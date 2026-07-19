@@ -1,0 +1,19 @@
+#!/bin/sh
+
+ACTION=${1}
+
+if [ "${ACTION}" == "boot" ]; then
+    ACTION=start
+fi
+
+exec 1>> /tmp/unslung.log 2>&1
+set -x 
+
+while ! grep -q "/mnt/UDISK" /proc/mounts; do
+    sleep 1
+done
+
+echo "unslung called with ${ACTION}"
+sh -x /opt/etc/init.d/rc.unslung "${ACTION}"
+echo "unslung exiting"
+
