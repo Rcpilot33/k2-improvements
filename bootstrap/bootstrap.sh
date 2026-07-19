@@ -14,18 +14,39 @@ cd /mnt/UDISK/root
 
 START_MENU="no"
 
-if [ -t 0 ]; then
-    echo ""
-    echo "Start the K2 Improvements installer menu after better-root completes? [y/N]"
-    printf "> "
-    read ANSWER
-
-    case "$ANSWER" in
-        y|Y|yes|YES)
+for ARG in "$@"; do
+    case "$ARG" in
+        --menu)
             START_MENU="yes"
-            export K2_SKIP_BETTER_ROOT_LOGOUT=1
+            ;;
+        --no-menu)
+            START_MENU="no"
             ;;
     esac
+done
+
+if [ "$START_MENU" = "yes" ]; then
+    if [ -t 0 ]; then
+        echo ""
+        echo "Start the K2 Improvements installer menu after better-root completes? [y/N]"
+        printf "> "
+        read ANSWER
+
+        case "$ANSWER" in
+            y|Y|yes|YES)
+                START_MENU="yes"
+                ;;
+            *)
+                START_MENU="no"
+                ;;
+        esac
+    else
+        START_MENU="no"
+    fi
+fi
+
+if [ "$START_MENU" = "yes" ]; then
+    export K2_SKIP_BETTER_ROOT_LOGOUT=1
 fi
 
 cd "$CURDIR"
