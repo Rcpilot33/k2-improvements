@@ -4,13 +4,28 @@ set -e
 cd $(dirname $0)
 CURDIR=$(pwd)
 
-# Run install script from Entware
-sh ./entware/install.sh
+# Run install script from Entware if needed
+if [ -x /opt/bin/opkg ] && [ -x /opt/bin/git ]; then
+    echo "I: Entware already installed; skipping Entware install."
+else
+    echo "I: Installing Entware..."
+    sh ./entware/install.sh
+fi
 
 mkdir -p /mnt/UDISK/root
 cd /mnt/UDISK/root
 
-/opt/bin/git clone -b k2-1155-compat https://github.com/Rcpilot33/k2-1155-Jacob-Fork.git k2-improvements
+if [ -d /mnt/UDISK/root/k2-improvements/.git ]; then
+    echo "I: k2-improvements already exists; updating existing repo."
+    cd /mnt/UDISK/root/k2-improvements
+    /opt/bin/git fetch origin
+    /opt/bin/git checkout k2-1155-compat
+    /opt/bin/git pull --ff-only origin k2-1155-compat
+else
+    echo "I: Cloning k2-improvements..."
+    cd /mnt/UDISK/root
+    /opt/bin/git clone -b k2-1155-compat https://github.com/Rcpilot33/k2-1155-Jacob-Fork.git k2-improvements
+fi
 
 START_MENU="no"
 
