@@ -40,8 +40,14 @@ move_homedir
 link_up
 #aliases
 
-echo "I: you need to log back in for changes to take effect!"
-echo "I: logging you out now!"
-echo "I: please reconnect to continue"
-# terminate the SSH session
-pgrep dropbear | grep -v "^$(pgrep -o dropbear)$" | xargs kill -9
+if [ "$K2_SKIP_BETTER_ROOT_LOGOUT" = "1" ]; then
+    echo "I: better-root changes applied."
+    echo "I: skipping forced logout because installer menu will run in this session."
+    echo "I: HOME/PATH will be patched by the bootstrap/menu."
+else
+    echo "I: you need to log back in for changes to take effect!"
+    echo "I: logging you out now!"
+    echo "I: please reconnect to continue"
+    # terminate the SSH session
+    pgrep dropbear | grep -v "^$(pgrep -o dropbear)$" | xargs kill -9
+fi

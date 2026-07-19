@@ -1,7 +1,11 @@
 #!/bin/ash
 set -e
 
+export HOME=/mnt/UDISK/root
+export PATH=/opt/bin:/opt/sbin:/mnt/UDISK/root/bin:$PATH
+
 REPO_DIR="/mnt/UDISK/root/k2-improvements"
+cd "$REPO_DIR"
 
 while true; do
     clear
