@@ -34,7 +34,7 @@ download "$BASE_URL/bootstrap/bootstrap.sh" "$BOOTSTRAP_DIR/bootstrap.sh"
 download "$BASE_URL/bootstrap/entware/install.sh" "$BOOTSTRAP_DIR/entware/install.sh"
 download "$BASE_URL/bootstrap/entware/wget-ssl.py" "$BOOTSTRAP_DIR/entware/wget-ssl.py"
 download "$BASE_URL/bootstrap/entware/unslung.init" "$BOOTSTRAP_DIR/entware/unslung.init"
-download "$BASE_URL/bootstrap/entware/unslung.init.d" "$BOOTSTRAP_DIR/entware/unslung.init.d"
+download "$BASE_URL/bootstrap/entware/unslung,init" "$BOOTSTRAP_DIR/entware/unslung,init"
 download "$BASE_URL/bootstrap/better-root/install.sh" "$BOOTSTRAP_DIR/better-root/install.sh"
 download "$BASE_URL/bootstrap/better-root/README.md" "$BOOTSTRAP_DIR/better-root/README.md"
 
