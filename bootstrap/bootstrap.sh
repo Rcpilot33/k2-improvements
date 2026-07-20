@@ -74,5 +74,5 @@ if [ "$START_MENU" = "yes" ]; then
     export PATH=/opt/bin:/opt/sbin:/mnt/UDISK/root/bin:$PATH
 
     cd /mnt/UDISK/root/k2-improvements
-    sh ./installer/menus/main.sh
+    sh ./menu.sh
 fi

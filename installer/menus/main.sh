@@ -1,129 +1,124 @@
-#!/bin/ash
-set -e
+#!/bin/sh
+# Top-level menu loop. Sourced by menu.sh.
 
-export HOME=/mnt/UDISK/root
-export PATH=/opt/bin:/opt/sbin:/mnt/UDISK/root/bin:$PATH
+main_menu() {
+    while :; do
+        clear
+        local fw=$(detect_printer_fw)
+        local chw=$(detect_carto_hw)
+        local extras_only="${K2_EXTRAS_ONLY:-0}"
+        local extras_forced=0
 
-REPO_DIR="/mnt/UDISK/root/k2-improvements"
-cd "$REPO_DIR"
+        # Firmware-based safety gate: force extras-only mode on 1.1.3.13
+        # regardless of how the menu was invoked. This fork's Cartographer
+        # Klipper patches are rebased for 1.1.5.2 — running them against
+        # stock 1.1.3.13 Klipper files would silently overwrite Creality's
+        # 1.1.3.13 fixes and break Cartographer on the next Klipper restart.
+        # Items 2 (Install essentials) and 3 (Features) are the dangerous
+        # ones; we hide them by forcing extras-only.
+        if [ "$fw" = "1.1.3.13" ] && [ "$extras_only" != "1" ]; then
+            extras_only=1
+            extras_forced=1
+        fi
 
-pause_menu() {
-    echo ""
-    printf "Press Enter to return to the menu..."
-    read _
+        if [ "$extras_only" = "1" ]; then
+            printf '\n=== K2 Plus Installer (extras-only) ===  fw: %s  carto: %s\n\n' "$fw" "${chw:-unknown}"
+            if [ "$extras_forced" = "1" ]; then
+                printf '%s\n' "$(c_yellow '  Forced extras-only: detected firmware 1.1.3.13. This fork ships')"
+                printf '%s\n' "$(c_yellow '  Klipper patches rebased for 1.1.5.2 only — Install-essentials and')"
+                printf '%s\n' "$(c_yellow '  Features would overwrite working patches and break Cartographer.')"
+                printf '%s\n' "$(c_yellow '  Use Jacob10383/k2-improvements for Cartographer install on 1.1.3.13.')"
+            else
+                printf '%s\n' "$(c_dim '  Mode: extras-only — Cartographer install is assumed to be already')"
+                printf '%s\n' "$(c_dim '  in place (e.g. via Jacob10383). Install-essentials and Features')"
+                printf '%s\n' "$(c_dim '  are hidden because they would overwrite Klipper patches.')"
+            fi
+            printf '\n'
+            printf '  1. Status — show what is installed\n'
+            printf '  4. Extras (K2-Plus patches) ▶\n'
+            printf '  5. KAMP adaptive purge ▶\n'
+            printf '  8. Update installer (git pull)\n'
+            printf '  9. Exit\n\n'
+            printf 'Choose: '
+            read -r c
+            case "$c" in
+                1) show_status ;;
+                4) menu_extras ;;
+                5) menu_kamp ;;
+                8) menu_update_installer ;;
+                9|q|Q) exit 0 ;;
+                2|3|6|7)
+                    printf '\n  %s\n\n' "$(c_yellow 'Disabled in extras-only mode. Re-run bootstrap.sh without --extras-only for the full menu.')"
+                    press_enter
+                    ;;
+                *) ;;
+            esac
+        else
+            printf '\n=== K2 Plus Installer ===  fw: %s  carto: %s\n\n' "$fw" "${chw:-unknown}"
+            printf '  1. Status — show what is installed\n'
+            printf '  2. Install stock probe / no-Cartographer setup\n'
+            printf '  3. Install Cartographer setup\n'
+            printf '  4. Features (k2-improvements) ▶\n'
+            printf '  5. Extras (K2-Plus patches) ▶\n'
+            printf '  6. KAMP adaptive purge ▶\n'
+            printf '  7. Cartographer firmware flash ▶\n'
+            printf '  8. Factory reset / cleanup tools ▶\n'
+            printf '  9. Update installer (git pull)\n'
+            printf '  0. Exit\n\n'
+            printf 'Choose [0-9]: '
+            read -r c
+            case "$c" in
+                1) show_status ;;
+                2)
+                    clear
+                    printf '\n=== Install stock probe / no  -Cartographer setup ===\n\n'
+                    printf 'This installs the K2 Improvements core setup for the stock PR Touch probe path.\n'
+                    printf 'It does NOT install the Cartographer feature.\n\n'
+                    printf 'Included:\n'
+                    printf '  - better-init\n'
+                    printf '  - skip-setup\n'
+                    printf '  - moonraker\n'
+                    printf '  - fluidd\n'
+                    printf '  - screws_tilt_adjust\n'
+                    printf '  - abort_homing\n'
+                    printf '  - bed_mesh / m191 / start_print / overrides macros\n\n'
+                    printf '%s\n' "$(c_yellow 'WARNING: this will modify Klipper/printer config. Make sure no print is active.')"
+                    printf '\n'
+                    if confirm "Proceed with stock probe / no-Cartographer setup?"; then
+                        sh "$INSTALLER_DIR/no-carto.sh"
+                    fi
+                    press_enter
+                    ;;
+                3) menu_install_all ;;
+                4) menu_features ;;
+                5) menu_extras ;;
+                6) menu_kamp ;;
+                7) menu_carto_fw ;;
+                8) menu_factory_reset ;;
+                9) menu_update_installer ;;
+                0|q|Q) exit 0 ;;
+                *) ;;
+            esac
+        fi
+    done
 }
 
-while true; do
+stub_menu() {
     clear
-    echo "========================================"
-    echo " K2 Improvements Installer"
-    echo " Firmware 1.1.5.5 Compatibility Branch"
-    echo "========================================"
-    echo ""
-    echo "1) Show installed options"
-    echo "2) No-Carto Setup"
-    echo "3) Cartographer Firmware Flash"
-    echo "4) Gimme the Jamin Setup"
-    echo "5) R3MEN printer.cfg changes"
-    echo "Q) Quit"
-    echo ""
+    printf '\n%s — not yet implemented.\n' "$1"
+    printf 'Tracked in installer-v1 milestone.\n\n'
+    press_enter
+}
 
-    printf "Select an option: "
-    read CHOICE
-
-    case "$CHOICE" in
-        1)
-            echo ""
-            echo "Installed option markers:"
-            echo ""
-
-            echo "cartographer:         $([ -f /tmp/cartographer ] && echo installed || echo not installed)"
-            echo "better-init:          $([ -f /tmp/better-init ] && echo installed || echo not installed)"
-            echo "skip-setup:           $([ -f /tmp/skip-setup ] && echo installed || echo not installed)"
-            echo "moonraker:            $([ -f /tmp/moonraker ] && echo installed || echo not installed)"
-            echo "fluidd:               $([ -f /tmp/fluidd ] && echo installed || echo not installed)"
-            echo "screws_tilt_adjust:   $([ -f /tmp/screws_tilt_adjust ] && echo installed || echo not installed)"
-            echo "abort_homing:         $([ -f /tmp/abort_homing ] && echo installed || echo not installed)"
-            echo "bed_mesh macro:       $([ -f /tmp/macros/bed_mesh ] && echo installed || echo not installed)"
-            echo "m191 macro:           $([ -f /tmp/macros/m191 ] && echo installed || echo not installed)"
-            echo "start_print macro:    $([ -f /tmp/macros/start_print ] && echo installed || echo not installed)"
-            echo "overrides macro:      $([ -f /tmp/macros/overrides ] && echo installed || echo not installed)"
-
-            pause_menu
-            ;;
-        2)
-            echo ""
-            echo "Installing Stock Probe / No-Cartographer Setup..."
-            echo ""
-            cd "$REPO_DIR"
-            sh ./no-carto.sh
-            echo ""
-            echo "Stock Probe / No-Cartographer install finished."
-            pause_menu
-            ;;
-        3)
-            echo ""
-            echo "Flashing Cartographer Firmware..."
-            echo ""
-            cd "$REPO_DIR"
-
-            if python3 ./features/cartographer/firmware/flash.py; then
-                echo ""
-                echo "Cartographer firmware flash finished."
-            else
-                echo ""
-                echo "Cartographer firmware flash failed."
-                echo "The board may need DFU recovery or may need to be power-cycled."
-                echo "For V3 / Survey boards, some may need to be flashed once"
-                echo "through STM32CubeProgrammer before printer-side flashing works."
-            fi
-
-            pause_menu
-            ;;
-                4)
-            echo ""
-            echo "Installing Cartographer Setup..."
-            echo ""
-            cd "$REPO_DIR"
-
-            if sh ./gimme-the-jamin.sh; then
-                echo ""
-                echo "Cartographer install finished."
-            else
-                echo ""
-                echo "Cartographer install failed."
-                echo "Check the installer output above."
-            fi
-
-            pause_menu
-            ;;
-                5)
-            echo ""
-            echo "Installing R3MEN printer.cfg changes..."
-            echo ""
-            cd "$REPO_DIR"
-
-            if sh ./features/r3men-bed/install.sh; then
-                echo ""
-                echo "R3MEN printer.cfg changes finished."
-                echo "Run FIRMWARE_RESTART before heating the bed."
-                echo "Do not run SAVE_CONFIG before restarting Klipper."
-            else
-                echo ""
-                echo "R3MEN printer.cfg changes failed."
-                echo "Check printer.cfg path and installer output."
-            fi
-
-            pause_menu
-            ;;
-        q|Q)
-            echo "Exiting."
-            exit 0
-            ;;
-        *)
-            echo ""
-            echo "Invalid option. Please select 1, 2, 3, 4, 5, or Q."
-            pause_menu
-            ;;
-    esac
-done
+menu_update_installer()  {
+    clear
+    ensure_path
+    if [ -d "$INSTALLER_DIR/.git" ]; then
+        info "git pull in $INSTALLER_DIR"
+        ( cd "$INSTALLER_DIR" && git pull --ff-only )
+    else
+        warn "$INSTALLER_DIR is not a git checkout — can't auto-update."
+        warn "Re-run bootstrap.sh from the host to refresh."
+    fi
+    press_enter
+}
