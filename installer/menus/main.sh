@@ -37,6 +37,7 @@ while true; do
             echo "Installed option markers:"
             echo ""
 
+            echo "cartographer:         $([ -f /tmp/cartographer ] && echo installed || echo not installed)"
             echo "better-init:          $([ -f /tmp/better-init ] && echo installed || echo not installed)"
             echo "skip-setup:           $([ -f /tmp/skip-setup ] && echo installed || echo not installed)"
             echo "moonraker:            $([ -f /tmp/moonraker ] && echo installed || echo not installed)"
@@ -65,25 +66,54 @@ while true; do
             echo "Flashing Cartographer Firmware..."
             echo ""
             cd "$REPO_DIR"
-            python3 ./features/cartographer/firmware/flash.py
-            echo ""
-            echo "Cartographer firmware flash finished."
+
+            if python3 ./features/cartographer/firmware/flash.py; then
+                echo ""
+                echo "Cartographer firmware flash finished."
+            else
+                echo ""
+                echo "Cartographer firmware flash failed."
+                echo "The board may need DFU recovery or may need to be power-cycled."
+                echo "For V3 / Survey boards, some may need to be flashed once"
+                echo "through STM32CubeProgrammer before printer-side flashing works."
+            fi
+
             pause_menu
             ;;
-        4)
+                4)
             echo ""
             echo "Installing Cartographer Setup..."
             echo ""
             cd "$REPO_DIR"
-            sh ./gimme-the-jamin.sh
-            echo ""
-            echo "Cartographer install finished."
+
+            if sh ./gimme-the-jamin.sh; then
+                echo ""
+                echo "Cartographer install finished."
+            else
+                echo ""
+                echo "Cartographer install failed."
+                echo "Check the installer output above."
+            fi
+
             pause_menu
             ;;
-        5)
+                5)
             echo ""
-            echo "R3MEN printer.cfg changes are not wired in yet."
-            echo "This menu option is a placeholder."
+            echo "Installing R3MEN printer.cfg changes..."
+            echo ""
+            cd "$REPO_DIR"
+
+            if sh ./features/r3men-bed/install.sh; then
+                echo ""
+                echo "R3MEN printer.cfg changes finished."
+                echo "Run FIRMWARE_RESTART before heating the bed."
+                echo "Do not run SAVE_CONFIG before restarting Klipper."
+            else
+                echo ""
+                echo "R3MEN printer.cfg changes failed."
+                echo "Check printer.cfg path and installer output."
+            fi
+
             pause_menu
             ;;
         q|Q)
