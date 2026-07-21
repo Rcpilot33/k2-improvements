@@ -6,54 +6,7 @@ main_menu() {
         clear
         local fw=$(detect_printer_fw)
         local chw=$(detect_carto_hw)
-        local extras_only="${K2_EXTRAS_ONLY:-0}"
-        local extras_forced=0
 
-        # Firmware-based safety gate: force extras-only mode on 1.1.3.13
-        # regardless of how the menu was invoked. This fork's Cartographer
-        # Klipper patches are rebased for 1.1.5.2 — running them against
-        # stock 1.1.3.13 Klipper files would silently overwrite Creality's
-        # 1.1.3.13 fixes and break Cartographer on the next Klipper restart.
-        # Items 2 (Install essentials) and 3 (Features) are the dangerous
-        # ones; we hide them by forcing extras-only.
-        if [ "$fw" = "1.1.3.13" ] && [ "$extras_only" != "1" ]; then
-            extras_only=1
-            extras_forced=1
-        fi
-
-        if [ "$extras_only" = "1" ]; then
-            printf '\n=== K2 Plus Installer (extras-only) ===  fw: %s  carto: %s\n\n' "$fw" "${chw:-unknown}"
-            if [ "$extras_forced" = "1" ]; then
-                printf '%s\n' "$(c_yellow '  Forced extras-only: detected firmware 1.1.3.13. This fork ships')"
-                printf '%s\n' "$(c_yellow '  Klipper patches rebased for 1.1.5.2 only — Install-essentials and')"
-                printf '%s\n' "$(c_yellow '  Features would overwrite working patches and break Cartographer.')"
-                printf '%s\n' "$(c_yellow '  Use Jacob10383/k2-improvements for Cartographer install on 1.1.3.13.')"
-            else
-                printf '%s\n' "$(c_dim '  Mode: extras-only — Cartographer install is assumed to be already')"
-                printf '%s\n' "$(c_dim '  in place (e.g. via Jacob10383). Install-essentials and Features')"
-                printf '%s\n' "$(c_dim '  are hidden because they would overwrite Klipper patches.')"
-            fi
-            printf '\n'
-            printf '  1. Status — show what is installed\n'
-            printf '  4. Extras (K2-Plus patches) ▶\n'
-            printf '  5. KAMP adaptive purge ▶\n'
-            printf '  8. Update installer (git pull)\n'
-            printf '  9. Exit\n\n'
-            printf 'Choose: '
-            read -r c
-            case "$c" in
-                1) show_status ;;
-                4) menu_extras ;;
-                5) menu_kamp ;;
-                8) menu_update_installer ;;
-                9|q|Q) exit 0 ;;
-                2|3|6|7)
-                    printf '\n  %s\n\n' "$(c_yellow 'Disabled in extras-only mode. Re-run bootstrap.sh without --extras-only for the full menu.')"
-                    press_enter
-                    ;;
-                *) ;;
-            esac
-        else
             printf '\n=== K2 Plus Installer ===  fw: %s  carto: %s\n\n' "$fw" "${chw:-unknown}"
             printf '  1. Status — show what is installed\n'
             printf '  2. Install stock probe / no-Cartographer setup\n'
@@ -71,7 +24,7 @@ main_menu() {
                 1) show_status ;;
                 2)
                     clear
-                    printf '\n=== Install stock probe / no  -Cartographer setup ===\n\n'
+                    printf '\n=== Install stock probe / no-Cartographer setup ===\n\n'
                     printf 'This installs the K2 Improvements core setup for the stock PR Touch probe path.\n'
                     printf 'It does NOT install the Cartographer feature.\n\n'
                     printf 'Included:\n'
@@ -89,7 +42,27 @@ main_menu() {
                     fi
                     press_enter
                     ;;
-                3) menu_install_all ;;
+                3)
+                    clear
+                    printf '\n=== Install Cartographer ===\n\n'
+                    printf 'This installs the K2 Improvements for the Cartographer feature.\n'
+                    printf 'Included:\n'
+                    printf '  - better-init\n'
+                    printf '  - skip-setup\n'
+                    printf '  - moonraker\n'
+                    printf '  - fluidd\n'
+                    printf '  - screws_tilt_adjust\n'
+                    printf '  - cartographer\n'
+                    printf '  - abort_homing\n'
+                    printf '  - bed_mesh / m191 / start_print / overrides macros\n\n'
+                    printf '%s\n' "$(c_yellow 'WARNING: Cartographer must be flashed and installed. Make sure Y-axis spacers are installed if required.')"
+                    printf '%s\n' "$(c_yellow 'WARNING: this will modify Klipper/printer config. Make sure no print is active.')"
+                    printf '\n'
+                    if confirm "Proceed with Cartographer setup?"; then
+                        sh "$INSTALLER_DIR/gimme-the-jamin.sh"
+                    fi
+                    press_enter
+                    ;;
                 4) menu_features ;;
                 5) menu_extras ;;
                 6) menu_kamp ;;
@@ -99,7 +72,6 @@ main_menu() {
                 0|q|Q) exit 0 ;;
                 *) ;;
             esac
-        fi
     done
 }
 
