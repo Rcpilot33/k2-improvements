@@ -26,8 +26,7 @@ This is documented in the K2 Plus install gotchas (item 6).
 
 ## When to run
 
-- After installing the `cartographer` feature on stock K2 Plus 1.1.5.2 or
-  1.1.3.13, **before** the next Klipper restart, OR
+- After installing the `cartographer` feature, **before** the next Klipper restart, OR
 - Any time Klipper fails to start with the `step_swap_pin` error after a
   cartographer install.
 

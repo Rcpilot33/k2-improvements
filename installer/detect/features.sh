@@ -7,7 +7,19 @@ is_cartographer()  { [ -f "$PRINTER_CFG_DIR/custom/cartographer.cfg" ] || \
                      grep -q '^\[cartographer\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null; }
 is_moonraker()     { [ -d /mnt/UDISK/printer_data/moonraker ] || [ -f /mnt/UDISK/printer_data/config/moonraker.conf ]; }
 is_fluidd()        { grep -lq 'crealityk2' /usr/share/fluidd/assets/*.js 2>/dev/null; }
-is_macros()        { [ -L "$PRINTER_CFG_DIR/custom/start_print.cfg" ]; }
+is_macros() {
+    local custom="$PRINTER_CFG_DIR/custom"
+    local main="$custom/main.cfg"
+    [ -e "$custom/start_print.cfg" ] &&
+    [ -e "$custom/m191.cfg" ] &&
+    [ -e "$custom/bed_mesh.cfg" ] &&
+    [ -f "$custom/overrides.cfg" ] &&
+    [ -f "$main" ] &&
+    grep -q '^\[include start_print\.cfg\]$' "$main" 2>/dev/null &&
+    grep -q '^\[include m191\.cfg\]$' "$main" 2>/dev/null &&
+    grep -q '^\[include bed_mesh\.cfg\]$' "$main" 2>/dev/null &&
+    grep -q '^\[include overrides\.cfg\]$' "$main" 2>/dev/null
+}
 is_kamp()          { [ -L "$PRINTER_CFG_DIR/custom/Line_Purge.cfg" ]; }
 is_screws_tilt()   { [ -L "$PRINTER_CFG_DIR/custom/screws_tilt_adjust.cfg" ]; }
 is_r3men_bed() {
@@ -37,9 +49,19 @@ is_motor_guard()   { grep -q 'motor-state-guard' "$PRINTER_CFG_DIR/custom/start_
 # Echoes one of: "Jamin", "JimmyV", "custom (x=N y=N)", "(no cartographer)"
 detect_carto_offset_label() {
     local cfg="$PRINTER_CFG_DIR/custom/cartographer.cfg"
+    local overrides="$PRINTER_CFG_DIR/custom/overrides.cfg"
     [ -f "$cfg" ] || { echo "(no cartographer)"; return; }
-    local x=$(awk '/^\[cartographer\]/{f=1; next} f && /^\[/ {f=0} f && /^x_offset:/ {print $2; exit}' "$cfg")
-    local y=$(awk '/^\[cartographer\]/{f=1; next} f && /^\[/ {f=0} f && /^y_offset:/ {print $2; exit}' "$cfg")
+
+    # cartographer.cfg supplies the baseline; matching keys in overrides.cfg
+    # are included later and therefore represent the effective values.
+    local x=$(awk '/^\[cartographer\]/{f=1; next} f && /^\[/ {f=0} f && /^[ \t]*x_offset[ \t]*:/ {sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t]*#.*$/, ""); print; exit}' "$cfg")
+    local y=$(awk '/^\[cartographer\]/{f=1; next} f && /^\[/ {f=0} f && /^[ \t]*y_offset[ \t]*:/ {sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t]*#.*$/, ""); print; exit}' "$cfg")
+    if [ -f "$overrides" ]; then
+        local override_x=$(awk '/^\[cartographer\]/{f=1; next} f && /^\[/ {f=0} f && /^[ \t]*x_offset[ \t]*:/ {sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t]*#.*$/, ""); print; exit}' "$overrides")
+        local override_y=$(awk '/^\[cartographer\]/{f=1; next} f && /^\[/ {f=0} f && /^[ \t]*y_offset[ \t]*:/ {sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t]*#.*$/, ""); print; exit}' "$overrides")
+        [ -n "$override_x" ] && x="$override_x"
+        [ -n "$override_y" ] && y="$override_y"
+    fi
     case "${x:-?} ${y:-?}" in
         "0 -15") echo "Jamin (x=0 y=-15)" ;;
         "0 36")  echo "JimmyV (x=0 y=36)" ;;

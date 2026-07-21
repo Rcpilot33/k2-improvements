@@ -82,8 +82,8 @@ install_extra() {
             is_cartographer)
                 printf '  This extra requires Cartographer to be installed first.\n'
                 printf '  On a fresh K2 Plus, install Cartographer via:\n\n'
-                printf '    - Menu item 2 (Install essentials)  — recommended path\n'
-                printf '    - Menu item 3 (Features) -> cartographer\n'
+                printf '    - Menu item 3 (Install essentials)  — recommended path\n'
+                printf '    - Menu item 4 (Features) -> cartographer\n'
                 printf '    - Or Jacob10383'"'"'s gimme-the-jamin.sh on 1.1.3.13\n\n'
                 printf '  Once Cartographer is installed and Klipper has restarted with the\n'
                 printf '  new config, this extra will become available.\n\n'

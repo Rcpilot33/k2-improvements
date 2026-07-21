@@ -4,13 +4,12 @@
 # excluded (requires the user to put the probe in DFU mode physically).
 
 # Essentials only — what's needed to have a working K2 Plus + Cartographer.
-# QoL features (KAMP, surface-wrapper, abort_homing, axis_twist), security
+# QoL features (KAMP, surface-wrapper, axis_twist), security
 # features (secure-auth — can lock you out if installed without keys), and
-# Optional features such as skip-setup and hardware-specific features such as
-# r3men-bed are excluded here. They stay available individually from the
-# Features and Extras menus.
+# hardware-specific features such as r3men-bed are excluded here.
+# They stay available individually from the Features and Extras menus.
 # Obico is not exposed in the installer menus in this fork because the inherited
-# external installer did not complete cleanly in 1.1.5.5 testing.
+# external installer did not complete cleanly.
 # The legacy files remain under features/obico for manual testing.
 # Order matches upstream gimme-the-jamin.sh: moonraker installs BEFORE
 # cartographer/fluidd/macros so those features can register their
@@ -20,10 +19,12 @@
 _INSTALL_ALL_ORDER='entware|is_entware|features/entware/install.sh
 better-root|is_better_root|installer/extras/better-root-safe/install.sh
 better-init|is_better_init|features/better-init/install.sh
+skip-setup|is_skip_setup|features/skip-setup/install.sh
 moonraker|is_moonraker|features/moonraker/install.sh
 fluidd|is_fluidd|features/fluidd/install.sh
 screws_tilt_adjust|is_screws_tilt|features/screws_tilt_adjust/install.sh
 cartographer|is_cartographer|features/cartographer/install.sh
+abort_homing|is_abort_homing|features/abort_homing/install.sh
 prtouch-cleanup|is_prtouch_clean|installer/extras/prtouch-cleanup/install.sh
 macros|is_macros|features/macros/install.sh'
 
@@ -35,7 +36,7 @@ menu_install_all() {
     printf 'Cartographer mount preset (mandatory — probe offsets depend on hardware).\n\n'
     printf 'NOT in this flow (need physical interaction or are optional):\n'
     printf '  - Cartographer firmware flash (DFU button)\n'
-    printf '  - Printer firmware swap (USB stick)\n'
+    printf '  - Hardware-specific features (e.g., r3men-bed)\n'
     printf '  - QoL features (KAMP, surface-wrapper, axis_twist, etc.) — Extras menu\n\n'
     printf 'Plan:\n'
     local OLDIFS="$IFS"
@@ -126,7 +127,7 @@ menu_install_all() {
             HOME=$(awk -F: '$1=="root"{print $6}' /etc/passwd) \
                 sh "$INSTALLER_DIR/installer/extras/cartographer-offset-setup/install.sh" || true
         else
-            printf '\n%s\n\n' "$(c_yellow 'Skipped — run it later from Extras menu (item 4).')"
+            printf '\n%s\n\n' "$(c_yellow 'Skipped — run it later from Extras menu (item 5).')"
         fi
     fi
 
@@ -134,10 +135,9 @@ menu_install_all() {
     printf '  1. Power-cycle the printer from the mains (the cartographer install\n'
     printf '     restarted Klipper, which under K2 Plus motor-state caveat means\n'
     printf '     your next G28 must come AFTER a real boot).\n'
-    printf '  2. Optional QoL: KAMP (item 5), surface-selection-wrapper (item 4),\n'
-    printf '     axis_twist_compensation / abort_homing / skip-setup (item 3).\n'
-    printf '  3. Optional: Cartographer firmware flash (item 6), printer firmware\n'
-    printf '     swap prep (item 7) — both need physical interaction.\n'
+    printf '  2. Optional QoL: KAMP (item 6); surface-selection-wrapper and\n'
+    printf '     axis_twist_compensation are available from Extras/Features (items 5/4).\n'
+    printf '  3. Optional: Cartographer firmware flash (item 7).\n'
     printf '  4. Calibrate per surface: CARTOGRAPHER_CALIBRATE METHOD=manual NAME=<plate>\n'
     printf '     and BED_MESH_CALIBRATE for each plate (default/pei/coolplate/etc).\n\n'
     press_enter

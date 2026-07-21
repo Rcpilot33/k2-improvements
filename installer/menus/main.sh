@@ -42,27 +42,7 @@ main_menu() {
                     fi
                     press_enter
                     ;;
-                3)
-                    clear
-                    printf '\n=== Install Cartographer ===\n\n'
-                    printf 'This installs the K2 Improvements for the Cartographer feature.\n'
-                    printf 'Included:\n'
-                    printf '  - better-init\n'
-                    printf '  - skip-setup\n'
-                    printf '  - moonraker\n'
-                    printf '  - fluidd\n'
-                    printf '  - screws_tilt_adjust\n'
-                    printf '  - cartographer\n'
-                    printf '  - abort_homing\n'
-                    printf '  - bed_mesh / m191 / start_print / overrides macros\n\n'
-                    printf '%s\n' "$(c_yellow 'WARNING: Cartographer must be flashed and installed. Make sure Y-axis spacers are installed if required.')"
-                    printf '%s\n' "$(c_yellow 'WARNING: this will modify Klipper/printer config. Make sure no print is active.')"
-                    printf '\n'
-                    if confirm "Proceed with Cartographer setup?"; then
-                        sh "$INSTALLER_DIR/gimme-the-jamin.sh"
-                    fi
-                    press_enter
-                    ;;
+                3) menu_install_all ;;
                 4) menu_features ;;
                 5) menu_extras ;;
                 6) menu_kamp ;;

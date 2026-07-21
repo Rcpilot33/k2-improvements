@@ -1,54 +1,73 @@
 # cartographer-offset-setup
 
-Sets `[cartographer] x_offset` / `y_offset` and `[bed_mesh] mesh_min` in
-`custom/cartographer.cfg` to match your physical Cartographer mount.
+Switches between the Jamin/default and JimmyV Cartographer mounts by editing
+only `custom/overrides.cfg`. It never modifies `custom/cartographer.cfg` or
+`printer.cfg`.
 
-## Why
+## Profiles
 
-The Cartographer probe sits on a 3D-printed mount that physically
-positions it relative to the nozzle. Klipper needs to know that
-distance to interpret probe readings correctly. Different community
-mounts place the probe in different positions.
+### Jamin/default
 
-`mesh_min` Y has to track `y_offset`: with `stepper_y position_min: -0.4`,
-`BED_MESH_CALIBRATE` can only probe Y values where the toolhead position
-(`probe_y - y_offset`) clears `position_min`. The JimmyV back-mount
-(`y_offset: 36`) physically cannot probe the front 36mm of the bed; the
-Jamin front-mount (`y_offset: -15`) can comfortably probe down to Y=5.
+The installer removes only these mount-related keys from `overrides.cfg`:
 
-## Presets
+- `[cartographer] x_offset` and `y_offset`
+- `[bed_mesh] mesh_min` and `mesh_max`
+- `[stepper_y] position_endstop` and `position_min`
 
-| Mount | x_offset | y_offset | mesh_min | Notes |
-| --- | ---: | ---: | --- | --- |
-| Jamin Collins front-mount | 0 | -15 | 10, 5 | Probe 15mm in **front** of nozzle. Default for `gimme-the-jamin.sh`. [Printables link](https://www.printables.com/model/1198696-k2-plus-cartographer-mount-shroud-and-spacers) |
-| JimmyV back-mount | 0 | 36 | 10, 36 | Probe 36mm **behind** nozzle. Loses front 36mm of bed for meshing. |
-| Custom | user value | user value | derived | `mesh_min` Y derived as `max(5, y_offset)` |
+With those overrides absent, the values in `cartographer.cfg` are effective:
 
-## What this does NOT touch
+| Setting | Value |
+| --- | --- |
+| `cartographer y_offset` | `-15` |
+| `bed_mesh mesh_min` | `10, 5` |
+| `bed_mesh mesh_max` | `340, 330` |
+| `stepper_y position_endstop` | `-0.4` |
+| `stepper_y position_min` | `-0.4` |
 
-`[stepper_y]` (`position_endstop`, `position_min`), `[bed_mesh] mesh_max`,
-and `zero_reference_position` are general K2 Plus values that are the
-same for every Cartographer mount the community has shipped so far. The
-picker leaves them alone.
+### JimmyV back-mount
 
-If you have a mount that genuinely needs different mesh limits beyond
-`mesh_min`, edit `custom/cartographer.cfg` directly after running this
-picker.
+The installer writes the mount author's specified overrides:
 
-## Idempotency / safety
+| Setting | Value |
+| --- | --- |
+| `cartographer y_offset` | `36` |
+| `bed_mesh mesh_min` | `5, 36` |
+| `bed_mesh mesh_max` | `345, 340` |
 
-- Picking the preset that matches your current values is a no-op.
-- Backs up `custom/cartographer.cfg` to `cartographer.cfg.before-offset-<timestamp>`
-  before any change.
-- Custom values are validated: must parse as numbers, range -100 to +100.
+JimmyV also says to comment out the `[stepper_y]` `-0.4` values in
+`cartographer.cfg`. Because this repository keeps `cartographer.cfg` unchanged,
+the installer reads the stock `position_endstop` and `position_min` from
+`printer.cfg` and writes them to `[stepper_y]` in `overrides.cfg`. The later
+override has the same effective result.
+
+### Custom mount
+
+The custom picker accepts:
+
+- `x_offset` and `y_offset` (validated from -100 through 100)
+- `mesh_min` and `mesh_max` as `X, Y` coordinate pairs
+- Cartographer baseline or stock `printer.cfg` values for `[stepper_y]`
+
+Custom values are written to `overrides.cfg`; `cartographer.cfg` remains
+unchanged. Choosing the Cartographer stepper baseline leaves the `[stepper_y]`
+keys absent from the overrides so the `-0.4` baseline remains effective.
+
+Before showing the profile menu, the installer displays the current
+`cartographer.cfg` X/Y offsets, mesh limits, and stepper Y values. These provide
+a reference for custom-mount setup and become the custom-entry defaults when
+the same key is not already present in `overrides.cfg`.
+
+## Preservation and safety
+
+- Existing unrelated settings, including `[bed_mesh] probe_count`, are kept.
+- The picker can be rerun at any time to switch profiles.
+- Reapplying the active profile is a no-op.
+- Before a change, `overrides.cfg` is backed up beside the file with a
+  `.before-cartographer-offset-<timestamp>` suffix.
+- If either stock `[stepper_y]` value cannot be read from `printer.cfg`, the
+  installer exits without changing anything.
 
 ## Activation
 
-Klipper picks up the change on next `FIRMWARE_RESTART`. Per K2 Plus
-motor-state caveat, power-cycle from mains before the next G28.
-
-## Why this is NOT in "Install all"
-
-Picking the wrong mount silently breaks Z-probing across the bed (the
-probe reads at the wrong physical location). Because installer scripts
-can't see your physical hardware, this picker stays manual.
+Run `FIRMWARE_RESTART` after switching. Follow the K2 Plus motor-state safety
+procedure used by your firmware before the next home operation.
