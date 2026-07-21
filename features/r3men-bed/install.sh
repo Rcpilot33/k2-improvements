@@ -27,17 +27,16 @@ resistance1: 100000
 temperature2: 97
 resistance2: 1385
 temperature3: 248
-resistance3: 165
-
-"""
+resistance3: 165"""
 
 if "[thermistor R3men_bed]" not in text:
     # Add thermistor block before heater_bed if possible, otherwise append.
     marker = "[heater_bed]"
     if marker in text:
-        text = text.replace(marker, thermistor_block + marker, 1)
+        before, after = text.split(marker, 1)
+        text = before.rstrip() + "\n\n" + thermistor_block + "\n\n" + marker + after
     else:
-        text = text.rstrip() + "\n\n" + thermistor_block
+        text = text.rstrip() + "\n\n" + thermistor_block + "\n"
 
 lines = text.splitlines()
 out = []
@@ -81,6 +80,8 @@ for line in lines:
 
         if stripped.startswith("max_power:"):
             if not seen_max_power:
+                while out and not out[-1].strip():
+                    out.pop()
                 out.append("max_power: 0.8")
                 seen_max_power = True
             continue

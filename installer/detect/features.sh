@@ -30,7 +30,12 @@ is_r3men_bed() {
 is_obico()         { [ -d /mnt/UDISK/moonraker-obico ]; }
 is_secure_auth()   { grep -q '^trusted_clients' /mnt/UDISK/printer_data/config/moonraker.conf 2>/dev/null && \
                      ! grep -q '127\.0\.0\.0/8' /mnt/UDISK/printer_data/config/moonraker.conf 2>/dev/null; }
-is_skip_setup()    { [ -f /mnt/UDISK/.skip_setup_done ]; }
+is_skip_setup()    {
+    command -v jq >/dev/null 2>&1 &&
+        jq -e '.user_info.self_test_sw == 0' \
+            /mnt/UDISK/creality/userdata/config/system_config.json \
+            >/dev/null 2>&1
+}
 is_axis_twist()    { grep -q '^\[axis_twist_compensation\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null; }
 is_abort_homing() {
     local klipper_dir="${KLIPPER_DIR:-/usr/share/klipper}"
