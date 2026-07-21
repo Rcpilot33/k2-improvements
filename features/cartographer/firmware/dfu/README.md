@@ -1,4 +1,4 @@
-# Cartographer offline DFU recovery
+# Cartographer bundled DFU recovery
 
 This recovery path is only for a Cartographer that cannot be updated through
 the normal USB/Katapult `flash.py` path.

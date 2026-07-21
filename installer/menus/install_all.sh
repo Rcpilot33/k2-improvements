@@ -1,7 +1,7 @@
 #!/bin/sh
 # "Install all (recommended)" flow — installs every missing feature + extra
 # + KAMP, in dependency order. Cartographer firmware flash is intentionally
-# excluded (requires the user to put the probe in DFU mode physically).
+# excluded because it requires explicit physical interaction.
 
 # Essentials only — what's needed to have a working K2 Plus + Cartographer.
 # QoL features (KAMP, surface-wrapper, axis_twist), security
@@ -30,12 +30,12 @@ macros|is_macros|features/macros/install.sh'
 
 menu_install_all() {
     clear
-    printf '\n=== Install essentials (recommended) ===\n\n'
+    printf '\n=== Install Cartographer setup ===\n\n'
     printf 'The minimum needed to run a K2 Plus + Cartographer probe. Skips anything\n'
     printf 'already installed. After the auto steps, prompts you to pick your\n'
     printf 'Cartographer mount preset (mandatory — probe offsets depend on hardware).\n\n'
     printf 'NOT in this flow (need physical interaction or are optional):\n'
-    printf '  - Cartographer firmware flash (DFU button)\n'
+    printf '  - Cartographer firmware flash (USB/Katapult or physical DFU mode)\n'
     printf '  - Hardware-specific features (e.g., r3men-bed)\n'
     printf '  - QoL features (KAMP, surface-wrapper, axis_twist, etc.) — Extras menu\n\n'
     printf 'Plan:\n'
@@ -56,7 +56,7 @@ menu_install_all() {
     printf '%s\n' "$(c_yellow 'WARNING: this can take 5-15 minutes and will modify Klipper.')"
     printf '         Make sure no print is active.\n\n'
 
-    if ! confirm "Proceed with install essentials?"; then return 0; fi
+    if ! confirm "Proceed with Cartographer setup installation?"; then return 0; fi
 
     local installed=0 skipped=0 failed=0
     OLDIFS="$IFS"

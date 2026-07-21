@@ -27,7 +27,7 @@ menu_carto_fw() {
         printf '\n=== Cartographer firmware tools ===\n\n'
         printf '  USB status : %s\n\n' "${usb_state:-unknown}"
 
-        printf '%s\n' "$(c_yellow 'Firmware flashing is manual/explicit only. It is not part of Install All.')"
+        printf '%s\n' "$(c_yellow 'Firmware flashing is manual/explicit only. It is not part of the Cartographer setup installer.')"
         printf '%s\n' "$(c_dim 'Normal flashing uses bundled flash.py and the USB/Katapult path.')"
         printf '%s\n\n' "$(c_dim 'DFU should be used as recovery-only if normal USB/Katapult flashing cannot communicate with the probe.')"
 

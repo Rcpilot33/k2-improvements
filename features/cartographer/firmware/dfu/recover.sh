@@ -1,5 +1,5 @@
 #!/bin/ash
-# Offline Cartographer V3/V4 STM32 DFU recovery using bundled combined images.
+# Cartographer V3/V4 STM32 DFU recovery using bundled combined images.
 
 set -e
 
@@ -54,7 +54,7 @@ wait_for_dfu() {
 }
 
 echo ""
-echo "=== Cartographer offline DFU recovery ==="
+echo "=== Cartographer bundled DFU recovery ==="
 echo ""
 echo "WARNING: DFU overwrites the probe bootloader and firmware."
 echo "Selecting the wrong hardware requires reflashing the correct image."

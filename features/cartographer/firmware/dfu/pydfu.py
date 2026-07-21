@@ -21,6 +21,7 @@ import os
 import re
 import struct
 import sys
+import time
 
 # Reuse the PyUSB package bundled beside flash.py. OpenWrt needs its system
 # libusb backend selected explicitly.
@@ -177,13 +178,25 @@ def get_status():
     """Get the status of the last operation."""
     stat = __dev.ctrl_transfer(0xA1, __DFU_GETSTATUS, 0, __DFU_INTERFACE, 6, 20000)
 
+    # Bytes 1-3 are bwPollTimeout (little-endian milliseconds). After an
+    # erase/write command, STM32's ROM bootloader returns dfuDNBUSY together
+    # with the amount of time the host must wait before polling again. Some
+    # devices tolerate an immediate second GETSTATUS; STM32F042 stalls the
+    # control endpoint with LIBUSB_ERROR_PIPE instead. Honour the device's
+    # requested delay as required by the DFU protocol.
+    poll_timeout_ms = int(stat[1]) | (int(stat[2]) << 8) | (int(stat[3]) << 16)
+
     # firmware can provide an optional string for any error
     if stat[5]:
         message = get_string(__dev, stat[5])
         if message:
             print(message)
 
-    return stat[4]
+    state = stat[4]
+    if poll_timeout_ms:
+        time.sleep(poll_timeout_ms / 1000.0)
+
+    return state
 
 
 def check_status(stage, expected):
