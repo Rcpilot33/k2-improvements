@@ -14,8 +14,9 @@
 # This is excluded from "Install all" because firmware flashing should only be
 # done by explicit user choice.
 #
-# DFU should be used as recovery-only and is not handled by flash.py. True STM32 DFU appears
-# as 0483:df11 and requires dfu-util plus manual BOOT0/RESET pad access.
+# DFU is a separate recovery-only path. True STM32 DFU appears as 0483:df11
+# and requires manual BOOT0/RESET pad access. The bundled Python writer reuses
+# the same PyUSB and system libusb backend as flash.py.
 
 menu_carto_fw() {
     while :; do
@@ -32,14 +33,16 @@ menu_carto_fw() {
 
         printf '  1. Show normal USB/Katapult flashing notes\n'
         printf '  2. Launch flash.py using normal USB/Katapult path\n'
-        printf '  3. Show DFU recovery notes\n'
+        printf '  3. Launch DFU recovery (manual V3/V4 selection)\n'
+        printf '  4. Show DFU recovery notes\n'
         printf '  b. Back\n\n'
         printf 'Choose: '
         read -r c
         case "$c" in
             1) carto_fw_show_katapult_notes ;;
             2) carto_fw_launch ;;
-            3) carto_fw_show_dfu_notes ;;
+            3) carto_fw_dfu_launch ;;
+            4) carto_fw_show_dfu_notes ;;
             b|B|q|Q) return ;;
             *) ;;
         esac
@@ -130,15 +133,30 @@ True STM32 DFU appears in lsusb as:
 Entering DFU mode requires physical access to the probe BOOT0/RESET pads or
 BOOT0/3V3 pads depending on the Cartographer version.
 
-Once the probe is manually placed into DFU mode, the rest of the recovery flash
-can be automated with dfu-util, but that is a separate recovery path from
-flash.py.
+Once the probe is manually placed into DFU mode, the bundled Python/libusb
+writer can perform the recovery. This remains a separate path from flash.py.
 
-Current status:
-  - Normal USB/Katapult flash path: tested
-  - DFU recovery flash path: not implemented in this menu yet
+The DFU recovery menu requires you to select V3 or V4 manually. True DFU mode
+does not provide the normal Katapult hardware-identification protocol.
+
+The recovery path uses only the checksum-verified combined USB images bundled
+with this installer. It does not download firmware. Combined images contain
+both Katapult and the tested Cartographer firmware and are flashed at
+0x08000000.
 
 EOF
+    press_enter
+}
+
+carto_fw_dfu_launch() {
+    local recovery="$INSTALLER_DIR/features/cartographer/firmware/dfu/recover.sh"
+    if [ ! -f "$recovery" ]; then
+        warn "DFU recovery script not found: $recovery"
+        press_enter
+        return
+    fi
+    ensure_path
+    sh "$recovery"
     press_enter
 }
 
@@ -191,6 +209,10 @@ carto_fw_launch() {
         printf 'Firmware was not flashed or was not verified successfully.\n'
         printf 'Do not continue with Cartographer setup until the firmware flash completes cleanly.\n\n'
         printf 'Check that the Cartographer is connected by USB and try again.\n\n'
+        if confirm "Open the manual V3/V4 DFU recovery menu?"; then
+            carto_fw_dfu_launch
+            return
+        fi
     fi
 
     press_enter
