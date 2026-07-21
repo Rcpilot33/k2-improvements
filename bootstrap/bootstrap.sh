@@ -41,20 +41,23 @@ for ARG in "$@"; do
 done
 
 if [ "$START_MENU" = "yes" ]; then
-    if [ -t 0 ]; then
+    if [ -t 0 ] || [ -t 1 ]; then
         echo ""
         echo "Start the K2 Improvements installer menu after better-root completes? [y/N]"
         printf "> "
-        read ANSWER
-
-        case "$ANSWER" in
-            y|Y|yes|YES)
-                START_MENU="yes"
-                ;;
-            *)
-                START_MENU="no"
-                ;;
-        esac
+        if read ANSWER </dev/tty; then
+            case "$ANSWER" in
+                y|Y|yes|YES)
+                    START_MENU="yes"
+                    ;;
+                *)
+                    START_MENU="no"
+                    ;;
+            esac
+        else
+            echo "W: unable to read menu choice; continuing without the menu."
+            START_MENU="no"
+        fi
     else
         START_MENU="no"
     fi
