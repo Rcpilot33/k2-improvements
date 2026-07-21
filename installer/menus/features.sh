@@ -3,7 +3,6 @@
 
 # name|detector|description (one per line)
 _FEATURES='abort_homing|is_abort_homing|Abort homing on M112/cancel
-axis_twist_compensation|is_axis_twist|Compensate Z drift across X
 better-init|is_better_init|/etc/profile.d autoloader
 better-root|is_better_root|$HOME → /mnt/UDISK/root (more space)
 cartographer|is_cartographer|Cartographer probe + Klipper patches
@@ -12,17 +11,12 @@ fluidd|is_fluidd|Web UI (alternative to Mainsail)
 macros|is_macros|START_PRINT / M191 / bed_mesh macros
 moonraker|is_moonraker|Klipper API server (replaces Creality)
 screws_tilt_adjust|is_screws_tilt|Manual bed-screws assist
-secure-auth|is_secure_auth|Lock down moonraker trusted_clients
-skip-setup|is_skip_setup|Skip first-run wizard
-r3men-bed|is_r3men_bed|R3MEN bed thermistor profile'
-
-# Canonical install order (deps first). Used by install_all_missing.
-_FEATURES_ORDER='entware better-root better-init cartographer moonraker fluidd macros screws_tilt_adjust secure-auth axis_twist_compensation abort_homing skip-setup'
+skip-setup|is_skip_setup|Skip first-run wizard'
 
 menu_features() {
     while :; do
         clear
-        printf '\n=== k2-improvements features ===\n\n'
+        printf '\n=== Core k2-improvements features ===\n\n'
         local n=0
         local OLDIFS="$IFS"
         IFS='
@@ -37,13 +31,11 @@ menu_features() {
             printf '  %2d. %s %-25s %s\n' "$n" "$mark" "$name" "$(c_dim "$desc")"
         done
         IFS="$OLDIFS"
-        printf '\n   i. Install all NOT-installed (in dep order)\n'
-        printf '   b. Back\n\n'
+        printf '\n   b. Back\n\n'
         printf 'Choose: '
         read -r c
         case "$c" in
             b|B|q|Q) return ;;
-            i|I) install_all_missing ;;
             ''|*[!0-9]*) ;;
             *)
                 local picked=$(printf '%s' "$_FEATURES" | sed -n "${c}p" | cut -d'|' -f1)
@@ -109,44 +101,4 @@ show_feature_readme() {
     printf '%s\n\n' '----------------------------------------------------------------'
     cat "$readme"
     printf '\n%s\n\n' '----------------------------------------------------------------'
-}
-
-# Install all features not yet installed, in canonical dep order
-install_all_missing() {
-    clear
-    printf '\n=== Install all NOT-installed features ===\n\n'
-    printf 'Order: %s\n\n' "$_FEATURES_ORDER"
-    if ! confirm "Proceed? Each feature's own install.sh runs in turn"; then return; fi
-
-    local skipped=0 installed=0 failed=0
-    for name in $_FEATURES_ORDER; do
-        local det=$(printf '%s' "$_FEATURES" | grep "^$name|" | cut -d'|' -f2)
-        [ -z "$det" ] && continue
-
-        printf '\n--- %s ---\n' "$name"
-        if "$det"; then
-            info "already installed — skipping"
-            skipped=$((skipped+1))
-            continue
-        fi
-
-        local script="$INSTALLER_DIR/features/$name/install.sh"
-        if [ ! -f "$script" ]; then
-            warn "missing $script — skipping"
-            failed=$((failed+1))
-            continue
-        fi
-
-        pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
-        if HOME="$pwd_home" sh "$script"; then
-            installed=$((installed+1))
-        else
-            warn "$name install.sh failed (continuing)"
-            failed=$((failed+1))
-        fi
-    done
-
-    printf '\n=== Summary: %d installed, %d skipped, %d failed ===\n\n' \
-        "$installed" "$skipped" "$failed"
-    press_enter
 }

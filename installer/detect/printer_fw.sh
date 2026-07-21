@@ -1,5 +1,5 @@
 #!/bin/sh
-# Detect K2 Plus printer firmware version. Echoes "1.1.3.13", "1.1.5.2", etc., or "unknown".
+# Detect the K2 Plus printer firmware version, or echo "unknown".
 
 detect_printer_fw() {
     local v=""
@@ -15,11 +15,4 @@ detect_printer_fw() {
     fi
 
     [ -n "$v" ] && echo "$v" || echo "unknown"
-}
-
-is_supported_fw() {
-    case "$1" in
-        1.1.3.13|1.1.5.2) return 0 ;;
-        *) return 1 ;;
-    esac
 }

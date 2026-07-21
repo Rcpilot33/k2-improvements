@@ -64,6 +64,8 @@ the same key is not already present in `overrides.cfg`.
 - Reapplying the active profile is a no-op.
 - Before a change, `overrides.cfg` is backed up beside the file with a
   `.before-cartographer-offset-<timestamp>` suffix.
+- After a successful change, only the two newest backups created by this
+  installer are retained; older matching backups are deleted.
 - If either stock `[stepper_y]` value cannot be read from `printer.cfg`, the
   installer exits without changing anything.
 

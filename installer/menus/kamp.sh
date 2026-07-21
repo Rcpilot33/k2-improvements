@@ -25,13 +25,13 @@ menu_kamp() {
 }
 
 kamp_show_readme() {
-    local readme="$INSTALLER_DIR/features/kamp-adaptive-purge/README.md"
+    local readme="$INSTALLER_DIR/installer/extras/kamp-adaptive-purge/README.md"
     show_feature_readme "kamp-adaptive-purge" "$readme"
     press_enter
 }
 
 kamp_install() {
-    local script="$INSTALLER_DIR/features/kamp-adaptive-purge/install.sh"
+    local script="$INSTALLER_DIR/installer/extras/kamp-adaptive-purge/install.sh"
     clear
     printf '\n=== Install KAMP adaptive purge ===\n\n'
     if [ ! -f "$script" ]; then

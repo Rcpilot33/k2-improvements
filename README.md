@@ -1,8 +1,28 @@
-# K2 Improvements
+# K2 Improvements - Menu Installer Fork
+
+This fork preserves Jacob10383's original feature installers and legacy
+`gimme-the-jamin.sh` / `no-carto.sh` entry points while adding a menu-based,
+resumable installation system.
 
 ## Firmware & Cartographer Support
 
-**Firmware compatibility:** Users have reported it working on any Creality firmware up to 1.1.5.5. Firmware 1.1.6.1 made no relevant file changes, so it is likely compatible too.
+### Fully tested Creality firmware
+
+- `1.1.3.13`
+- `1.1.5.2`
+- `1.1.5.5`
+
+On each version, the following paths were installed and function-tested:
+
+- Stock PR Touch / no-Cartographer installation
+- Cartographer installation
+- Stock PR Touch installation followed by Cartographer installation on top
+- Individual feature installers
+
+Testing included repeated completed prints after each installation path on each
+firmware version. Versions not listed above have not received the same complete
+installation-and-print test cycle; no version-specific installer changes are
+required for the three tested versions.
 
 I now use my own firmware instead of Creality firmware, so I no longer use this project. If interested, you can check it out on Discord: <https://discord.gg/RcnUFd7dfX>
 
@@ -55,11 +75,19 @@ echo "all" | /usr/bin/nc -U /var/run/wipe.sock
 
 ## Installers
 
-A unified installation menu is *planned*.  For now each feature can be found under the [features](./features/) directory.  A `README.md` and installation script `install.sh` are provided for each option.
+The recommended entry point for this fork is the unified menu:
 
-The unified installer will understand inter option dependencies and ensure they are met.
+```sh
+sh /mnt/UDISK/root/k2-improvements/menu.sh
+```
 
-For now, there are two default installations:   **Note either option will take some time and seem to hang at times. Be patient as it is moving lots of files and creating venvs for klipper and moonraker full installs
+The menu provides safe, resumable setup paths for both stock PR Touch and
+Cartographer, displays installed-component status, skips components already
+installed, and keeps individual Jacob feature installers available.
+
+The original scripts remain available and unchanged. Either option can take
+some time and may appear to pause while moving files and creating the Klipper
+and Moonraker virtual environments.
 
 - Option 1: `gimme-the-jamin.sh` - Used to install carto **NOTE MUST HAVE CARTO FLASHED AND PLUGGED IN AND READY TO GO** by following instructions [here](https://github.com/Jacob10383/k2-improvements/blob/main/features/cartographer/firmware/README.md) first.
 

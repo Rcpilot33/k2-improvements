@@ -254,6 +254,19 @@ cp "$OVERRIDES_CFG" "$BACKUP"
 mv "$NEW_CFG" "$OVERRIDES_CFG"
 trap - EXIT HUP INT TERM
 
+# Keep recovery useful without filling custom/ after repeated mount testing.
+# The glob is deliberately limited to backups created by this installer.
+OLD_BACKUPS=$(ls -1t "${OVERRIDES_CFG}.before-cartographer-offset-"* 2>/dev/null | awk 'NR > 2')
+if [ -n "$OLD_BACKUPS" ]; then
+    printf '%s\n' "$OLD_BACKUPS" | while IFS= read -r old_backup; do
+        if rm -f "$old_backup"; then
+            echo "I: removed old backup $old_backup"
+        else
+            echo "W: could not remove old backup $old_backup"
+        fi
+    done
+fi
+
 echo
 echo "I: applied $LABEL"
 echo "I: cartographer.cfg was not changed"

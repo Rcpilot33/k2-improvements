@@ -8,6 +8,7 @@ show_status() {
     local cfw=$(detect_carto_fw)
 
     printf '\n=== K2 Plus installer status ===\n\n'
+    printf '  Installed setup     : %s\n' "$(detect_install_profile)"
     printf '  Printer firmware    : %s\n' "$fw"
     printf '  Cartographer HW     : %s\n' "${chw:-unknown}"
     printf '  Cartographer FW     : %s\n' "${cfw:-unknown}"
@@ -16,21 +17,23 @@ show_status() {
     status_line 'Entware (opkg, git, curl)'  is_entware
     status_line 'better-root ($HOME → UDISK)' is_better_root
     status_line 'better-init (PATH/profile.d)' is_better_init
-    printf '\n--- k2-improvements features ---\n'
+    printf '\n--- Core k2-improvements features ---\n'
     status_line 'cartographer'                is_cartographer
     status_line 'moonraker'                   is_moonraker
     status_line 'fluidd'                      is_fluidd
     status_line 'macros (start_print/m191/bed_mesh)' is_macros
     status_line 'screws_tilt_adjust'          is_screws_tilt
-    status_line 'axis_twist_compensation'     is_axis_twist
     status_line 'abort_homing'                is_abort_homing
-    status_line 'secure-auth'                 is_secure_auth
     status_line 'skip-setup'                  is_skip_setup
-    printf '\n--- K2-Plus extras ---\n'
-    status_line 'KAMP adaptive purge'         is_kamp
+    printf '\n--- Optional features / K2-Plus extras ---\n'
+    status_line 'axis_twist_compensation'     is_axis_twist
+    status_line 'secure-auth'                 is_secure_auth
+    status_line 'R3MEN bed thermistor profile' is_r3men_bed
+    if [ -f "$INSTALLER_DIR/installer/extras/kamp-adaptive-purge/install.sh" ]; then
+        status_line 'KAMP adaptive purge'     is_kamp
+    fi
     status_line 'surface-selection wrapper'   is_surface_wrap
     status_line 'cartographer macros (CARTO_*)' is_carto_macros
-    status_line 'motor-state guard (UNTESTED)' is_motor_guard
     status_line 'homing.py hasattr fix'       is_homing_hasattr
     status_line 'prtouch_v3 SAVE_CONFIG clean' is_prtouch_clean
     printf '\n'

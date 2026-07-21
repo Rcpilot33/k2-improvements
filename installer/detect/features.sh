@@ -71,6 +71,34 @@ detect_carto_offset_label() {
 is_homing_hasattr() { grep -q "hasattr.*get_suspended_det_status" "$KLIPPER_DIR/klippy/extras/homing.py" 2>/dev/null; }
 is_prtouch_clean() { ! grep -q '^#\*# \[prtouch_v3\]$' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null; }
 
+# Shared essentials installed by both recommended setup paths.
+is_essentials_core() {
+    is_entware &&
+    is_better_root &&
+    is_better_init &&
+    is_skip_setup &&
+    is_moonraker &&
+    is_fluidd &&
+    is_screws_tilt &&
+    is_abort_homing &&
+    is_macros
+}
+
+# Human-readable setup selected through the recommended installers.
+detect_install_profile() {
+    if is_cartographer; then
+        if is_essentials_core; then
+            echo "Cartographer"
+        else
+            echo "Cartographer (incomplete)"
+        fi
+    elif is_essentials_core; then
+        echo "stock probe / no-Cartographer"
+    else
+        echo "not installed / incomplete"
+    fi
+}
+
 # Pretty-print a feature's status. Args: label, detector_function_name
 status_line() {
     local label="$1"

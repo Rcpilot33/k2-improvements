@@ -6,49 +6,30 @@ main_menu() {
         clear
         local fw=$(detect_printer_fw)
         local chw=$(detect_carto_hw)
+        local setup=$(detect_install_profile)
 
-            printf '\n=== K2 Plus Installer ===  fw: %s  carto: %s\n\n' "$fw" "${chw:-unknown}"
+            printf '\n=== K2 Plus Installer ===  fw: %s  carto: %s\n' "$fw" "${chw:-unknown}"
+            printf '    setup: %s\n\n' "$setup"
             printf '  1. Status — show what is installed\n'
             printf '  2. Install stock probe / no-Cartographer setup\n'
             printf '  3. Install Cartographer setup\n'
-            printf '  4. Features (k2-improvements) ▶\n'
-            printf '  5. Extras (K2-Plus patches) ▶\n'
-            printf '  6. KAMP adaptive purge ▶\n'
-            printf '  7. Cartographer firmware flash ▶\n'
-            printf '  8. Factory reset / cleanup tools ▶\n'
-            printf '  9. Update installer (git pull)\n'
+            printf '  4. Core features (Cartographer stack) ▶\n'
+            printf '  5. Extras (optional features / patches) ▶\n'
+            printf '  6. Cartographer firmware flash ▶\n'
+            printf '  7. Factory reset / cleanup tools ▶\n'
+            printf '  8. Update installer (git pull)\n'
             printf '  0. Exit\n\n'
-            printf 'Choose [0-9]: '
+            printf 'Choose [0-8]: '
             read -r c
             case "$c" in
                 1) show_status ;;
-                2)
-                    clear
-                    printf '\n=== Install stock probe / no-Cartographer setup ===\n\n'
-                    printf 'This installs the K2 Improvements core setup for the stock PR Touch probe path.\n'
-                    printf 'It does NOT install the Cartographer feature.\n\n'
-                    printf 'Included:\n'
-                    printf '  - better-init\n'
-                    printf '  - skip-setup\n'
-                    printf '  - moonraker\n'
-                    printf '  - fluidd\n'
-                    printf '  - screws_tilt_adjust\n'
-                    printf '  - abort_homing\n'
-                    printf '  - bed_mesh / m191 / start_print / overrides macros\n\n'
-                    printf '%s\n' "$(c_yellow 'WARNING: this will modify Klipper/printer config. Make sure no print is active.')"
-                    printf '\n'
-                    if confirm "Proceed with stock probe / no-Cartographer setup?"; then
-                        sh "$INSTALLER_DIR/no-carto.sh"
-                    fi
-                    press_enter
-                    ;;
+                2) menu_install_no_carto ;;
                 3) menu_install_all ;;
                 4) menu_features ;;
                 5) menu_extras ;;
-                6) menu_kamp ;;
-                7) menu_carto_fw ;;
-                8) menu_factory_reset ;;
-                9) menu_update_installer ;;
+                6) menu_carto_fw ;;
+                7) menu_factory_reset ;;
+                8) menu_update_installer ;;
                 0|q|Q) exit 0 ;;
                 *) ;;
             esac

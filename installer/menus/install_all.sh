@@ -135,9 +135,9 @@ menu_install_all() {
     printf '  1. Power-cycle the printer from the mains (the cartographer install\n'
     printf '     restarted Klipper, which under K2 Plus motor-state caveat means\n'
     printf '     your next G28 must come AFTER a real boot).\n'
-    printf '  2. Optional QoL: KAMP (item 6); surface-selection-wrapper and\n'
-    printf '     axis_twist_compensation are available from Extras/Features (items 5/4).\n'
-    printf '  3. Optional: Cartographer firmware flash (item 7).\n'
+    printf '  2. Optional QoL: surface-selection-wrapper and axis_twist_compensation\n'
+    printf '     are available from Extras/Features (items 5/4).\n'
+    printf '  3. Optional: Cartographer firmware flash (item 6).\n'
     printf '  4. Calibrate per surface: CARTOGRAPHER_CALIBRATE METHOD=manual NAME=<plate>\n'
     printf '     and BED_MESH_CALIBRATE for each plate (default/pei/coolplate/etc).\n\n'
     press_enter

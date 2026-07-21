@@ -8,7 +8,16 @@ _EXTRAS='prtouch-cleanup|is_prtouch_clean|Remove orphan [prtouch_v3] SAVE_CONFIG
 surface-selection-wrapper|is_surface_wrap|START_PRINT SURFACE= param loads matching scan/touch model|installer/extras/surface-selection-wrapper/install.sh|is_cartographer
 cartographer-offset-setup|is_carto_offset_set|Cartographer probe X/Y offset (Jamin/JimmyV/custom)|installer/extras/cartographer-offset-setup/install.sh|is_cartographer
 cartographer-macros|is_carto_macros|CARTO_* macro buttons for Fluidd (calibrate/load/touch home)|installer/extras/cartographer-macros/install.sh|is_cartographer
-motor-state-guard|is_motor_guard|G28 crash-guard after klippy-only restart (UNTESTED)|features/motor-state-guard/install.sh|'
+axis_twist_compensation|is_axis_twist|Optional Z-drift compensation across X|features/axis_twist_compensation/install.sh|
+secure-auth|is_secure_auth|Optional Moonraker trusted_clients lockdown|features/secure-auth/install.sh|
+r3men-bed|is_r3men_bed|R3MEN graphite-bed thermistor profile|features/r3men-bed/install.sh|'
+
+# Keep this conditional so older checkouts without the KAMP extra do not
+# advertise an installer that is not present.
+if [ -f "$INSTALLER_DIR/installer/extras/kamp-adaptive-purge/install.sh" ]; then
+    _EXTRAS="${_EXTRAS}
+kamp-adaptive-purge|is_kamp|KAMP adaptive purge|installer/extras/kamp-adaptive-purge/install.sh|"
+fi
 
 # Human-readable hint for the requires_function name. Add new entries here
 # when new precondition functions are introduced.
@@ -84,7 +93,7 @@ install_extra() {
                 printf '  On a fresh K2 Plus, install Cartographer via:\n\n'
                 printf '    - Menu item 3 (Install essentials)  — recommended path\n'
                 printf '    - Menu item 4 (Features) -> cartographer\n'
-                printf '    - Or Jacob10383'"'"'s gimme-the-jamin.sh on 1.1.3.13\n\n'
+                printf '    - Or Jacob10383'"'"'s original gimme-the-jamin.sh\n\n'
                 printf '  Once Cartographer is installed and Klipper has restarted with the\n'
                 printf '  new config, this extra will become available.\n\n'
                 ;;
@@ -111,29 +120,6 @@ install_extra() {
             printf '  Currently configured: %s\n\n' "$(c_green "$label")"
             if ! confirm "Open the offset picker?"; then return 0; fi
             ;;
-        motor-state-guard)
-            printf '\n'
-            printf '%s\n' "$(c_red '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')"
-            printf '%s\n' "$(c_red '!!!  WARNING — UNTESTED FEATURE                              !!!')"
-            printf '%s\n' "$(c_red '!!!                                                          !!!')"
-            printf '%s\n' "$(c_red '!!!  Code looks correct but the detection mechanism (tmpfs   !!!')"
-            printf '%s\n' "$(c_red '!!!  marker, delayed_gcode handshake, G28 wrap) has NOT      !!!')"
-            printf '%s\n' "$(c_red '!!!  been verified end-to-end on a live K2 Plus.             !!!')"
-            printf '%s\n' "$(c_red '!!!                                                          !!!')"
-            printf '%s\n' "$(c_red '!!!  If the guard fails to engage you are in the same risk   !!!')"
-            printf '%s\n' "$(c_red '!!!  position as without it: G28 after a klippy-only restart !!!')"
-            printf '%s\n' "$(c_red '!!!  may invert Y and crash the toolhead into the back frame.!!!')"
-            printf '%s\n' "$(c_red '!!!                                                          !!!')"
-            printf '%s\n' "$(c_red '!!!  Install only if you understand and accept the risk.     !!!')"
-            printf '%s\n' "$(c_red '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')"
-            printf '\n'
-            if "$det" 2>/dev/null; then
-                printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"
-                if ! confirm "Re-run install.sh anyway?"; then return 0; fi
-            else
-                if ! confirm "Apply $name DESPITE the warning above?"; then return 0; fi
-            fi
-            ;;
         *)
             if "$det" 2>/dev/null; then
                 printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"
@@ -144,8 +130,10 @@ install_extra() {
             ;;
     esac
 
-    info "running $script"
-    if sh "$script"; then
+    local pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+    [ -n "$pwd_home" ] || pwd_home="$HOME"
+    info "running $script (HOME=$pwd_home)"
+    if HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script"; then
         info "$name install completed"
     else
         warn "$name install.sh exited non-zero"
