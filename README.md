@@ -1,147 +1,233 @@
-# K2 Improvements - Menu Installer Fork
+# K2 Plus Improvements — Menu Installer
 
-This fork preserves Jacob10383's original feature installers and legacy
-`gimme-the-jamin.sh` / `no-carto.sh` entry points while adding a menu-based,
-resumable installation system.
+This fork preserves the core work from [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements) and adds a guided, status-aware installer for the Creality K2 Plus.
 
-## Firmware & Cartographer Support
+The menu provides separate, resumable installation paths for:
 
-### Fully tested Creality firmware
+- The stock PR Touch probe with no Cartographer
+- A Cartographer V3 or V4 setup
+- Converting a previously installed stock-probe setup to Cartographer
+- Installing individual core features and optional extras
+- Flashing or recovering Cartographer firmware from files bundled with this repository
 
-- `1.1.3.13`
-- `1.1.5.2`
-- `1.1.5.5`
+## Important warnings
 
-On each version, the following paths were installed and function-tested:
+> [!WARNING]
+> These scripts modify the printer's rooted operating system, Klipper, Moonraker, Fluidd, and printer configuration. Use them at your own risk and keep a backup of any configuration you want to preserve.
 
-- Stock PR Touch / no-Cartographer installation
-- Cartographer installation
-- Stock PR Touch installation followed by Cartographer installation on top
-- Individual feature installers
+> [!CAUTION]
+> After an installer, `SAVE_CONFIG`, or `FIRMWARE_RESTART` restarts Klipper, fully reboot or power-cycle the printer **before running `G28`**. A known K2 Plus motor-state issue can otherwise cause homing in the wrong direction.
 
-Testing included repeated completed prints after each installation path on each
-firmware version. Versions not listed above have not received the same complete
-installation-and-print test cycle; no version-specific installer changes are
-required for the three tested versions.
+These improvements are not compatible with Creality's automatic calibration workflow. Manual probe calibration, bed-mesh calibration, and tuning are recommended.
 
-I now use my own firmware instead of Creality firmware, so I no longer use this project. If interested, you can check it out on Discord: <https://discord.gg/RcnUFd7dfX>
+## Tested firmware and installation paths
 
-**Cartographer Support:**
+The complete installation and printing test cycle has been performed on:
 
-- Supports Cartographer v3 and v4
-- Includes custom flash tool for flashing either version directly on the K2
-- Includes new Cartographer plugin with custom modifications for K2 compatibility and optimizations
+| Creality firmware | Stock probe | Cartographer | Stock probe → Cartographer | Individual features |
+|---|:---:|:---:|:---:|:---:|
+| `1.1.3.13` | ✓ | ✓ | ✓ | ✓ |
+| `1.1.5.2` | ✓ | ✓ | ✓ | ✓ |
+| `1.1.5.5` | ✓ | ✓ | ✓ | ✓ |
 
-## Live Component Status vs Mainline
+Testing included multiple completed prints after each installation path. Versions not listed may work, but have not received the same complete install-and-print test cycle.
 
-[![Fluidd](https://img.shields.io/badge/dynamic/json?url=https://api.github.com/repos/fluidd-core/fluidd/compare/develop...Jacob10383:fluidd:k2&query=$.behind_by&label=Fluidd&suffix=%20commits%20behind&color=blue&style=for-the-badge&logo=github)](https://github.com/Jacob10383/fluidd/tree/k2)  
-![Fluidd Last Update](https://img.shields.io/badge/dynamic/json?url=https://gist.githubusercontent.com/Jacob10383/f94d1bab6f84f53cd0a88e33c528d196/raw/fluidd-last-update.json&query=$.date&label=Last%20Synced&style=flat-square&color=gray)
+Cartographer V3 and V4 normal USB/Katapult flashing and bundled STM32 DFU recovery have also been tested on printer hardware.
 
-[![Moonraker](https://img.shields.io/badge/dynamic/json?url=https://api.github.com/repos/Arksine/moonraker/compare/master...jacob10383:moonraker:k2&query=$.behind_by&label=Moonraker&suffix=%20commits%20behind&color=blue&style=for-the-badge&logo=github)](https://github.com/jacob10383/moonraker/tree/k2)  
-![Moonraker Last Update](https://img.shields.io/badge/dynamic/json?url=https://gist.githubusercontent.com/Jacob10383/f94d1bab6f84f53cd0a88e33c528d196/raw/moonraker-last-update.json&query=$.date&label=Last%20Synced&style=flat-square&color=gray)
+## Quick start
 
-[![Cartographer](https://img.shields.io/badge/dynamic/json?url=https://api.github.com/repos/Cartographer3D/cartographer3d-plugin/compare/main...jacob10383:cartographer3d-plugin:main&query=$.behind_by&label=Cartographer&suffix=%20commits%20behind&color=blue&style=for-the-badge&logo=github)](https://github.com/jacob10383/cartographer3d-plugin)  
-![Cartographer Last Update](https://img.shields.io/badge/dynamic/json?url=https://gist.githubusercontent.com/Jacob10383/f94d1bab6f84f53cd0a88e33c528d196/raw/cartographer-last-update.json&query=$.date&label=Last%20Synced&style=flat-square&color=gray)
+### Before you begin
 
-*Tracks my forks vs upstream as updates happen there, not here.*
+1. Enable root access from the K2 Plus screen under **Settings → General → Root Account Information**.
+2. Record the displayed root password and the printer's IP address.
+3. Connect to the printer over SSH as `root` on port `22`.
+4. Make sure no print is active.
 
-## DISCLAIMER
+A clean factory reset is recommended when replacing previous third-party modifications. After a reset, complete the on-screen setup far enough to restore the network connection, but stop before Creality calibration.
 
-Use at your own risk, I'm not responsible for fires or broken dreams.  But you do get to keep both halves if something breaks.
+### Start bootstrap and open the installer menu
 
-## Warning
+Copy this entire command into the printer's SSH session:
 
-As a *heads up* these improvements are not compatible with Creality's *auto-calibration*.  In our experience we get better results through manual tuning.
-
-## Start Here at Bootstrap
-
-The Bootstrap is a requirement for the improvements to install properly, so this must be accomplished first. Of note, it will install entware tools necessary to accomplish the installs. Additionally, root is enabled by default with the password: 'creality_2024'. At some point, we recommend running command 'passwd' in the terminal to change the defualt password to something secure.
-
-It is recommend to perform a factory reset prior to install to avoid potential conflicts with previous modifications.  A factory reset can be achieved with the following command in a terminal on the K2:
-
-```raw
-echo "all" | /usr/bin/nc -U /var/run/wipe.sock
+```sh
+python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githubusercontent.com/Rcpilot33/k2-1155-Jacob-Fork/k2-1155-compat/bootstrap.sh", "/tmp/bootstrap.sh")' && sh /tmp/bootstrap.sh localhost --menu
 ```
 
-1. Enable root access on the K2 Plus by going to Settings, General tab and root on the physical screen. Take note of the password.
-1. Download the latest bootstrap release from [https://github.com/Jacob10383/k2-improvements/releases](https://github.com/Jacob10383/k2-improvements/releases) and extract the folder.
-1. To install the bootstrap, connect to your K2 Plus's Fluid interface via browser **<http://PrinterIP:4408>**
-1. Unzip the downloaded bootstrap folder and upload the extracted bootstrap folder by going to Configuration **{...}**, **+**, **Upload Folder**, and selecting the extracted bootstrap folder.
-    ![image](https://github.com/user-attachments/assets/3d242efc-4cf8-412d-b4b0-59507720f5ad)
-1. SSH to the K2 Plus using any terminal tool (e.g. PuTTy) using the printers ip adress, port 22, user "root" and the password noted in step 1.
-1. If you execute a wipe, you will need to go through setup on the K2 screen and complete all the way through creality cloud connection. This will give you the wifi/network connection that you will need and connect appropriately to creality cloud. Stop at the calibration, you can do this later.
-1. To start the boostrap install paste into the terminal `sh /mnt/UDISK/printer_data/config/bootstrap/bootstrap.sh` and hit enter.
-1. Once the setup completes, it will log you out of your terminal and you will need to log back in.
+The `--menu` path installs or updates the bootstrap requirements, then asks whether to open the installer menu. Enter `y` to continue into the menu. No, blank input, or an input failure finishes without opening it.
 
-## Installers
+### Bootstrap without the menu prompt
 
-The recommended entry point for this fork is the unified menu:
+Use this form when you only want to install or update the bootstrap and repository:
+
+```sh
+python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githubusercontent.com/Rcpilot33/k2-1155-Jacob-Fork/k2-1155-compat/bootstrap.sh", "/tmp/bootstrap.sh")' && sh /tmp/bootstrap.sh localhost --no-menu
+```
+
+The default with no menu flag is also `--no-menu`. On the first run, `better-root` may intentionally end the SSH session. Reconnect and start the menu with:
 
 ```sh
 sh /mnt/UDISK/root/k2-improvements/menu.sh
 ```
 
-The menu provides safe, resumable setup paths for both stock PR Touch and
-Cartographer, displays installed-component status, skips components already
-installed, and keeps individual Jacob feature installers available.
+Bootstrap installs Entware when needed, configures the larger persistent root home, and clones or updates this branch at `/mnt/UDISK/root/k2-improvements`.
 
-The original scripts remain available and unchanged. Either option can take
-some time and may appear to pause while moving files and creating the Klipper
-and Moonraker virtual environments.
+## Choose an installation path
 
-- Option 1: `gimme-the-jamin.sh` - Used to install carto **NOTE MUST HAVE CARTO FLASHED AND PLUGGED IN AND READY TO GO** by following instructions [here](https://github.com/Jacob10383/k2-improvements/blob/main/features/cartographer/firmware/README.md) first.
+| Goal | Main-menu choice | What it does |
+|---|---|---|
+| Keep the stock PR Touch probe | **2. Install stock probe / no-Cartographer setup** | Installs the supported core stack without Cartographer. |
+| Install Cartographer | **3. Install Cartographer setup** | Installs the Cartographer stack and then offers the required mount-offset picker. |
+| Add Cartographer later | **3. Install Cartographer setup** | Detects and skips the components already installed by the stock-probe path. |
+| Add one component | **4. Core features** or **5. Extras** | Shows installation status and runs only the selected installer. |
 
-    To run, use the terminal command `sh /mnt/UDISK/root/k2-improvements/gimme-the-jamin.sh`
+The installers are resumable. Before each step, the menu checks what is already installed and skips completed components. A summary reports installed, skipped, and failed steps.
 
-    After install you will need to calibrate the carto by following instructions [here](https://github.com/Jacob10383/k2-improvements/blob/main/features/cartographer/SETUP.md)
+The stock-probe installer does **not** remove an existing Cartographer installation or restore a converted printer automatically. It will stop if Cartographer is detected.
 
-- Option 2: `no-carto.sh` - Use this if you aren't going to use a carto, or don't have your carto yet.
+## Main menu
 
-    To run, use the terminal command `sh /mnt/UDISK/root/k2-improvements/no-carto.sh`
+| Item | Purpose |
+|---:|---|
+| 1 | Show the detected printer firmware, installed setup, Cartographer hardware/firmware, offsets, core features, and extras. |
+| 2 | Install the stock PR Touch / no-Cartographer setup. |
+| 3 | Install the recommended Cartographer setup. Firmware flashing is intentionally separate. |
+| 4 | Install individual core `k2-improvements` features. |
+| 5 | Install optional features and K2 Plus patches. |
+| 6 | Open normal Cartographer flashing and bundled DFU recovery tools. |
+| 7 | Preview or run factory-reset cleanup tools. |
+| 8 | Update the installer with a fast-forward-only `git pull`. |
+| 0 | Exit. |
 
-They both install the same set of features (those that I use).  The only difference is whether or not the cartographer bits are installed. If you start with no-carto.sh and later get a carto, you can then run the gimme-the-jamin.sh script and it will install all of the necessary carto items appropriately.
+`[X]` means the detector considers an item installed, `[ ]` means it is not installed, and `[!]` means an extra is unavailable until its prerequisite is installed.
 
-You are still welcome to hand pick which features you want to install.
+## Cartographer setup
 
-## Donations
+### Firmware flashing
 
-Donations are definitely *not required*, they are appreciated.  If you'd like to donate you can do so [here](https://ko-fi.com/jacob10383).
+Cartographer firmware flashing is a separate, explicit menu action because it requires the probe to be connected and may require physical access.
 
-## Features
+The normal USB/Katapult path:
 
-- [axis_twist_compensation](./features/axis_twist_compensation/README.md)
-- [better init](./features/better-init/README.md)
-- [better root](./features/better-root/README.md) home directory
-- [Cartographer](./features/cartographer/README.md) support
-- installs [Entware](https://github.com/Entware/Entware)
-- updated [Fluidd](./features/fluidd/README.md)
-- updated [Moonraker](./features/moonraker/README.md)
-- [Obico](./features/obico/README.md) - *WIP*
-- implements [SCREWS_TILT_CALCULATE](https://www.klipper3d.org/Manual_Level.html#adjusting-bed-leveling-screws-using-the-bed-probe)
+- Detects the connected Cartographer and its V3/V4 hardware
+- Enters Katapult automatically when possible
+- Offers only the firmware bundled and tested for this printer
+- Writes and verifies the selected image
 
-And a few quality of life improvement macros
+The included choices are:
 
-- [MESH_IF_NEEDED](./features/macros/bed_mesh/README.md)
-- [START_PRINT](./features/macros/start_print/README.md)
-- [M191](./features/macros/m191/README.md)
+| Hardware | Full | Lite fallback |
+|---|---|---|
+| Cartographer V3 / STM32F042 | `5.1.0` | `K1 5.1.0` |
+| Cartographer V4 / STM32G431 | `6.0.0` | `V4 6.0.0 Lite` |
 
-### Bed Leveling
+Full is the recommended K2 configuration. Lite is the conservative fallback for timing problems.
 
-Sadly, many of the K2 beds resemble a taco or valley.  In the [bed_leveling](bed_leveling) folder you will find a python based script and short writeup on how to apply aluminium tape to shim the bed.
+### Bundled DFU recovery
 
-## Credits
+Use DFU only when normal USB/Katapult flashing cannot communicate with the probe. V3 and V4 both appear as `0483:df11` in true STM32 DFU mode, so the recovery menu requires manual hardware selection.
 
-- [@Guilouz](https://github.com/Guilouz) - standing on the shoulders of giants
+DFU recovery:
+
+- Requires the probe to be placed physically into DFU mode using its pads
+- Requires you to confirm V3 or V4 before writing
+- Uses checksum-verified combined images bundled in this repository
+- Writes both Katapult and Cartographer firmware at `0x08000000`
+- Does not need an internet connection while performing the recovery
+
+Selecting the wrong hardware image requires reflashing the correct one. Read the [Cartographer firmware instructions](./features/cartographer/firmware/README.md) before using recovery.
+
+### Mount offsets and calibration
+
+The Cartographer installer offers a mount-offset picker after the automatic steps. It supports the Jamin mount, JimmyV mount, and custom offsets without deleting the inherited values from `cartographer.cfg`; managed values are written to `overrides.cfg`, where they take precedence.
+
+The offset tool retains only the two newest `overrides.cfg.before-cartographer-offset-*` backups.
+
+After a full printer reboot, follow the [Cartographer setup and calibration guide](./features/cartographer/SETUP.md). Offsets and calibration models must match the physical mount and build surface.
+
+## Core installation contents
+
+The guided paths install the required items in dependency order. The Cartographer path adds Cartographer and its cleanup step; the stock-probe path omits them.
+
+| Component | Purpose |
+|---|---|
+| Entware | Package toolchain used by the installers. |
+| [better-root](./features/better-root/README.md) | Moves root's home to persistent UDISK storage. |
+| [better-init](./features/better-init/README.md) | Loads the persistent profile environment. |
+| skip-setup | Preserves Jacob's first-run wizard bypass. |
+| [Moonraker](./features/moonraker/README.md) | Mainline-based Klipper API server. |
+| [Fluidd](./features/fluidd/README.md) | Updated printer web interface. |
+| [screws_tilt_adjust](./features/screws_tilt_adjust/README.md) | Manual bed-screw adjustment support. |
+| Cartographer | Probe support and K2-specific Klipper patches; Cartographer path only. |
+| abort_homing | Allows an emergency stop to abort homing. |
+| Macros | Installs `START_PRINT`, `M191`, bed-mesh, and overrides support. |
+
+Optional quality-of-life and hardware-specific changes are intentionally excluded from the guided installation paths.
+
+## Optional extras
+
+Extras are installed individually from menu item 5.
+
+| Extra | Purpose / requirement |
+|---|---|
+| [Cartographer offset setup](./installer/extras/cartographer-offset-setup/README.md) | Select Jamin, JimmyV, or custom probe offsets; requires Cartographer. |
+| [Surface selection wrapper](./installer/extras/surface-selection-wrapper/README.md) | Loads matching scan/touch models through the `START_PRINT SURFACE=` parameter; requires Cartographer. |
+| [Cartographer macros](./installer/extras/cartographer-macros/README.md) | Adds `CARTO_*` calibration/load/touch-home controls; requires Cartographer. |
+| [Axis twist compensation](./features/axis_twist_compensation/README.md) | Optional compensation for Z drift across X. |
+| [KAMP adaptive purge](./installer/extras/kamp-adaptive-purge/README.md) | Adds the adaptive purge feature. |
+| [R3MEN bed profile](./features/r3men-bed/README.md) | Adds the R3MEN graphite-bed thermistor profile. |
+| [Secure Auth](./features/secure-auth/README.md) | Disables SSH password login only after a valid-looking public key is detected. Test the key in a second terminal first. |
+| [PR Touch cleanup](./installer/extras/prtouch-cleanup/README.md) | Removes an orphan `[prtouch_v3]` `SAVE_CONFIG` header. |
+| homing.py `hasattr` fix | Optional K2 Plus homing compatibility patch. |
+
+## Updating
+
+Use **8. Update installer** from the main menu, rerun either bootstrap command above, or run:
+
+```sh
+cd /mnt/UDISK/root/k2-improvements
+git pull --ff-only
+```
+
+## Factory reset and cleanup
+
+Menu item 7 provides a dry run and a separately confirmed destructive reset. Review the dry run first.
+
+The improved reset preserves `/mnt/UDISK/root` and `/mnt/UDISK/bin`, removes most other top-level UDISK directories—including `/mnt/UDISK/printer_data`—and then triggers Creality's factory reset. Printer configuration, custom macros, saved meshes, logs, and backups under `printer_data` will be removed.
+
+## Legacy entry points
+
+The inherited entry-point scripts remain available for compatibility:
+
+```sh
+sh /mnt/UDISK/root/k2-improvements/gimme-the-jamin.sh
+sh /mnt/UDISK/root/k2-improvements/no-carto.sh
+```
+
+The menu-based paths are recommended because they display status, skip completed work, enforce prerequisites, and provide clearer recovery instructions.
+
+## Additional tools
+
+Many K2 Plus beds have a pronounced valley or crown. The [`bed_leveling`](./bed_leveling) folder contains a script and guide for measuring the bed and applying aluminium tape as a shim.
+
+See the project [FAQ](./FAQ.md) for common questions and troubleshooting.
+
+## Project lineage and credits
+
+This repository builds on [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements). The menu-based installer work was informed by [erondiel's `v1.1.24` fork](https://github.com/erondiel/k2-improvements/tree/v1.1.24) and other community forks while keeping Jacob's feature installers and project layout recognizable.
+
+Original-project acknowledgements:
+
+- [@Guilouz](https://github.com/Guilouz)
 - [@stranula](https://github.com/stranula)
 - [@juliosueiras](https://github.com/juliosueiras)
+- [Moonraker](https://github.com/Arksine/moonraker)
+- [Klipper](https://github.com/Klipper3d/klipper)
+- [Fluidd](https://github.com/fluidd-core/fluidd)
+- [Entware](https://github.com/Entware/Entware)
+- [Cartographer 3D](https://github.com/Cartographer3D)
 
-- Moonraker - [https://github.com/Arksine/moonraker](https://github.com/Arksine/moonraker)
-- Klipper - [https://github.com/Klipper3d/klipper](https://github.com/Klipper3d/klipper)
-- Fluidd - [https://github.com/fluidd-core/fluidd](https://github.com/fluidd-core/fluidd)
-- Entware - [https://github.com/Entware/Entware](https://github.com/Entware/Entware)
-- Obico - [https://www.obico.io/](https://www.obico.io/)
-- SimplyPrint - [https://simplyprint.io/](https://simplyprint.io/)
+Donations to support Jacob's original work are available through [Jacob10383's Ko-fi](https://ko-fi.com/jacob10383).
 
-## FAQ
+## Disclaimer
 
-See the [FAQ](./FAQ.md)
+Use this software at your own risk. The maintainers and contributors are not responsible for damage to the printer, probe, configuration, or other property.

@@ -24,8 +24,7 @@ is_kamp()          { [ -L "$PRINTER_CFG_DIR/custom/Line_Purge.cfg" ]; }
 is_screws_tilt()   { [ -L "$PRINTER_CFG_DIR/custom/screws_tilt_adjust.cfg" ]; }
 is_r3men_bed() {
     grep -qE '^\[thermistor R3men_bed\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null &&
-    grep -qE '^[[:space:]]*sensor_type:[[:space:]]*R3men_bed' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null &&
-    grep -qE '^[[:space:]]*max_power:[[:space:]]*0\.8' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null
+    grep -qE '^[[:space:]]*sensor_type:[[:space:]]*R3men_bed' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null
 }
 is_obico()         { [ -d /mnt/UDISK/moonraker-obico ]; }
 is_secure_auth()   { grep -Fq 'procd_append_param command -s' /etc/init.d/dropbear 2>/dev/null && \
