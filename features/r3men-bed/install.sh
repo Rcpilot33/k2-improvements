@@ -49,10 +49,16 @@ for line in lines:
 
     if stripped.startswith("[") and stripped.endswith("]"):
         if in_bed:
+            # Keep generated heater_bed settings inside the section rather
+            # than after its trailing separator lines. Restore one blank line
+            # before the following section for readable formatting.
+            while out and not out[-1].strip():
+                out.pop()
             if not seen_sensor:
                 out.append("sensor_type: R3men_bed")
             if not seen_max_power:
                 out.append("max_power: 0.8")
+            out.append("")
         in_bed = stripped == "[heater_bed]"
         seen_sensor = False
         seen_max_power = False
@@ -90,6 +96,8 @@ for line in lines:
 
 # Handle if [heater_bed] was last section.
 if in_bed:
+    while out and not out[-1].strip():
+        out.pop()
     if not seen_sensor:
         out.append("sensor_type: R3men_bed")
     if not seen_max_power:
