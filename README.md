@@ -228,7 +228,11 @@ See the project [FAQ](./FAQ.md) for common questions and troubleshooting.
 
 ## Project lineage and credits
 
-This repository builds on [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements). The menu-based installer work was informed by [erondiel's `v1.1.24` fork](https://github.com/erondiel/k2-improvements/tree/v1.1.24) and other community forks while keeping Jacob's feature installers and project layout recognizable.
+This repository builds on [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements), which provides the original features and installers. Jacob had also planned a menu-driven installation path.
+
+The working menu implementation in this fork is based substantially on [erondiel's `v1.1.24` fork](https://github.com/erondiel/k2-improvements/tree/v1.1.24). That fork provided the practical foundation and design reference for the guided menu system, which has since been reorganized and extended here with setup detection, resumable install paths, status reporting, recovery tools, and additional safety checks.
+
+The Cartographer plate-profile macros and automatic slicer surface-selection workflow are also adapted from erondiel's work.
 
 Original-project acknowledgements:
 

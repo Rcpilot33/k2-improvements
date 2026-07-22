@@ -45,6 +45,7 @@ is_better_init()   { [ -f /etc/profile.d/better-init.sh ]; }
 is_surface_wrap()  { grep -q 'surface-selection wrapper' "$PRINTER_CFG_DIR/custom/start_print.cfg" 2>/dev/null; }
 is_carto_macros()  { [ -L "$PRINTER_CFG_DIR/custom/cartographer_macros.cfg" ] || \
                      [ -f "$PRINTER_CFG_DIR/custom/cartographer_macros.cfg" ]; }
+is_carto_plate_workflow() { is_carto_macros && is_surface_wrap; }
 is_carto_offset_set() { is_cartographer; }  # always "set" if cartographer is installed (some value is always there)
 is_motor_guard()   { grep -q 'motor-state-guard' "$PRINTER_CFG_DIR/custom/start_print.cfg" 2>/dev/null; }
 

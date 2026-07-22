@@ -64,6 +64,74 @@ run_extra_name() {
     install_extra "$line"
 }
 
+carto_plate_workflow_state() {
+    if is_carto_plate_workflow; then
+        state_installed
+    elif is_carto_macros || is_surface_wrap; then
+        state_incomplete
+    elif ! is_cartographer; then
+        state_requires 'CARTOGRAPHER'
+    else
+        state_not_installed
+    fi
+}
+
+run_carto_plate_workflow() {
+    clear
+    ui_heading 'CARTOGRAPHER PLATE PROFILES / AUTO-SELECTION'
+    printf '\nThis installs the two tied parts of the plate workflow:\n'
+    printf '  - CARTO_* Fluidd buttons for default, PEI, and Coolplate\n'
+    printf '  - START_PRINT surface selection using the slicer plate choice\n\n'
+
+    if ! is_cartographer; then
+        printf '%s\n' "$(c_yellow 'Cannot install: Cartographer is required first.')"
+        press_enter
+        return 1
+    fi
+
+    printf '  %-32s %s\n' 'Cartographer Fluidd macros' \
+        "$(if is_carto_macros; then state_installed; else state_not_installed; fi)"
+    printf '  %-32s %s\n\n' 'Surface-selection wrapper' \
+        "$(if is_surface_wrap; then state_installed; else state_not_installed; fi)"
+
+    if is_carto_plate_workflow; then
+        printf '%s\n' "$(c_green 'Plate profiles and automatic selection are already installed.')"
+        press_enter
+        return 0
+    fi
+
+    if ! confirm 'Install the missing plate-workflow components now?'; then
+        return 0
+    fi
+
+    local pwd_home failed
+    pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+    [ -n "$pwd_home" ] || pwd_home="$HOME"
+    failed=0
+
+    if ! is_carto_macros; then
+        info 'installing Cartographer Fluidd macros'
+        HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" \
+            sh "$INSTALLER_DIR/installer/extras/cartographer-macros/install.sh" \
+            || failed=1
+    fi
+
+    if [ "$failed" -eq 0 ] && ! is_surface_wrap; then
+        info 'installing surface-selection wrapper'
+        HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" \
+            sh "$INSTALLER_DIR/installer/extras/surface-selection-wrapper/install.sh" \
+            || failed=1
+    fi
+
+    if [ "$failed" -eq 0 ] && is_carto_plate_workflow; then
+        printf '\n%s\n' "$(c_green 'Cartographer plate workflow installed successfully.')"
+        printf 'Power-cycle the printer before homing.\n'
+    else
+        printf '\n%s\n' "$(c_yellow 'Plate workflow is incomplete; review the errors above.')"
+    fi
+    press_enter
+}
+
 menu_extras() {
     while :; do
         clear
@@ -73,20 +141,18 @@ menu_extras() {
         printf '\n Print workflow\n'
         ui_menu_item 2 'KAMP adaptive purge' "$(extra_state kamp-adaptive-purge)"
         ui_menu_item 3 'Axis twist compensation' "$(extra_state axis_twist_compensation)"
-        ui_menu_item 4 'Surface / plate selection wrapper' "$(extra_state surface-selection-wrapper)"
-        ui_menu_item 5 'Cartographer Fluidd macros' "$(extra_state cartographer-macros)"
+        ui_menu_item 4 'Cartographer plate profiles / auto-selection' "$(carto_plate_workflow_state)"
         printf '\n Security\n'
-        ui_menu_item 6 'Secure Auth' "$(extra_state secure-auth)"
+        ui_menu_item 5 'Secure Auth' "$(extra_state secure-auth)"
 
-        printf '\n  0. Back\n\nSelect [0-6]: '
+        printf '\n  0. Back\n\nSelect [0-5]: '
         read -r c
         case "$c" in
             1) run_extra_name r3men-bed ;;
             2) run_extra_name kamp-adaptive-purge ;;
             3) run_extra_name axis_twist_compensation ;;
-            4) run_extra_name surface-selection-wrapper ;;
-            5) run_extra_name cartographer-macros ;;
-            6) run_extra_name secure-auth ;;
+            4) run_carto_plate_workflow ;;
+            5) run_extra_name secure-auth ;;
             0|b|B|q|Q) return ;;
             *) ;;
         esac

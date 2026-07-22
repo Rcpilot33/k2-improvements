@@ -46,3 +46,9 @@ reinstalls.
 ## Activation
 
 Klipper picks up the macros on next `FIRMWARE_RESTART`.
+
+## Credit
+
+The predefined Cartographer plate macros and their integration into the
+menu-based workflow are adapted from
+[erondiel's `v1.1.24` fork](https://github.com/erondiel/k2-improvements/tree/v1.1.24).

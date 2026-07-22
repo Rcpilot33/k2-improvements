@@ -50,8 +50,13 @@ show_status() {
     if [ -f "$INSTALLER_DIR/installer/extras/kamp-adaptive-purge/install.sh" ]; then
         status_line 'KAMP adaptive purge' is_kamp
     fi
-    status_line 'surface-selection wrapper' is_surface_wrap
-    status_line 'cartographer macros (CARTO_*)' is_carto_macros
+    if is_carto_plate_workflow; then
+        printf '  %-43s %s\n' 'Cartographer plate profiles / auto-selection' "$(state_installed)"
+    elif is_carto_macros || is_surface_wrap; then
+        printf '  %-43s %s\n' 'Cartographer plate profiles / auto-selection' "$(state_incomplete)"
+    else
+        printf '  %-43s %s\n' 'Cartographer plate profiles / auto-selection' "$(state_not_installed)"
+    fi
 
     printf '\n Maintenance\n'
     if is_prtouch_clean; then

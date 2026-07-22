@@ -60,6 +60,12 @@ If `SURFACE=` is omitted, the wrapper falls back to `default`.
 Klipper picks up the change on next `FIRMWARE_RESTART`. Per K2 Plus
 motor-state caveat, power-cycle from mains before the next G28.
 
+## Credit
+
+The automatic plate-selection workflow and its integration with the
+Cartographer plate macros are adapted from
+[erondiel's `v1.1.24` fork](https://github.com/erondiel/k2-improvements/tree/v1.1.24).
+
 ## Re-applying after `git pull`
 
 The wrapper lives in the upstream macros file. A `git pull` in

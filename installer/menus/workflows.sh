@@ -142,24 +142,36 @@ show_cartographer_setup_checklist() {
   1. Confirm the correct physical mount and offset preset is selected.
   2. Power-cycle the printer before the next G28 after any installer change,
      SAVE_CONFIG, or FIRMWARE_RESTART.
-  3. Calibrate every build plate you intend to use. Give each model the same
-     name that your slicer passes for that selected plate:
+EOF
+    if is_carto_plate_workflow; then
+        cat <<'EOF'
+  3. Cartographer plate profiles and automatic selection are installed. With
+     the correct plate on the bed, use its supplied CARTO_CALIBRATE_* and
+     CARTO_TOUCH_CAL_* buttons in Fluidd, then run:
 
-       CARTOGRAPHER_CALIBRATE METHOD=manual NAME=<plate>
        BED_MESH_CALIBRATE
 
-EOF
-    if is_surface_wrap; then
-        cat <<'EOF'
-  4. The surface-selection wrapper is installed. The plate selected in the
-     slicer is passed as SURFACE and loads the matching Cartographer models.
-     Make sure the calibration NAME matches that SURFACE value.
+  4. The plate selected in your slicer automatically loads the matching
+     calibrated Cartographer models.
 EOF
     else
+        if is_carto_macros || is_surface_wrap; then
+            cat <<'EOF'
+  3. The optional Cartographer plate workflow is INCOMPLETE. Open Extras and
+     run "Cartographer plate profiles / auto-selection" to install its missing
+     component before relying on automatic plate selection.
+EOF
+        else
+            cat <<'EOF'
+  3. Optional per-plate profiles and automatic selection are not installed.
+     For that workflow, install "Cartographer plate profiles / auto-selection"
+     from Extras. It supplies the predefined Fluidd buttons and slicer wrapper
+     together.
+EOF
+        fi
         cat <<'EOF'
-  4. The surface-selection wrapper is not installed. Selecting a plate in the
-     slicer will not automatically load its Cartographer models. Use the
-     default model or manually load the matching models when changing plates.
+  4. Until then, follow the standard Cartographer calibration workflow for the
+     active default plate; slicer plate selection will not switch models.
 EOF
     fi
     cat <<'EOF'
