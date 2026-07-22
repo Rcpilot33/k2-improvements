@@ -142,12 +142,27 @@ show_cartographer_setup_checklist() {
   1. Confirm the correct physical mount and offset preset is selected.
   2. Power-cycle the printer before the next G28 after any installer change,
      SAVE_CONFIG, or FIRMWARE_RESTART.
-  3. Calibrate every build surface you intend to use:
+  3. Calibrate every build plate you intend to use. Give each model the same
+     name that your slicer passes for that selected plate:
 
        CARTOGRAPHER_CALIBRATE METHOD=manual NAME=<plate>
        BED_MESH_CALIBRATE
 
-  4. Use consistent model names such as default, pei, or coolplate.
+EOF
+    if is_surface_wrap; then
+        cat <<'EOF'
+  4. The surface-selection wrapper is installed. The plate selected in the
+     slicer is passed as SURFACE and loads the matching Cartographer models.
+     Make sure the calibration NAME matches that SURFACE value.
+EOF
+    else
+        cat <<'EOF'
+  4. The surface-selection wrapper is not installed. Selecting a plate in the
+     slicer will not automatically load its Cartographer models. Use the
+     default model or manually load the matching models when changing plates.
+EOF
+    fi
+    cat <<'EOF'
   5. Test homing and probing before starting a print.
 
 EOF
@@ -159,7 +174,7 @@ menu_maintenance() {
         clear
         ui_heading 'MAINTENANCE AND RECOVERY'
         printf '\n'
-        ui_menu_item 1 'Core component installer' "$(c_yellow 'ADVANCED')"
+        ui_menu_item 1 'Core component installer' "$(c_cyan 'OPEN MENU')"
         ui_menu_item 2 'PR Touch SAVE_CONFIG cleanup' "$(if is_prtouch_clean; then state_complete; else state_available; fi)"
         ui_menu_item 3 'Factory reset and cleanup tools' "$(state_destructive)"
 
