@@ -40,10 +40,19 @@ Cartographer V3 and V4 normal USB/Katapult flashing and bundled STM32 DFU recove
 
 1. Enable root access from the K2 Plus screen under **Settings → General → Root Account Information**.
 2. Record the displayed root password and the printer's IP address.
-3. Connect to the printer over SSH as `root` on port `22`.
+3. Connect to the printer over SSH as `root` on port `22`. [MobaXterm](https://mobaxterm.mobatek.net/) is the recommended SSH client for Windows and includes a convenient graphical SFTP file browser.
 4. Make sure no print is active.
 
-A clean factory reset is recommended when replacing previous third-party modifications. After a reset, complete the on-screen setup far enough to restore the network connection, but stop before Creality calibration.
+A clean factory reset is recommended when replacing previous third-party modifications. To wipe the printer, copy this command into its SSH session:
+
+```sh
+echo "all" | /usr/bin/nc -U /var/run/wipe.sock
+```
+
+> [!WARNING]
+> The wipe command is destructive. Back up the printer configuration, custom macros, saved meshes, and any other files you want to keep before running it.
+
+After the reset, complete the on-screen setup far enough to restore the network connection, but stop before Creality calibration.
 
 ### Start bootstrap and open the installer menu
 

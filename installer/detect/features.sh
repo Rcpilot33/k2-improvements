@@ -27,8 +27,7 @@ is_r3men_bed() {
     grep -qE '^[[:space:]]*sensor_type:[[:space:]]*R3men_bed' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null
 }
 is_obico()         { [ -d /mnt/UDISK/moonraker-obico ]; }
-is_secure_auth()   { grep -Fq 'procd_append_param command -s' /etc/init.d/dropbear 2>/dev/null && \
-                     grep -Fq 'procd_append_param command -g' /etc/init.d/dropbear 2>/dev/null; }
+is_secure_auth()   { grep -Fq '# k2-improvements: secure-auth installed' /etc/init.d/dropbear 2>/dev/null; }
 is_skip_setup()    {
     command -v jq >/dev/null 2>&1 &&
         jq -e '.user_info.self_test_sw == 0' \
