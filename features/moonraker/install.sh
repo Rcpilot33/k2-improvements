@@ -107,9 +107,17 @@ replace_moonraker() {
 modify_moonraker_asvc() {
     progress "Modifying moonraker.asvc ..."
     MOONRAKER_ASVC=/mnt/UDISK/printer_data/moonraker.asvc
-    for SERVICE in webrtc cartographer klipper; do
-        if ! grep -qE "${SERVICE}" ${MOONRAKER_ASVC}; then
-            echo "${SERVICE}" >> ${MOONRAKER_ASVC}
+    mkdir -p "$(dirname "$MOONRAKER_ASVC")"
+    touch "$MOONRAKER_ASVC"
+
+    SERVICES="webrtc klipper"
+    if [ -e /etc/init.d/cartographer ]; then
+        SERVICES="$SERVICES cartographer"
+    fi
+
+    for SERVICE in $SERVICES; do
+        if ! grep -qxF "$SERVICE" "$MOONRAKER_ASVC"; then
+            echo "$SERVICE" >> "$MOONRAKER_ASVC"
         fi
     done
 }

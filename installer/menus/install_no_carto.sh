@@ -95,5 +95,8 @@ menu_install_no_carto() {
         "$(c_green "$installed")" "$skipped" "$(c_red "$failed")"
     printf '%s\n\n' '----------------------------------------------------------------'
     printf 'Detected setup: %s\n\n' "$(detect_install_profile)"
+    printf '%s\n' "$(c_yellow 'MANDATORY: fully reboot or power-cycle the printer before homing.')"
+    printf 'This installation restarted Klipper. Due to the K2 Plus motor-direction\n'
+    printf 'bug, do NOT run G28 until the printer has completed a full reboot.\n\n'
     press_enter
 }

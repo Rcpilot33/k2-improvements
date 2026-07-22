@@ -9,7 +9,7 @@ surface-selection-wrapper|is_surface_wrap|START_PRINT SURFACE= param loads match
 cartographer-offset-setup|is_carto_offset_set|Cartographer probe X/Y offset (Jamin/JimmyV/custom)|installer/extras/cartographer-offset-setup/install.sh|is_cartographer
 cartographer-macros|is_carto_macros|CARTO_* macro buttons for Fluidd (calibrate/load/touch home)|installer/extras/cartographer-macros/install.sh|is_cartographer
 axis_twist_compensation|is_axis_twist|Optional Z-drift compensation across X|features/axis_twist_compensation/install.sh|
-secure-auth|is_secure_auth|Optional Moonraker trusted_clients lockdown|features/secure-auth/install.sh|
+secure-auth|is_secure_auth|Disable SSH password login (requires a tested public key)|features/secure-auth/install.sh|
 r3men-bed|is_r3men_bed|R3MEN graphite-bed thermistor profile|features/r3men-bed/install.sh|'
 
 # Keep this conditional so older checkouts without the KAMP extra do not
