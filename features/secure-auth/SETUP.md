@@ -1,66 +1,130 @@
-# Key Based Authentication
+# Secure Auth key setup
 
-## Install
+Secure Auth disables SSH password login on the printer. Before installing it,
+you must place an SSH public key on the printer and prove that the matching
+private key can open a second SSH session.
 
-Download and install `git`.  Either the **Standalone Installer** or **Portable**:
+> **Do not install Secure Auth until the key-only test in step 4 succeeds.**
+> Keep your original SSH session connected while performing the test.
 
-* [https://git-scm.com/downloads](https://git-scm.com/downloads)
+## What you need
 
-Alternatively you can use a one of the package management tools such as:
+- The printer's IP address, such as `192.168.1.239`
+- The printer's current root password
+- [Git for Windows](https://git-scm.com/downloads), which includes Git Bash
+- A second terminal window for testing the key
 
-* [winget tool](https://docs.microsoft.com/en-us/windows/package-manager/winget)
-* [chocolatey](https://chocolatey.org/install)
+MobaXterm is recommended for managing the printer, but the commands below use
+Git Bash to create and test the key.
 
-## Key generation
+## 1. Create a dedicated key
 
-Start **Git Bash**
-
-![Git Bash](./images/git-bash.png)
-
-Generate a key:
-
-```sh
-ssh-keygen -t ed25519
-```
-
-![key generation](./images/key-generation.png)
-
-Leave the file path at default (press Enter).
-
-For the passphrase, you may leave this blank if you desire.  If you do enter a passphrase, you will need to remember (and enter) the passphrase in order to use this key.
-
-Confirm your previous choice by either leaving it blank again or re-entering the same passphrase again.
-
-## Setting up authentication
-
-In order to use the key for ssh authentication we need to put the _public_ portion fo the key onto the K2.  Replace _k2_ in the following with the printer's hostname or IP address.
+Open **Git Bash** on your Windows computer and run:
 
 ```sh
-ssh-copy-id root@k2
+ssh-keygen -t ed25519 -f ~/.ssh/k2plus_secure_auth -C "k2plus-secure-auth"
 ```
 
-![push key](./images/key-pushed.png)
+You may protect the key with a passphrase or press Enter twice to leave the
+passphrase blank. If you use a passphrase, you must enter it when using the key.
 
-This will likely ask you about the K2's ssh fingerprint.  Validation of system ssh fingerprints is beyound the scope of this documentation, for now it is safe to simply accept this by typing `yes` and pressing _Enter_.
+This creates two files:
 
-At this point you'll be asked for the root users password, enter it. Note: you will _not_ see characters as you type the password.
+- `~/.ssh/k2plus_secure_auth` - private key; keep this secret and backed up
+- `~/.ssh/k2plus_secure_auth.pub` - public key; this is copied to the printer
 
-## Usage
+Never send the private key to the printer or share it with anyone.
 
-At this point you should be able to authenticate to the K2 with your ssh key rather than a password.  Replace _k2_ in the following with the printer's hostname or IP address.
+## 2. Copy the public key to the printer
+
+Replace `192.168.1.239` in these examples with your printer's IP address.
+
+From Git Bash, copy the public key to a temporary file on the printer:
 
 ```sh
-ssh root@k2
+scp ~/.ssh/k2plus_secure_auth.pub root@192.168.1.239:/tmp/k2plus_secure_auth.pub
 ```
 
-If you put a passphrase on your key at generation you will likely be asked to enter it each time you attempt to use the key.
+Accept the host fingerprint if prompted, then enter the printer's current root
+password. Password characters are not displayed while you type.
 
-## Verification
-
-Now from your system (git bash) try to run this:
+Connect to the printer:
 
 ```sh
-ssh -o PreferredAuthentications=password root@k2
+ssh root@192.168.1.239
 ```
 
-This tries to `ssh` with only password authentication.  If the installation succeeded without error, the above should not work
+In that printer SSH session, run:
+
+```sh
+mkdir -p /etc/dropbear
+chmod 700 /etc/dropbear
+touch /etc/dropbear/authorized_keys
+cat /tmp/k2plus_secure_auth.pub >> /etc/dropbear/authorized_keys
+chmod 600 /etc/dropbear/authorized_keys
+rm -f /tmp/k2plus_secure_auth.pub
+```
+
+Appending the same public key more than once is harmless, although duplicate
+lines may be removed later if desired.
+
+## 3. Keep the original session open
+
+Do not close the printer SSH session used above. It is your recovery session if
+the key test fails.
+
+## 4. Test key-only login in a second terminal
+
+Open a **second Git Bash window** and run:
+
+```sh
+ssh -i ~/.ssh/k2plus_secure_auth \
+  -o IdentitiesOnly=yes \
+  -o PreferredAuthentications=publickey \
+  -o PasswordAuthentication=no \
+  root@192.168.1.239
+```
+
+The test succeeds only if a new printer shell opens without requesting the
+printer's root password. A prompt for the key's own passphrase is normal.
+
+If it asks for the printer password or refuses the connection, do not install
+Secure Auth. Recheck the commands above from the still-open original session.
+
+## 5. Install Secure Auth
+
+After the key-only test succeeds, return to the original printer session and
+open the installer menu:
+
+```sh
+cd /mnt/UDISK/root/k2-improvements
+./menu.sh
+```
+
+Choose **Extras**, then **secure-auth**. The installer verifies that a
+valid-looking public key exists before changing Dropbear. It then disables
+password authentication, restarts SSH, and disconnects the current session.
+
+## 6. Reconnect with the key
+
+From Git Bash, reconnect with:
+
+```sh
+ssh -i ~/.ssh/k2plus_secure_auth root@192.168.1.239
+```
+
+For MobaXterm, edit or create the printer's SSH session, open **Advanced SSH
+settings**, enable **Use private key**, and select the Windows file:
+
+```text
+C:\Users\YOUR_WINDOWS_NAME\.ssh\k2plus_secure_auth
+```
+
+Open a new MobaXterm session to confirm it connects successfully.
+
+## Factory reset warning
+
+Treat `/etc/dropbear/authorized_keys` as erased by a printer factory reset or
+firmware recovery. Your private key remains on your Windows computer, but you
+must copy its `.pub` file back to the printer, test key-only login again, and
+reinstall Secure Auth.

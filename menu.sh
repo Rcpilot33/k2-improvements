@@ -1,5 +1,5 @@
 #!/bin/sh
-# K2 Plus installer — TUI entry point. Run this on the printer.
+# K2 Plus installer - TUI entry point. Run this on the printer.
 
 set -u
 
@@ -27,6 +27,7 @@ fi
 . "$SCRIPT_DIR/installer/menus/install_all.sh"
 . "$SCRIPT_DIR/installer/menus/carto_fw.sh"
 . "$SCRIPT_DIR/installer/menus/factory_reset.sh"
+. "$SCRIPT_DIR/installer/menus/workflows.sh"
 . "$SCRIPT_DIR/installer/menus/main.sh"
 
 require_root

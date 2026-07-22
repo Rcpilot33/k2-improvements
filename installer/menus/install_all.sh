@@ -1,13 +1,13 @@
 #!/bin/sh
-# "Install all (recommended)" flow — installs every missing feature + extra
+# "Install all (recommended)" flow - installs every missing feature + extra
 # + KAMP, in dependency order. Cartographer firmware flash is intentionally
 # excluded because it requires explicit physical interaction.
 
-# Essentials only — what's needed to have a working K2 Plus + Cartographer.
+# Essentials only - what's needed to have a working K2 Plus + Cartographer.
 # QoL features (KAMP, surface-wrapper, axis_twist), security
-# features (secure-auth — can lock you out if installed without keys), and
+# features (secure-auth - can lock you out if installed without keys), and
 # hardware-specific features such as r3men-bed are excluded here.
-# They stay available individually from the Features and Extras menus.
+# They stay available individually from Maintenance and Optional extras.
 # Obico is not exposed in the installer menus in this fork because the inherited
 # external installer did not complete cleanly.
 # The legacy files remain under features/obico for manual testing.
@@ -30,14 +30,15 @@ macros|is_macros|features/macros/install.sh'
 
 menu_install_all() {
     clear
-    printf '\n=== Install Cartographer setup ===\n\n'
+    ui_heading 'INSTALL CARTOGRAPHER SETUP'
+    printf '\n'
     printf 'The minimum needed to run a K2 Plus + Cartographer probe. Skips anything\n'
     printf 'already installed. After the auto steps, prompts you to pick your\n'
-    printf 'Cartographer mount preset (mandatory — probe offsets depend on hardware).\n\n'
+    printf 'Cartographer mount preset (mandatory - probe offsets depend on hardware).\n\n'
     printf 'NOT in this flow (need physical interaction or are optional):\n'
     printf '  - Cartographer firmware flash (USB/Katapult or physical DFU mode)\n'
     printf '  - Hardware-specific features (e.g., r3men-bed)\n'
-    printf '  - QoL features (KAMP, surface-wrapper, axis_twist, etc.) — Extras menu\n\n'
+    printf '  - QoL features (KAMP, surface-wrapper, axis_twist, etc.) - Optional extras\n\n'
     printf 'Plan:\n'
     local OLDIFS="$IFS"
     IFS='
@@ -47,9 +48,9 @@ menu_install_all() {
         n=$((n+1))
         local name=$(printf '%s' "$line" | cut -d'|' -f1)
         local det=$(printf  '%s' "$line" | cut -d'|' -f2)
-        local mark
-        if "$det" 2>/dev/null; then mark=$(c_green '[X]'); else mark=$(c_dim '[ ]'); fi
-        printf '  %2d. %s %s\n' "$n" "$mark" "$name"
+        local state
+        if "$det" 2>/dev/null; then state=$(state_installed); else state=$(state_pending); fi
+        printf '  %2d. %-34s %s\n' "$n" "$name" "$state"
     done
     IFS="$OLDIFS"
     printf '\n'
@@ -71,12 +72,12 @@ menu_install_all() {
         printf '\n--- %s ---\n' "$name"
 
         if "$det" 2>/dev/null; then
-            info "already installed — skipping"
+            info "already installed - skipping"
             skipped=$((skipped+1))
             continue
         fi
         if [ ! -f "$script" ]; then
-            warn "missing $script — skipping"
+            warn "missing $script - skipping"
             failed=$((failed+1))
             continue
         fi
@@ -117,7 +118,7 @@ menu_install_all() {
     printf '%s\n\n' '----------------------------------------------------------------'
 
     # Mandatory final step: pick the Cartographer mount preset. The offset
-    # values are hardware-specific so we can't auto-pick — but the user must
+    # values are hardware-specific so we can't auto-pick - but the user must
     # set them or Z-probing will be wrong across the bed.
     if is_cartographer; then
         printf '%s\n' "$(c_yellow 'MANDATORY: select your Cartographer mount preset')"
@@ -127,7 +128,7 @@ menu_install_all() {
             HOME=$(awk -F: '$1=="root"{print $6}' /etc/passwd) \
                 sh "$INSTALLER_DIR/installer/extras/cartographer-offset-setup/install.sh" || true
         else
-            printf '\n%s\n\n' "$(c_yellow 'Skipped — run it later from Extras menu (item 5).')"
+            printf '\n%s\n\n' "$(c_yellow 'Skipped - run it later from Cartographer tools.')"
         fi
     fi
 
@@ -136,8 +137,8 @@ menu_install_all() {
     printf '     restarted Klipper, which under K2 Plus motor-state caveat means\n'
     printf '     your next G28 must come AFTER a real boot).\n'
     printf '  2. Optional QoL: surface-selection-wrapper and axis_twist_compensation\n'
-    printf '     are available from Extras/Features (items 5/4).\n'
-    printf '  3. Optional: Cartographer firmware flash (item 6).\n'
+    printf '     are available from Optional extras.\n'
+    printf '  3. Optional: firmware flashing is available from Cartographer tools.\n'
     printf '  4. Calibrate per surface: CARTOGRAPHER_CALIBRATE METHOD=manual NAME=<plate>\n'
     printf '     and BED_MESH_CALIBRATE for each plate (default/pei/coolplate/etc).\n\n'
     press_enter

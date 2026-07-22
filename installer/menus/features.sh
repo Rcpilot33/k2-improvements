@@ -1,22 +1,23 @@
 #!/bin/sh
-# k2-improvements feature install sub-menu. Install only — uninstall is v2.
+# k2-improvements feature install sub-menu. Install only - uninstall is v2.
 
 # name|detector|description (one per line)
 _FEATURES='abort_homing|is_abort_homing|Abort homing on M112/cancel
-better-init|is_better_init|/etc/profile.d autoloader
-better-root|is_better_root|$HOME → /mnt/UDISK/root (more space)
-cartographer|is_cartographer|Cartographer probe + Klipper patches
-entware|is_entware|opkg toolchain (git/curl/dialog)
-fluidd|is_fluidd|Web UI (alternative to Mainsail)
-macros|is_macros|START_PRINT / M191 / bed_mesh macros
-moonraker|is_moonraker|Klipper API server (replaces Creality)
-screws_tilt_adjust|is_screws_tilt|Manual bed-screws assist
+better-init|is_better_init|Profile and PATH loader
+better-root|is_better_root|Persistent root home on UDISK
+cartographer|is_cartographer|Probe and Klipper patches
+entware|is_entware|Package tools (git/curl/dialog)
+fluidd|is_fluidd|Updated printer web UI
+macros|is_macros|START_PRINT / M191 / bed mesh
+moonraker|is_moonraker|Mainline Klipper API server
+screws_tilt_adjust|is_screws_tilt|Manual bed-screw assist
 skip-setup|is_skip_setup|Skip first-run wizard'
 
 menu_features() {
     while :; do
         clear
-        printf '\n=== Core k2-improvements features ===\n\n'
+        ui_heading 'CORE COMPONENT INSTALLER'
+        printf '\n%s\n\n' "$(c_yellow 'Advanced: install or repair individual components.')"
         local n=0
         local OLDIFS="$IFS"
         IFS='
@@ -26,16 +27,15 @@ menu_features() {
             local name=$(printf '%s' "$line" | cut -d'|' -f1)
             local det=$(printf '%s'  "$line" | cut -d'|' -f2)
             local desc=$(printf '%s' "$line" | cut -d'|' -f3)
-            local mark
-            if "$det"; then mark=$(c_green '[X]'); else mark=$(c_dim '[ ]'); fi
-            printf '  %2d. %s %-25s %s\n' "$n" "$mark" "$name" "$(c_dim "$desc")"
+            local state
+            if "$det"; then state=$(state_installed); else state=$(state_not_installed); fi
+            printf '  %2d. %-24s %-31s %s\n' "$n" "$name" "$desc" "$state"
         done
         IFS="$OLDIFS"
-        printf '\n   b. Back\n\n'
-        printf 'Choose: '
+        printf '\n   0. Back\n\nSelect [0-%s]: ' "$n"
         read -r c
         case "$c" in
-            b|B|q|Q) return ;;
+            0|b|B|q|Q) return ;;
             ''|*[!0-9]*) ;;
             *)
                 local picked=$(printf '%s' "$_FEATURES" | sed -n "${c}p" | cut -d'|' -f1)
@@ -52,11 +52,12 @@ install_feature() {
     local readme="$INSTALLER_DIR/features/$name/README.md"
 
     clear
-    printf '\n=== %s ===\n\n' "$name"
+    ui_heading "$name"
+    printf '\n'
 
     if [ ! -f "$script" ]; then
         warn "feature script not found: $script"
-        warn "(installer must live at $INSTALLER_DIR — check your bootstrap)"
+        warn "(installer must live at $INSTALLER_DIR - check your bootstrap)"
         press_enter
         return 1
     fi
@@ -71,7 +72,7 @@ install_feature() {
         if ! confirm "Install $name now?"; then return 0; fi
     fi
 
-    # Force HOME from /etc/passwd — better-root may have changed root's
+    # Force HOME from /etc/passwd - better-root may have changed root's
     # home mid-session, but the menu shell's HOME is cached from login.
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
     info "running $name (HOME=$pwd_home)"

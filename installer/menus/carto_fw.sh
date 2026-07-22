@@ -24,7 +24,8 @@ menu_carto_fw() {
         local usb_state
         usb_state="$(detect_carto_usb_state)"
 
-        printf '\n=== Cartographer firmware tools ===\n\n'
+        ui_heading 'CARTOGRAPHER FIRMWARE TOOLS'
+        printf '\n'
         printf '  USB status : %s\n\n' "${usb_state:-unknown}"
 
         printf '%s\n' "$(c_yellow 'Firmware flashing is manual/explicit only. It is not part of the Cartographer setup installer.')"
@@ -35,15 +36,15 @@ menu_carto_fw() {
         printf '  2. Launch flash.py using normal USB/Katapult path\n'
         printf '  3. Launch DFU recovery (manual V3/V4 selection)\n'
         printf '  4. Show DFU recovery notes\n'
-        printf '  b. Back\n\n'
-        printf 'Choose: '
+        printf '  0. Back\n\n'
+        printf 'Select [0-4]: '
         read -r c
         case "$c" in
             1) carto_fw_show_katapult_notes ;;
             2) carto_fw_launch ;;
             3) carto_fw_dfu_launch ;;
             4) carto_fw_show_dfu_notes ;;
-            b|B|q|Q) return ;;
+            0|b|B|q|Q) return ;;
             *) ;;
         esac
     done
@@ -170,7 +171,7 @@ carto_fw_launch() {
     fi
 
     clear
-    printf '\n%s\n' "$(c_yellow 'Final check — is the Cartographer connected by USB?')"
+    printf '\n%s\n' "$(c_yellow 'Final check - is the Cartographer connected by USB?')"
     printf '  flash.py will detect the probe and enter Katapult bootloader automatically when possible.\n'
     printf '  Only connect one Cartographer or similar Klipper/OpenMoko USB device while flashing.\n\n'
 

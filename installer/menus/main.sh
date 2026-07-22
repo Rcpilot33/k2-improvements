@@ -1,57 +1,77 @@
 #!/bin/sh
-# Top-level menu loop. Sourced by menu.sh.
+# Top-level workflow menu. Sourced by menu.sh.
+
+detect_installer_branch() {
+    if [ -d "$INSTALLER_DIR/.git" ]; then
+        git -C "$INSTALLER_DIR" symbolic-ref --quiet --short HEAD 2>/dev/null || echo 'detached'
+    else
+        echo 'not a git checkout'
+    fi
+}
 
 main_menu() {
     while :; do
         clear
-        local fw=$(detect_printer_fw)
-        local chw=$(detect_carto_hw)
-        local setup=$(detect_install_profile)
+        local fw chw cfw setup branch
+        fw="$(detect_printer_fw)"
+        chw="$(detect_carto_hw)"
+        cfw="$(detect_carto_fw)"
+        setup="$(detect_install_profile)"
+        branch="$(detect_installer_branch)"
 
-            printf '\n=== K2 Plus Installer ===  fw: %s  carto: %s\n' "$fw" "${chw:-unknown}"
-            printf '    setup: %s\n\n' "$setup"
-            printf '  1. Status — show what is installed\n'
-            printf '  2. Install stock probe / no-Cartographer setup\n'
-            printf '  3. Install Cartographer setup\n'
-            printf '  4. Core features (Cartographer stack) ▶\n'
-            printf '  5. Extras (optional features / patches) ▶\n'
-            printf '  6. Cartographer firmware flash ▶\n'
-            printf '  7. Factory reset / cleanup tools ▶\n'
-            printf '  8. Update installer (git pull)\n'
-            printf '  0. Exit\n\n'
-            printf 'Choose [0-8]: '
-            read -r c
-            case "$c" in
-                1) show_status ;;
-                2) menu_install_no_carto ;;
-                3) menu_install_all ;;
-                4) menu_features ;;
-                5) menu_extras ;;
-                6) menu_carto_fw ;;
-                7) menu_factory_reset ;;
-                8) menu_update_installer ;;
-                0|q|Q) exit 0 ;;
-                *) ;;
-            esac
+        ui_rule
+        printf ' %s\n' "$(c_cyan 'K2 PLUS COMPATIBILITY INSTALLER')"
+        printf '%s\n' '------------------------------------------------------------'
+        printf ' Firmware : %s\n' "$(c_cyan "$fw")"
+        printf ' Branch   : %s\n' "$(c_cyan "$branch")"
+        case "$setup" in
+            *incomplete*) printf ' Setup    : %s\n' "$(c_yellow "$setup")" ;;
+            *) printf ' Setup    : %s\n' "$(c_green "$setup")" ;;
+        esac
+        if is_cartographer; then
+            printf ' Probe    : %s / firmware %s\n' "$(c_cyan "${chw:-unknown}")" "$(c_cyan "${cfw:-unknown}")"
+            printf ' Mount    : %s\n' "$(c_cyan "$(detect_carto_offset_label)")"
+        fi
+        ui_rule
+
+        printf '\n'
+        ui_menu_item 1 'Status and diagnostics'
+        ui_menu_item 2 'Install or change setup'
+        ui_menu_item 3 'Cartographer tools'
+        ui_menu_item 4 'Optional extras'
+        ui_menu_item 5 'Maintenance and recovery'
+        ui_menu_item 6 'Update installer'
+        printf '\n  0. Exit\n\nSelect [0-6]: '
+        read -r c
+        case "$c" in
+            1) show_status ;;
+            2) menu_install_paths ;;
+            3) menu_cartographer_tools ;;
+            4) menu_extras ;;
+            5) menu_maintenance ;;
+            6) menu_update_installer ;;
+            0|q|Q) exit 0 ;;
+            *) ;;
+        esac
     done
 }
 
-stub_menu() {
+menu_update_installer() {
     clear
-    printf '\n%s — not yet implemented.\n' "$1"
-    printf 'Tracked in installer-v1 milestone.\n\n'
-    press_enter
-}
-
-menu_update_installer()  {
-    clear
+    ui_heading 'UPDATE INSTALLER'
+    printf '\n'
     ensure_path
     if [ -d "$INSTALLER_DIR/.git" ]; then
         info "git pull in $INSTALLER_DIR"
-        ( cd "$INSTALLER_DIR" && git pull --ff-only )
+        if ( cd "$INSTALLER_DIR" && git pull --ff-only ); then
+            printf '\n%s\n' "$(c_green 'Update complete. Reloading the installer...')"
+            exec sh "$INSTALLER_DIR/menu.sh"
+        else
+            warn 'git pull failed; the current menu remains loaded.'
+        fi
     else
-        warn "$INSTALLER_DIR is not a git checkout — can't auto-update."
-        warn "Re-run bootstrap.sh from the host to refresh."
+        warn "$INSTALLER_DIR is not a git checkout - cannot auto-update."
+        warn 'Re-run bootstrap.sh from the host to refresh.'
     fi
     press_enter
 }

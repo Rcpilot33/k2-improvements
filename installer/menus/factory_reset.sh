@@ -4,7 +4,8 @@
 menu_factory_reset() {
     while :; do
         clear
-        printf '\n=== Factory reset / cleanup tools ===\n\n'
+        ui_heading 'FACTORY RESET AND CLEANUP'
+        printf '\n'
 
         printf '%s\n' "$(c_red 'WARNING: These tools are destructive.')"
         printf '%s\n' "$(c_dim 'factory-reset-improved removes leftover UDISK directories, then triggers Creality factory reset.')"
@@ -12,14 +13,14 @@ menu_factory_reset() {
 
         printf '  1. Show what factory-reset-improved removes\n'
         printf '  2. Run factory-reset-improved\n'
-        printf '  b. Back\n\n'
-        printf 'Choose: '
+        printf '  0. Back\n\n'
+        printf 'Select [0-2]: '
         read -r c
 
         case "$c" in
             1) factory_reset_dry_run ;;
             2) factory_reset_run ;;
-            b|B|q|Q) return ;;
+            0|b|B|q|Q) return ;;
             *) ;;
         esac
     done

@@ -14,7 +14,8 @@ macros|is_macros|features/macros/install.sh'
 
 menu_install_no_carto() {
     clear
-    printf '\n=== Install stock probe / no-Cartographer setup ===\n\n'
+    ui_heading 'INSTALL STOCK PROBE / NO-CARTOGRAPHER SETUP'
+    printf '\n'
     printf 'Safe, resumable replacement for Jacob10383%s no-carto.sh.\n' "'"
     printf 'Installs the same stock PR Touch feature set while skipping components\n'
     printf 'that are already installed. It does NOT install or remove Cartographer.\n\n'
@@ -37,9 +38,9 @@ menu_install_no_carto() {
         n=$((n+1))
         local name=$(printf '%s' "$line" | cut -d'|' -f1)
         local det=$(printf '%s' "$line" | cut -d'|' -f2)
-        local mark
-        if "$det" 2>/dev/null; then mark=$(c_green '[X]'); else mark=$(c_dim '[ ]'); fi
-        printf '  %2d. %s %s\n' "$n" "$mark" "$name"
+        local state
+        if "$det" 2>/dev/null; then state=$(state_installed); else state=$(state_pending); fi
+        printf '  %2d. %-34s %s\n' "$n" "$name" "$state"
     done
     IFS="$OLDIFS"
 

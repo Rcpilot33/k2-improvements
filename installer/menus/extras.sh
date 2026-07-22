@@ -3,7 +3,7 @@
 
 # name|detector|description|script_path|requires  (one per line; script_path
 # relative to INSTALLER_DIR; requires is the name of a function that must
-# return 0 for the extra to be installable — empty if no precondition).
+# return 0 for the extra to be installable - empty if no precondition).
 _EXTRAS='prtouch-cleanup|is_prtouch_clean|Remove orphan [prtouch_v3] SAVE_CONFIG header|installer/extras/prtouch-cleanup/install.sh|
 surface-selection-wrapper|is_surface_wrap|START_PRINT SURFACE= param loads matching scan/touch model|installer/extras/surface-selection-wrapper/install.sh|is_cartographer
 cartographer-offset-setup|is_carto_offset_set|Cartographer probe X/Y offset (Jamin/JimmyV/custom)|installer/extras/cartographer-offset-setup/install.sh|is_cartographer
@@ -28,42 +28,67 @@ _extras_requires_label() {
     esac
 }
 
+extra_line() {
+    printf '%s\n' "$_EXTRAS" | grep "^$1|" | head -1
+}
+
+extra_state() {
+    local line det req
+    line="$(extra_line "$1")"
+    [ -n "$line" ] || { c_yellow 'UNAVAILABLE'; return; }
+    det=$(printf '%s' "$line" | cut -d'|' -f2)
+    req=$(printf '%s' "$line" | cut -d'|' -f5)
+
+    if "$det" 2>/dev/null; then
+        state_installed
+    elif [ -n "$req" ] && ! "$req" 2>/dev/null; then
+        case "$req" in
+            is_cartographer) state_requires 'CARTOGRAPHER' ;;
+            *) state_blocked ;;
+        esac
+    else
+        state_not_installed
+    fi
+}
+
+run_extra_name() {
+    local line
+    line="$(extra_line "$1")"
+    if [ -z "$line" ]; then
+        clear
+        ui_heading 'OPTIONAL EXTRA UNAVAILABLE'
+        printf '\nThe selected installer is not present in this checkout.\n'
+        press_enter
+        return 1
+    fi
+    install_extra "$line"
+}
+
 menu_extras() {
     while :; do
         clear
-        printf '\n=== K2-Plus extras ===\n\n'
-        local n=0
-        local OLDIFS="$IFS"
-        IFS='
-'
-        for line in $_EXTRAS; do
-            n=$((n+1))
-            local name=$(printf '%s' "$line" | cut -d'|' -f1)
-            local det=$(printf  '%s' "$line" | cut -d'|' -f2)
-            local desc=$(printf '%s' "$line" | cut -d'|' -f3)
-            local req=$(printf  '%s' "$line" | cut -d'|' -f5)
-            local mark hint=""
-            if "$det" 2>/dev/null; then
-                mark=$(c_green '[X]')
-            elif [ -n "$req" ] && ! "$req" 2>/dev/null; then
-                mark=$(c_yellow '[!]')
-                hint=" $(c_yellow "($(_extras_requires_label "$req"))")"
-            else
-                mark=$(c_dim '[ ]')
-            fi
-            printf '  %2d. %s %-30s %s%s\n' "$n" "$mark" "$name" "$(c_dim "$desc")" "$hint"
-        done
-        IFS="$OLDIFS"
-        printf '\n   b. Back\n\n'
-        printf 'Choose: '
+        ui_heading 'OPTIONAL EXTRAS'
+        printf '\n Hardware\n'
+        ui_menu_item 1 'R3MEN bed thermistor profile' "$(extra_state r3men-bed)"
+        printf '\n Print workflow\n'
+        ui_menu_item 2 'KAMP adaptive purge' "$(extra_state kamp-adaptive-purge)"
+        ui_menu_item 3 'Axis twist compensation' "$(extra_state axis_twist_compensation)"
+        ui_menu_item 4 'Surface / plate selection wrapper' "$(extra_state surface-selection-wrapper)"
+        ui_menu_item 5 'Cartographer Fluidd macros' "$(extra_state cartographer-macros)"
+        printf '\n Security\n'
+        ui_menu_item 6 'Secure Auth' "$(extra_state secure-auth)"
+
+        printf '\n  0. Back\n\nSelect [0-6]: '
         read -r c
         case "$c" in
-            b|B|q|Q) return ;;
-            ''|*[!0-9]*) ;;
-            *)
-                local picked=$(printf '%s' "$_EXTRAS" | sed -n "${c}p")
-                [ -n "$picked" ] && install_extra "$picked"
-                ;;
+            1) run_extra_name r3men-bed ;;
+            2) run_extra_name kamp-adaptive-purge ;;
+            3) run_extra_name axis_twist_compensation ;;
+            4) run_extra_name surface-selection-wrapper ;;
+            5) run_extra_name cartographer-macros ;;
+            6) run_extra_name secure-auth ;;
+            0|b|B|q|Q) return ;;
+            *) ;;
         esac
     done
 }
@@ -78,11 +103,12 @@ install_extra() {
     local readme="$(dirname "$script")/README.md"
 
     clear
-    printf '\n=== %s ===\n\n' "$name"
+    ui_heading "$name"
+    printf '\n'
 
     # Precondition gate: refuse with a clean message if the extra requires
     # something that's not present (e.g. is_cartographer fails). The
-    # install scripts have their own grep checks too — this is just the
+    # install scripts have their own grep checks too - this is just the
     # friendlier UX layer that prevents the user from running the script
     # at all when the precondition is missing.
     if [ -n "$req" ] && ! "$req" 2>/dev/null; then
@@ -91,8 +117,8 @@ install_extra() {
             is_cartographer)
                 printf '  This extra requires Cartographer to be installed first.\n'
                 printf '  On a fresh K2 Plus, install Cartographer via:\n\n'
-                printf '    - Menu item 3 (Install Cartographer setup)  — recommended path\n'
-                printf '    - Menu item 4 (Features) -> cartographer\n'
+                printf '    - Install or change setup -> Cartographer setup\n'
+                printf '    - Maintenance -> Core component installer -> cartographer\n'
                 printf '    - Or Jacob10383'"'"'s original gimme-the-jamin.sh\n\n'
                 printf '  Once Cartographer is installed and Klipper has restarted with the\n'
                 printf '  new config, this extra will become available.\n\n'

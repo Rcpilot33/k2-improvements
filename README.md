@@ -82,12 +82,13 @@ Bootstrap installs Entware when needed, configures the larger persistent root ho
 
 ## Choose an installation path
 
-| Goal | Main-menu choice | What it does |
+| Goal | Menu path | What it does |
 |---|---|---|
-| Keep the stock PR Touch probe | **2. Install stock probe / no-Cartographer setup** | Installs the supported core stack without Cartographer. |
-| Install Cartographer | **3. Install Cartographer setup** | Installs the Cartographer stack and then offers the required mount-offset picker. |
-| Add Cartographer later | **3. Install Cartographer setup** | Detects and skips the components already installed by the stock-probe path. |
-| Add one component | **4. Core features** or **5. Extras** | Shows installation status and runs only the selected installer. |
+| Keep the stock PR Touch probe | **Install or change setup -> Stock probe** | Installs the supported core stack without Cartographer. |
+| Install Cartographer | **Install or change setup -> Cartographer setup** | Installs the Cartographer stack and then offers the required mount-offset picker. |
+| Add Cartographer later | **Install or change setup -> Convert stock setup to Cartographer** | Detects and skips components already installed by the stock-probe path. |
+| Add one optional extra | **Optional extras** | Shows its current state and runs only the selected installer. |
+| Repair one core component | **Maintenance and recovery -> Core component installer** | Opens the advanced individual-component menu. |
 
 The installers are resumable. Before each step, the menu checks what is already installed and skips completed components. A summary reports installed, skipped, and failed steps.
 
@@ -97,17 +98,22 @@ The stock-probe installer does **not** remove an existing Cartographer installat
 
 | Item | Purpose |
 |---:|---|
-| 1 | Show the detected printer firmware, installed setup, Cartographer hardware/firmware, offsets, core features, and extras. |
-| 2 | Install the stock PR Touch / no-Cartographer setup. |
-| 3 | Install the recommended Cartographer setup. Firmware flashing is intentionally separate. |
-| 4 | Install individual core `k2-improvements` features. |
-| 5 | Install optional features and K2 Plus patches. |
-| 6 | Open normal Cartographer flashing and bundled DFU recovery tools. |
-| 7 | Preview or run factory-reset cleanup tools. |
-| 8 | Update the installer with a fast-forward-only `git pull`. |
+| 1 | Show the detailed installation, firmware, Cartographer, component, and extras status. |
+| 2 | Install, repair, or change the printer setup path. |
+| 3 | Open Cartographer firmware, DFU recovery, mount-offset, and calibration tools. |
+| 4 | Install optional hardware, print-workflow, and security extras. |
+| 5 | Open advanced component repair, PR Touch cleanup, and factory-reset tools. |
+| 6 | Update the installer with a fast-forward-only `git pull`, then reload the menu. |
 | 0 | Exit. |
 
-`[X]` means the detector considers an item installed, `[ ]` means it is not installed, and `[!]` means an extra is unavailable until its prerequisite is installed.
+Menu states are written as colored words rather than checkboxes: green
+`INSTALLED`/`COMPLETE`, gray `NOT INSTALLED`/`AVAILABLE`, yellow
+`REQUIRES ...`/`INCOMPLETE`/`RECOVERY`, and red `DESTRUCTIVE`/`ERROR`.
+The wording remains meaningful in terminals that do not display color.
+
+Returning an active Cartographer setup to stock PR Touch is shown as a planned
+recovery workflow but is not enabled yet. The existing stock installer will not
+attempt an unsafe partial conversion.
 
 ## Cartographer setup
 
@@ -174,7 +180,7 @@ Optional quality-of-life and hardware-specific changes are intentionally exclude
 
 ## Optional extras
 
-Extras are installed individually from menu item 5.
+Extras are installed individually from **Optional extras**.
 
 | Extra | Purpose / requirement |
 |---|---|
@@ -184,9 +190,8 @@ Extras are installed individually from menu item 5.
 | [Axis twist compensation](./features/axis_twist_compensation/README.md) | Optional compensation for Z drift across X. |
 | [KAMP adaptive purge](./installer/extras/kamp-adaptive-purge/README.md) | Adds the adaptive purge feature. |
 | [R3MEN bed profile](./features/r3men-bed/README.md) | Adds the R3MEN graphite-bed thermistor profile. |
-| [Secure Auth](./features/secure-auth/README.md) | Disables SSH password login only after a valid-looking public key is detected. Test the key in a second terminal first. |
+| [Secure Auth](./features/secure-auth/README.md) ([key setup guide](./features/secure-auth/SETUP.md)) | Disables SSH password login only after a valid-looking public key is detected. Follow the setup guide and test the key in a second terminal first. |
 | [PR Touch cleanup](./installer/extras/prtouch-cleanup/README.md) | Removes an orphan `[prtouch_v3]` `SAVE_CONFIG` header. |
-| homing.py `hasattr` fix | Optional K2 Plus homing compatibility patch. |
 
 ## Updating
 
@@ -199,7 +204,8 @@ git pull --ff-only
 
 ## Factory reset and cleanup
 
-Menu item 7 provides a dry run and a separately confirmed destructive reset. Review the dry run first.
+**Maintenance and recovery -> Factory reset and cleanup tools** provides a dry
+run and a separately confirmed destructive reset. Review the dry run first.
 
 The improved reset preserves `/mnt/UDISK/root` and `/mnt/UDISK/bin`, removes most other top-level UDISK directories—including `/mnt/UDISK/printer_data`—and then triggers Creality's factory reset. Printer configuration, custom macros, saved meshes, logs, and backups under `printer_data` will be removed.
 

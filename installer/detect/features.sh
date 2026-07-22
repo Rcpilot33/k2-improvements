@@ -107,8 +107,8 @@ status_line() {
     local label="$1"
     local fn="$2"
     if "$fn"; then
-        printf '  %s %s\n' "$(c_green '[X]')" "$label"
+        printf '  %-43s %s\n' "$label" "$(state_installed)"
     else
-        printf '  %s %s\n' "$(c_dim '[ ]')" "$label"
+        printf '  %-43s %s\n' "$label" "$(state_not_installed)"
     fi
 }
