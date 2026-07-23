@@ -45,6 +45,30 @@ From Git Bash, copy the public key to a temporary file on the printer:
 scp ~/.ssh/k2plus_secure_auth.pub root@192.168.1.239:/tmp/k2plus_secure_auth.pub
 ```
 
+### If SSH reports that the host identification changed
+
+After an intentional printer wipe, firmware reinstall, or recovery, the
+printer may generate a new SSH host key. Git Bash will then stop `scp` with a
+`REMOTE HOST IDENTIFICATION HAS CHANGED` warning.
+
+Only when you know the printer was intentionally wiped or reinstalled, remove
+its old saved host key from your Windows computer:
+
+```sh
+ssh-keygen -R 192.168.1.239
+```
+
+Then retry the copy:
+
+```sh
+scp ~/.ssh/k2plus_secure_auth.pub root@192.168.1.239:/tmp/k2plus_secure_auth.pub
+```
+
+When prompted about the new fingerprint, type `yes`. If the printer was not
+intentionally wiped, reinstalled, or recovered, do not remove the saved key.
+An unexpected host-key change could mean that you are connecting to a different
+device or that the connection is being intercepted; investigate it first.
+
 Accept the host fingerprint if prompted, then enter the printer's current root
 password. Password characters are not displayed while you type.
 
