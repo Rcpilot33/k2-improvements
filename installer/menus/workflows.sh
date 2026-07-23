@@ -158,13 +158,13 @@ EOF
         if is_carto_macros || is_surface_wrap; then
             cat <<'EOF'
   3. The optional Cartographer plate workflow is INCOMPLETE. Open Extras and
-     run "Cartographer plate profiles / auto-selection" to install its missing
+     run "Cartographer plate workflow" to install its missing
      component before relying on automatic plate selection.
 EOF
         else
             cat <<'EOF'
   3. Optional per-plate profiles and automatic selection are not installed.
-     For that workflow, install "Cartographer plate profiles / auto-selection"
+     For that workflow, install "Cartographer plate workflow"
      from Extras. It supplies the predefined Fluidd buttons and slicer wrapper
      together.
 EOF

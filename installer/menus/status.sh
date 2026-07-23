@@ -51,11 +51,11 @@ show_status() {
         status_line 'KAMP adaptive purge' is_kamp
     fi
     if is_carto_plate_workflow; then
-        printf '  %-43s %s\n' 'Cartographer plate profiles / auto-selection' "$(state_installed)"
+        printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_installed)"
     elif is_carto_macros || is_surface_wrap; then
-        printf '  %-43s %s\n' 'Cartographer plate profiles / auto-selection' "$(state_incomplete)"
+        printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_incomplete)"
     else
-        printf '  %-43s %s\n' 'Cartographer plate profiles / auto-selection' "$(state_not_installed)"
+        printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_not_installed)"
     fi
 
     printf '\n Maintenance\n'
