@@ -212,6 +212,21 @@ install_extra() {
             printf '  Currently configured: %s\n\n' "$(c_green "$label")"
             if ! confirm "Open the offset picker?"; then return 0; fi
             ;;
+        secure-auth)
+            if "$det" 2>/dev/null; then
+                printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"
+            fi
+            printf '%s\n' "$(c_red 'Secure Auth disables SSH password login and disconnects active SSH sessions.')"
+            printf 'Confirm that key-only login works in a second terminal before continuing.\n\n'
+            printf 'Type SECURE AUTH to continue: '
+            local secure_auth_answer
+            read -r secure_auth_answer
+            if [ "$secure_auth_answer" != "SECURE AUTH" ]; then
+                warn 'confirmation did not match; Secure Auth was not changed.'
+                press_enter
+                return 0
+            fi
+            ;;
         *)
             if "$det" 2>/dev/null; then
                 printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"

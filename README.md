@@ -22,7 +22,8 @@ These improvements are not compatible with Creality's automatic calibration work
 
 ## Tested firmware and installation paths
 
-The complete installation and printing test cycle has been performed on:
+Before the current menu and bootstrap redesign, the complete installation and
+printing test cycle was performed on:
 
 | Creality firmware | Stock probe | Cartographer | Stock probe → Cartographer | Individual features |
 |---|:---:|:---:|:---:|:---:|
@@ -30,7 +31,18 @@ The complete installation and printing test cycle has been performed on:
 | `1.1.5.2` | ✓ | ✓ | ✓ | ✓ |
 | `1.1.5.5` | ✓ | ✓ | ✓ | ✓ |
 
-Testing included multiple completed prints after each installation path. Versions not listed may work, but have not received the same complete install-and-print test cycle.
+That baseline testing included multiple completed prints after each installation
+path. The redesigned menu and bootstrap are now being revalidated separately:
+
+| Creality firmware | Current menu/bootstrap revalidation |
+|---|:---:|
+| `1.1.5.5` | In progress |
+| `1.1.3.13` | Pending retest |
+| `1.1.5.2` | Pending retest |
+
+Update this table as each current menu-driven test cycle is completed. Versions
+not listed may work, but have not received the same complete install-and-print
+test cycle.
 
 Cartographer V3 and V4 normal USB/Katapult flashing and bundled STM32 DFU recovery have also been tested on printer hardware.
 
@@ -150,6 +162,14 @@ DFU recovery:
 - Does not need an internet connection while performing the recovery
 
 Selecting the wrong hardware image requires reflashing the correct one. Read the [Cartographer firmware instructions](./features/cartographer/firmware/README.md) before using recovery.
+
+> [!NOTE]
+> Some Cartographer V3 / Survey boards may fail during a normal USB/Katapult
+> write until their bootloader and firmware have been restored. Put the probe
+> into true DFU mode, run the bundled DFU recovery with **V3** selected, then
+> unplug/replug the probe or power-cycle the printer. Rerun the normal flasher
+> afterward to verify communication. Use STM32CubeProgrammer from another
+> computer only if the bundled printer-side DFU recovery also fails.
 
 ### Mount offsets and calibration
 

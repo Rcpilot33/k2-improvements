@@ -1,5 +1,6 @@
 #!/bin/sh
-# Printer-firmware USB-stick prep sub-menu.
+# Future/unwired printer-firmware USB-stick prep sub-menu. It is intentionally
+# not sourced by menu.sh because this workflow has not been tested end-to-end.
 #
 # Can't flash from inside Klipper (the bootloader does that, requires
 # physical USB stick + power-cycle). What this menu does:

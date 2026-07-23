@@ -59,14 +59,14 @@ fi
 # 5. Wire all three into custom/main.cfg
 # ------------------------------------------------------------
 echo "I: ensuring includes in custom/main.cfg"
-python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/printer.cfg custom/main.cfg
-python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg kamp_settings.cfg
-python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg Line_Purge.cfg
 if [ -f ~/printer_data/config/custom/exclude_object.cfg ]; then
-    python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+    python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
         ~/printer_data/config/custom/main.cfg exclude_object.cfg
 fi
 
@@ -89,7 +89,7 @@ elif [ ! -t 0 ]; then
     echo "I: non-interactive run; skipping firmware_retraction prompt"
     echo "I:   to enable later: cp ${SCRIPT_DIR}/firmware_retraction.cfg \\"
     echo "I:                       ~/printer_data/config/custom/ and add to main.cfg"
-    FW_RETRACT_STATUS="not configured (use --enable-firmware-retraction or run interactively)"
+    FW_RETRACT_STATUS="not configured (run this installer interactively to enable)"
 else
     echo ""
     echo "Optional: enable Klipper firmware retraction?"
@@ -106,7 +106,7 @@ else
             echo "I: copying firmware_retraction.cfg into custom/"
             cp -f "${SCRIPT_DIR}/firmware_retraction.cfg" \
                 ~/printer_data/config/custom/firmware_retraction.cfg
-            python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+            python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
                 ~/printer_data/config/custom/main.cfg firmware_retraction.cfg
             FW_RETRACT_STATUS="enabled with PLA defaults — tune in custom/firmware_retraction.cfg"
             ;;

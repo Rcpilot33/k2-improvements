@@ -1,5 +1,6 @@
 #!/bin/sh
-# KAMP adaptive purge sub-menu.
+# Legacy/unwired KAMP sub-menu retained for reference. The active menu installs
+# KAMP through installer/menus/extras.sh.
 
 menu_kamp() {
     while :; do

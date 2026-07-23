@@ -98,12 +98,13 @@ open the installer menu:
 
 ```sh
 cd /mnt/UDISK/root/k2-improvements
-./menu.sh
+sh ./menu.sh
 ```
 
 Choose **Extras**, then **secure-auth**. The installer verifies that a
-valid-looking public key exists before changing Dropbear. It then disables
-password authentication, restarts SSH, and disconnects the current session.
+valid-looking public key exists and requires you to type `SECURE AUTH` before
+changing Dropbear. It then disables password authentication, restarts SSH, and
+disconnects the current session.
 
 ## 6. Reconnect with the key
 
