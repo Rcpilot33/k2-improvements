@@ -43,7 +43,17 @@ is_skip_setup()    {
             /mnt/UDISK/creality/userdata/config/system_config.json \
             >/dev/null 2>&1
 }
-is_axis_twist()    { grep -q '^\[axis_twist_compensation\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null; }
+is_axis_twist() {
+    local custom="$PRINTER_CFG_DIR/custom"
+    local cfg="$custom/axis_twist_compensation.cfg"
+    local main="$custom/main.cfg"
+    local klipper_dir="${KLIPPER_DIR:-/usr/share/klipper}"
+    [ -e "$cfg" ] &&
+    grep -q '^\[axis_twist_compensation\]$' "$cfg" 2>/dev/null &&
+    [ -f "$main" ] &&
+    grep -q '^\[include axis_twist_compensation\.cfg\]$' "$main" 2>/dev/null &&
+    [ -e "$klipper_dir/klippy/extras/axis_twist_compensation.py" ]
+}
 is_abort_homing() {
     local klipper_dir="${KLIPPER_DIR:-/usr/share/klipper}"
     grep -q '_handle_force_stop_homing' "$klipper_dir/klippy/webhooks.py" 2>/dev/null &&
