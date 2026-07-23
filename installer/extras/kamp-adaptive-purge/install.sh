@@ -59,14 +59,14 @@ fi
 # 5. Wire all three into custom/main.cfg
 # ------------------------------------------------------------
 echo "I: ensuring includes in custom/main.cfg"
-python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
     ~/printer_data/config/printer.cfg custom/main.cfg
-python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg kamp_settings.cfg
-python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg Line_Purge.cfg
 if [ -f ~/printer_data/config/custom/exclude_object.cfg ]; then
-    python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+    python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
         ~/printer_data/config/custom/main.cfg exclude_object.cfg
 fi
 
@@ -106,7 +106,7 @@ else
             echo "I: copying firmware_retraction.cfg into custom/"
             cp -f "${SCRIPT_DIR}/firmware_retraction.cfg" \
                 ~/printer_data/config/custom/firmware_retraction.cfg
-            python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+            python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
                 ~/printer_data/config/custom/main.cfg firmware_retraction.cfg
             FW_RETRACT_STATUS="enabled with PLA defaults — tune in custom/firmware_retraction.cfg"
             ;;

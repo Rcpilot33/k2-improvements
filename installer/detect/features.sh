@@ -20,7 +20,16 @@ is_macros() {
     grep -q '^\[include bed_mesh\.cfg\]$' "$main" 2>/dev/null &&
     grep -q '^\[include overrides\.cfg\]$' "$main" 2>/dev/null
 }
-is_kamp()          { [ -L "$PRINTER_CFG_DIR/custom/Line_Purge.cfg" ]; }
+is_kamp() {
+    local custom="$PRINTER_CFG_DIR/custom"
+    local main="$custom/main.cfg"
+    [ -L "$custom/Line_Purge.cfg" ] &&
+    [ -f "$custom/kamp_settings.cfg" ] &&
+    [ -f "$main" ] &&
+    grep -q '^\[include kamp_settings\.cfg\]$' "$main" 2>/dev/null &&
+    grep -q '^\[include Line_Purge\.cfg\]$' "$main" 2>/dev/null &&
+    grep -rEhq '^\[exclude_object\]' "$PRINTER_CFG_DIR" 2>/dev/null
+}
 is_screws_tilt()   { [ -L "$PRINTER_CFG_DIR/custom/screws_tilt_adjust.cfg" ]; }
 is_r3men_bed() {
     grep -qE '^\[thermistor R3men_bed\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null &&
