@@ -139,7 +139,8 @@ menu_install_all() {
     printf '  2. Optional QoL: surface-selection-wrapper and axis_twist_compensation\n'
     printf '     are available from Optional extras.\n'
     printf '  3. Optional: firmware flashing is available from Cartographer tools.\n'
-    printf '  4. Calibrate per surface: CARTOGRAPHER_CALIBRATE METHOD=manual NAME=<plate>\n'
-    printf '     and BED_MESH_CALIBRATE for each plate (default/pei/coolplate/etc).\n\n'
+    printf '  4. Before printing, open Cartographer tools and run the Calibration\n'
+    printf '     and setup checklist. Follow the steps shown for your installed\n'
+    printf '     plate workflow, then test homing and probing.\n\n'
     press_enter
 }
