@@ -90,6 +90,8 @@ show_feature_readme() {
     local readme="$2"
     local menu_summary="$(dirname "$readme")/MENU.txt"
     local display_file="$readme"
+    local readme_relative=""
+    local readme_url=""
 
     if [ ! -f "$readme" ]; then
         local desc=$(printf '%s' "$_FEATURES" | grep "^$name|" | cut -d'|' -f3)
@@ -123,8 +125,14 @@ show_feature_readme() {
         }
     ' "$display_file"
     if [ "$display_file" = "$menu_summary" ]; then
-        printf '\nFull guide: %s\n' "$readme"
-        printf 'View with: less %s\n' "$readme"
+        case "$readme" in
+            "$INSTALLER_DIR"/*)
+                readme_relative=${readme#"$INSTALLER_DIR"/}
+                readme_url="https://github.com/Rcpilot33/k2-1155-Jacob-Fork/blob/k2-1155-compat/$readme_relative"
+                printf '\nFull guide online (Ctrl+click or copy):\n%s\n' "$readme_url"
+                ;;
+        esac
+        printf '\nRead directly in the printer SSH terminal:\nless %s\n' "$readme"
     fi
     printf '\n%s\n\n' '----------------------------------------------------------------'
 }

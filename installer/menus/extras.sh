@@ -64,6 +64,23 @@ run_extra_name() {
     install_extra "$line"
 }
 
+show_secure_auth_setup_guide() {
+    local guide="$INSTALLER_DIR/features/secure-auth/SETUP.md"
+
+    if [ ! -f "$guide" ]; then
+        warn "Secure Auth setup guide not found: $guide"
+        return 1
+    fi
+
+    if command -v less >/dev/null 2>&1; then
+        less "$guide"
+    elif command -v more >/dev/null 2>&1; then
+        more "$guide"
+    else
+        cat "$guide"
+    fi
+}
+
 carto_plate_workflow_state() {
     if is_carto_plate_workflow; then
         state_installed
@@ -215,6 +232,10 @@ install_extra() {
         secure-auth)
             if "$det" 2>/dev/null; then
                 printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"
+            fi
+            if confirm 'Open the complete setup guide in this terminal now?'; then
+                show_secure_auth_setup_guide
+                printf '\n'
             fi
             printf '%s\n' "$(c_red 'Secure Auth disables SSH password login and disconnects active SSH sessions.')"
             printf 'Confirm that key-only login works in a second terminal before continuing.\n\n'

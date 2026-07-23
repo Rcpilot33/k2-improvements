@@ -2,7 +2,7 @@ Secure Auth disables SSH password login and permits public-key login only.
 
 Read the complete setup guide before installing.
 
-Open in a browser (click, Ctrl+click, or copy the URL):
+Open in a browser (Ctrl+click or copy the URL):
 https://github.com/Rcpilot33/k2-1155-Jacob-Fork/blob/k2-1155-compat/features/secure-auth/SETUP.md
 
 Read directly in the printer SSH terminal:
