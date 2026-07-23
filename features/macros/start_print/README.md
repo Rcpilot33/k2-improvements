@@ -1,19 +1,20 @@
 # START_PRINT
 
-## Why
+Replaces the stock start macro with a temperature-aware workflow that:
 
-Creality's stock **START_PRINT** does not:
+- heats and optionally soaks the bed;
+- waits for the requested chamber temperature;
+- applies material-specific Z offsets;
+- levels the gantry and prepares the correct bed mesh; and
+- handles either Cartographer or the stock probe path.
 
-* handle (or wait for) chamber temperature
-* handle the different offset needs of different filament types
-* ensure the bed is _still_ level after rising from the bottom || it's frequently not ||
+## Slicer setup
 
-## Setup
+Pass nozzle, bed, chamber, and material values from the slicer:
 
-Install this feature and update your slicer's start gcode to send the **CHAMBER_TEMP** and **MATERIAL** as parameters.
-
-Here is an example for Creality Print:
-
-```raw
+```gcode
 START_PRINT EXTRUDER_TEMP=[nozzle_temperature_initial_layer] BED_TEMP=[bed_temperature_initial_layer_single] CHAMBER_TEMP=[overall_chamber_temperature] MATERIAL={filament_type[initial_tool]}
 ```
+
+Optional extensions such as KAMP or Cartographer plate selection may require
+the machine-start templates supplied with those features.

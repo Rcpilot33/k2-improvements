@@ -88,6 +88,8 @@ install_feature() {
 show_feature_readme() {
     local name="$1"
     local readme="$2"
+    local menu_summary="$(dirname "$readme")/MENU.txt"
+    local display_file="$readme"
 
     if [ ! -f "$readme" ]; then
         local desc=$(printf '%s' "$_FEATURES" | grep "^$name|" | cut -d'|' -f3)
@@ -97,9 +99,32 @@ show_feature_readme() {
         return
     fi
 
+    if [ -f "$menu_summary" ]; then
+        display_file="$menu_summary"
+    fi
+
     printf '%s\n' '----------------------------------------------------------------'
-    printf 'README: %s\n' "$name"
+    if [ "$display_file" = "$menu_summary" ]; then
+        printf 'SUMMARY: %s\n' "$name"
+    else
+        printf 'README: %s\n' "$name"
+    fi
     printf '%s\n\n' '----------------------------------------------------------------'
-    cat "$readme"
+    # The menu is a plain terminal, not a Markdown renderer. Retain the text
+    # while removing Markdown syntax that is distracting in terminal output.
+    awk '
+        /^[[:space:]]*```/ { next }
+        {
+            sub(/\r$/, "")
+            sub(/^#[#]*[[:space:]]+/, "")
+            gsub(/`/, "")
+            gsub(/\*\*/, "")
+            print
+        }
+    ' "$display_file"
+    if [ "$display_file" = "$menu_summary" ]; then
+        printf '\nFull guide: %s\n' "$readme"
+        printf 'View with: less %s\n' "$readme"
+    fi
     printf '\n%s\n\n' '----------------------------------------------------------------'
 }

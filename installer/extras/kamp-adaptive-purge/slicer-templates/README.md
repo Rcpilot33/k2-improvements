@@ -1,21 +1,21 @@
-# Slicer templates
+# KAMP Slicer Templates
 
-Drop-in machine start gcode templates for `kamp-adaptive-purge` on the K2 Plus.
+These files replace the complete machine-start G-code block in the matching
+K2 Plus slicer profile.
 
 | File | Slicer | Status |
-| --- | --- | --- |
-| `creality-print-machine-start.gcode` | Creality Print 7.x | Verified on 7.1.1 |
-| `orca-machine-start.gcode` | Orca / OrcaSlicer | Unverified — `bed_type` strings need confirming against your Orca profile |
+|---|---|---|
+| `creality-print-machine-start.gcode` | Creality Print 7.x | Verified with 7.1.1 |
+| `orca-machine-start.gcode` | Orca / OrcaSlicer | Verify plate-name values against your profile |
 
-See the parent feature [README.md](../README.md) § "Slicer change required" for full setup instructions including:
+## Use
 
-- Enabling the **Label objects** toggle in your slicer (required — without it `LINE_PURGE` falls back to bed-origin behavior)
-- Why a blocking `M109` is needed before `LINE_PURGE`
-- Verification with `grep EXCLUDE_OBJECT_DEFINE|LINE_PURGE` on the sliced gcode
+1. Enable **Label objects** or **Use exclude_object** in the slicer.
+2. Open the printer profile's **Machine start G-code** setting.
+3. Replace the complete block with the appropriate template.
+4. Save the profile and slice a test object.
+5. Confirm the output contains `EXCLUDE_OBJECT_DEFINE`, `M109`, and
+   `LINE_PURGE` before printing.
 
-## Using a template
-
-1. Open your slicer's printer profile → Machine G-code → Machine start G-code
-2. Replace the entire block with the contents of the appropriate template
-3. Save the printer profile
-4. Slice a test print and verify with the grep command from the parent README before sending to the printer
+See the parent [KAMP guide](../README.md) for installation, verification,
+tuning, and troubleshooting.

@@ -1,12 +1,14 @@
 # Secure Auth
 
-## Why?
+Disables SSH password authentication so the K2 Plus accepts public-key login
+only.
 
-The Creality K2 has a well known username and password for remote SSH access.
+The installer refuses to make changes unless
+`/etc/dropbear/authorized_keys` contains a valid-looking public key. Before
+installing:
 
-Provided there is a [key configured for ssh authentication](./SETUP.md), this disables all password ssh authentication.
+1. Follow the [key setup guide](./SETUP.md).
+2. Confirm key login works in a second terminal.
+3. Keep the current SSH session open until the test succeeds.
 
-The installer refuses to make any changes unless
-`/etc/dropbear/authorized_keys` contains a valid-looking SSH public-key entry.
-Before installing, verify that the key works from a second terminal and keep
-the current SSH session open until that test succeeds.
+Incorrect key setup can lock you out of SSH access.

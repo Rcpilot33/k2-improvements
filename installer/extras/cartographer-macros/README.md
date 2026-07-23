@@ -1,54 +1,40 @@
-# cartographer-macros
+# Cartographer Fluidd Macros
 
-Wraps the most-used `CARTOGRAPHER_*` plugin commands in `[gcode_macro]`
-blocks so they show up as buttons in Fluidd's Macros panel. Without
-this, those commands only run via the console (which is fine but slow
-to type and easy to mistype the plate name).
+Adds predefined `CARTO_*` buttons to Fluidd for Cartographer calibration,
+model loading, homing, and diagnostics.
 
-## Why a wrapper layer
+These macros are installed together with the
+[surface-selection wrapper](../surface-selection-wrapper/README.md) by the
+**Cartographer plate workflow** entry in Extras.
 
-`CARTOGRAPHER_CALIBRATE`, `CARTOGRAPHER_TOUCH_CALIBRATE`,
-`CARTOGRAPHER_SCAN_MODEL LOAD=...`, etc. are commands registered by
-the Cartographer Klipper plugin — not `[gcode_macro]` definitions.
-Fluidd's macros panel only lists `[gcode_macro]` blocks, so plugin
-commands don't appear there. This file adds a thin macro per command
-that just calls through.
+## Included plate profiles
 
-## Naming / grouping
+The supplied buttons use three fixed model names:
 
-Every macro in this file is prefixed `CARTO_`. Fluidd sorts macros
-alphabetically, so they cluster together at the top of the panel.
+- `default`
+- `pei`
+- `coolplate`
 
-## What you get
+For each name, Fluidd receives buttons to calibrate the scan model, calibrate
+the touch model, and load both saved models. Utility buttons provide touch
+homing, model listing, and probe information.
 
-| Macro | Calls |
-| --- | --- |
-| `CARTO_CALIBRATE_DEFAULT` | `CARTOGRAPHER_CALIBRATE METHOD=manual NAME=default` |
-| `CARTO_CALIBRATE_PEI` | `CARTOGRAPHER_CALIBRATE METHOD=manual NAME=pei` |
-| `CARTO_CALIBRATE_COOLPLATE` | `CARTOGRAPHER_CALIBRATE METHOD=manual NAME=coolplate` |
-| `CARTO_TOUCH_CAL_DEFAULT` | `CARTOGRAPHER_TOUCH_CALIBRATE NAME=default` |
-| `CARTO_TOUCH_CAL_PEI` | `CARTOGRAPHER_TOUCH_CALIBRATE NAME=pei` |
-| `CARTO_TOUCH_CAL_COOLPLATE` | `CARTOGRAPHER_TOUCH_CALIBRATE NAME=coolplate` |
-| `CARTO_LOAD_DEFAULT` | scan + touch model load (default) |
-| `CARTO_LOAD_PEI` | scan + touch model load (pei) |
-| `CARTO_LOAD_COOLPLATE` | scan + touch model load (coolplate) |
-| `CARTO_TOUCH_HOME` | `CARTOGRAPHER_TOUCH_HOME` (Z-ref via touch) |
-| `CARTO_LIST_MODELS` | List all saved scan + touch models |
-| `CARTO_INFO` | `CARTOGRAPHER_GET_INFO` (firmware/HW info) |
+The buttons call the Cartographer plugin commands directly, including
+`CARTOGRAPHER_SCAN_CALIBRATE`, `CARTOGRAPHER_TOUCH_CALIBRATE`, and the scan and
+touch model loaders.
 
-## Adding plates
+## Custom plates
 
-If you have a build plate beyond default/pei/coolplate, copy one of
-the existing `[gcode_macro CARTO_*_<plate>]` blocks and rename. Or
-override in `custom/overrides.cfg` to keep the change through
-reinstalls.
+For another plate name, copy and rename the matching calibration and load
+macros. Keep local changes in `custom/overrides.cfg` or another custom include
+so repository updates do not overwrite them.
 
 ## Activation
 
-Klipper picks up the macros on next `FIRMWARE_RESTART`.
+The macros appear after Klipper reloads the configuration. Power-cycle the K2
+Plus before the next `G28`.
 
 ## Credit
 
-The predefined Cartographer plate macros and their integration into the
-menu-based workflow are adapted from
+The predefined plate macros and their menu integration are adapted from
 [erondiel's `v1.1.24` fork](https://github.com/erondiel/k2-improvements/tree/v1.1.24).

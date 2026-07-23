@@ -1,3 +1,7 @@
-# Why
+# Fluidd
 
-The version of Fluidd provided on the K2 is old (v1.30.0-f3e4ac3, 2024-05-01) and _does not_ support the camera on the K2.
+Installs the K2-compatible Fluidd build used by this project. It replaces the
+older factory web interface, enables the K2 camera integration, registers
+Fluidd with Moonraker's update manager, and restarts the web services.
+
+Updated Moonraker must be installed first.

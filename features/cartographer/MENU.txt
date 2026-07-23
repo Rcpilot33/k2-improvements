@@ -1,0 +1,14 @@
+Replaces the stock PR Touch probe with Cartographer scanning and touch
+probing.
+
+Before installing:
+  - Mount and connect a compatible Cartographer V3 or V4 by USB.
+  - Know which physical mount and offset preset you are using.
+  - Stop any active print.
+
+After installing:
+  1. Select the matching mount-offset profile.
+  2. Power-cycle the printer before homing.
+  3. Complete Cartographer calibration.
+
+Probe firmware flashing is a separate, optional menu action.

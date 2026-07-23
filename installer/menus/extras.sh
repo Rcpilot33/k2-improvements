@@ -141,7 +141,7 @@ menu_extras() {
         printf '\n Print workflow\n'
         ui_menu_item 2 'KAMP adaptive purge' "$(extra_state kamp-adaptive-purge)"
         ui_menu_item 3 'Axis twist compensation' "$(extra_state axis_twist_compensation)"
-        ui_menu_item 4 'Cartographer plate profiles / auto-selection' "$(carto_plate_workflow_state)"
+        ui_menu_item 4 'Cartographer plate workflow' "$(carto_plate_workflow_state)"
         printf '\n Security\n'
         ui_menu_item 5 'Secure Auth' "$(extra_state secure-auth)"
 

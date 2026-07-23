@@ -1,5 +1,10 @@
 # Screws Tilt Adjust
 
-## Why
+Adds K2 Plus support for Klipper's `SCREWS_TILT_CALCULATE` command. The command
+probes above each bed screw and reports how far and in which direction to turn
+each adjustment knob.
 
-Klipper's own documentation covers this, [here](https://www.klipper3d.org/Manual_Level.html#adjusting-bed-leveling-screws-using-the-bed-probe)
+Repeat the command and adjustments until the reported values are close to
+zero. See Klipper's
+[bed-screw adjustment guide](https://www.klipper3d.org/Manual_Level.html#adjusting-bed-leveling-screws-using-the-bed-probe)
+for the procedure.

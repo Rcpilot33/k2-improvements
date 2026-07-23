@@ -1,0 +1,12 @@
+Only install this profile when the printer has an R3MEN graphite bed.
+Do not install it for the stock K2 Plus bed.
+
+The installer:
+  - backs up printer.cfg;
+  - adds the R3MEN thermistor table;
+  - changes heater_bed to sensor_type: R3men_bed; and
+  - sets max_power: 0.8.
+
+After installation, restart the firmware and verify the room-temperature
+reading before heating the bed. Perform a low-temperature test and bed PID
+calibration before normal printing.

@@ -1,0 +1,8 @@
+Removes an orphan prtouch_v3 header from printer.cfg after Cartographer
+replaces the stock probe.
+
+Run this when Klipper reports:
+  Option 'step_swap_pin' in section 'prtouch_v3' must be specified
+
+The installer backs up printer.cfg and removes only the stale SAVE_CONFIG
+header. Re-running is safe when the header is already absent.

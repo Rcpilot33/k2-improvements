@@ -1,39 +1,27 @@
 # Better Root
 
-## Why
+Moves the root user's home directory from the small system filesystem to
+`/mnt/UDISK/root`.
 
-The `root` home directory resides on a rather small filesystem (~220 meg).
+This provides enough space for Klipper-related repositories and gives the K2
+Plus a conventional layout containing paths such as:
 
-Typical **Klipper** based printers have the various components installed/visible directly from the user's home directory.  For example:
-
-```sh
-$ ls -1
-crowsnest
-fluidd
-fluidd-config
-kiauh
-kiauh-backups
+```text
 klipper
 klippy-env
 moonraker
 moonraker-env
 printer_data
 ```
-
-This replicates much of this by moving the `root` home directory to `/mnt/UDISK` and symlinking the various components in place:
-
-```sh
-# ls -1
-fluidd
-klipper
-klippy-env
-moonraker
-moonraker-env
-printer_data
-```
-
-This is also a prerequisite for almost every application addition or update in this repository.  They will be installed in the `root` users home directory, like normal **Klipper** based printers.
 
 ## What to expect
 
-The `install.sh` will move any existing contents of the `root` home directory to the new location `/mnt/UDISK/root`, update the system with the new location, symlink the various components into their expected location, and log you out.  The log out is needed to ensure that the `root` user's home directory is fully updated for future sessions/commands.
+The installer:
+
+1. Moves existing root-home content to `/mnt/UDISK/root`.
+2. Updates `/etc/passwd` with the new home directory.
+3. Creates the required links to the printer software and configuration.
+4. Ends the current SSH session so the new home directory takes effect.
+
+Reconnect to the printer after installation. Re-running the installer is safe
+when Better Root is already active.

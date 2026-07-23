@@ -1,16 +1,20 @@
 # Abort Homing
 
-Stop a homing move without triggering a full emergency stop.
+Adds the backend support required by the custom Fluidd **Force Stop Homing**
+button.
 
-![Abort Homing Button](image.png)
+Use it to stop an incorrect homing move without issuing a full emergency stop.
+This is especially useful if an axis begins moving in the wrong direction.
 
-## What it does
+![Abort Homing button](image.png)
 
-Implements the backend webhook for the "Force Stop Homing" button included in the custom Fluidd build. Can be used when you spot reverse homing occuring without the need for an emergency shutdown.
+## Install
 
+Use **Maintenance and recovery -> Core component installer**, or run:
 
-## Installation
-
-```bash
-./install.sh
+```sh
+sh install.sh
 ```
+
+The installer patches Klipper and restarts the service. Power-cycle the printer
+before the next `G28`.

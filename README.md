@@ -102,7 +102,7 @@ The stock-probe installer does **not** remove an existing Cartographer installat
 | 2 | Install, repair, or change the printer setup path. |
 | 3 | Open Cartographer firmware, DFU recovery, mount-offset, and calibration tools. |
 | 4 | Install optional hardware, print-workflow, and security extras. |
-| 5 | Open advanced component repair, PR Touch cleanup, and factory-reset tools. |
+| 5 | Open individual component repair, PR Touch cleanup, and factory-reset tools. |
 | 6 | Update the installer with a fast-forward-only `git pull`, then reload the menu. |
 | 0 | Exit. |
 
@@ -185,8 +185,7 @@ Extras are installed individually from **Optional extras**.
 | Extra | Purpose / requirement |
 |---|---|
 | [Cartographer offset setup](./installer/extras/cartographer-offset-setup/README.md) | Select Jamin, JimmyV, or custom probe offsets; requires Cartographer. |
-| [Surface selection wrapper](./installer/extras/surface-selection-wrapper/README.md) | Loads matching scan/touch models through the `START_PRINT SURFACE=` parameter; requires Cartographer. |
-| [Cartographer macros](./installer/extras/cartographer-macros/README.md) | Adds `CARTO_*` calibration/load/touch-home controls; requires Cartographer. |
+| Cartographer plate workflow ([macros](./installer/extras/cartographer-macros/README.md), [automatic selection](./installer/extras/surface-selection-wrapper/README.md)) | Installs the predefined `CARTO_*` controls and slicer-driven plate selection together; requires Cartographer. |
 | [Axis twist compensation](./features/axis_twist_compensation/README.md) | Optional compensation for Z drift across X. |
 | [KAMP adaptive purge](./installer/extras/kamp-adaptive-purge/README.md) | Adds the adaptive purge feature. |
 | [R3MEN bed profile](./features/r3men-bed/README.md) | Adds the R3MEN graphite-bed thermistor profile. |
@@ -195,7 +194,7 @@ Extras are installed individually from **Optional extras**.
 
 ## Updating
 
-Use **8. Update installer** from the main menu, rerun either bootstrap command above, or run:
+Use **6. Update installer** from the main menu, rerun either bootstrap command above, or run:
 
 ```sh
 cd /mnt/UDISK/root/k2-improvements

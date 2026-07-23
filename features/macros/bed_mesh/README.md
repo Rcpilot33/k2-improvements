@@ -1,11 +1,11 @@
-# BED MESH
+# Bed Mesh Macros
 
-## Why
+The K2 Plus bed changes shape as it heats. A mesh created at room temperature
+may not represent the bed at printing temperature.
 
-The K2 bed flexes quite a lot between ambient (cold) and heat soaked at the desired printing temperature.  So, it is best to take a bed mesh at your desired printing temperature.  However, the K2 also has both a large bed and a slow probe.  As a result taking a detailed bed mesh at your desired printing temperature can add a non trivial amount of time to your print, each time.
+These macros create temperature-specific mesh profiles after heating and
+soaking the bed. On the stock probe path, an existing profile is reused when
+available. Cartographer uses its adaptive mesh flow from `START_PRINT`.
 
-But doesn't the K2 already take a bed mesh?
-
-Yes, but during calibration it creates a bed mesh, but this is done at ambient temps.  I highly doubt anyone is printing at ambient temperatures.  Additionaly, it only stores a single "default" bed mesh.
-
-## Use
+Profiles are named from the requested bed and chamber temperatures, such as
+`60c_0c`.

@@ -1,0 +1,11 @@
+Select the offset profile matching the physical Cartographer mount:
+
+  - Jamin/default: use the cartographer.cfg baseline.
+  - JimmyV: apply y=36, matching mesh limits, and stock stepper_y values.
+  - Custom: enter probe offsets, mesh limits, and the stepper_y source.
+
+Only custom/overrides.cfg is changed. cartographer.cfg and printer.cfg are
+preserved. The installer creates a backup and retains the two newest matching
+backups.
+
+Power-cycle the printer before the next G28 after applying a change.

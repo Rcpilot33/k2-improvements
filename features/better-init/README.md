@@ -1,15 +1,9 @@
 # Better Init
 
-## Why
+Replaces key K2 Plus service scripts with versions that track running
+processes correctly.
 
-The existing init scripts on the K2 feel like a bit of an after thought.
-
-They don't create traditional tracking mechanisms for whether a process is running or not, such as a PID file.
-
-The lack of these tracking mechanisms mean they don't allow integration with Moonraker and thereby Fluidd.
-
-## Updated Init Scripts
-
-This replaces some of the key init scripts with improved versions that do provide the process tracking.
-
-Additionally, wrapper scripts are provided to allow integration with Moonraker and Fluidd.  This allows for service management of these processes from Fluidd's UI.
+The stock scripts do not provide normal PID and service-management behavior.
+That prevents Moonraker and Fluidd from reliably reporting or controlling
+services. Better Init adds the required tracking and wrapper scripts so those
+services can be managed from Fluidd.

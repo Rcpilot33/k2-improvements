@@ -1,0 +1,14 @@
+KAMP replaces the fixed front-left purge line with a purge placed near
+the current print and inside the usable bed area.
+
+Before using KAMP:
+  1. Enable "Label objects" in your slicer.
+  2. Use the bundled machine-start G-code template for your slicer.
+  3. Confirm the template contains M109 before LINE_PURGE.
+
+Templates:
+  slicer-templates/creality-print-machine-start.gcode
+  slicer-templates/orca-machine-start.gcode
+
+The installer does not restart Klipper. After restarting the firmware,
+power-cycle the printer before the next G28.

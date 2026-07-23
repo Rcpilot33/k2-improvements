@@ -16,8 +16,6 @@ restart and dies with:
 Option 'step_swap_pin' in section 'prtouch_v3' must be specified
 ```
 
-This is documented in the K2 Plus install gotchas (item 6).
-
 ## What this does
 
 1. Backs up `printer.cfg` to `printer.cfg.before-prtouch-cleanup-<timestamp>`.
