@@ -64,7 +64,11 @@ echo "all" | /usr/bin/nc -U /var/run/wipe.sock
 > [!WARNING]
 > The wipe command is destructive. Back up the printer configuration, custom macros, saved meshes, and any other files you want to keep before running it.
 
-After the reset, complete the on-screen setup far enough to restore the network connection, but stop before Creality calibration.
+After the reset, complete the full on-screen Creality setup and its factory
+calibrations, including cutter calibration and input shaping. Restore the
+network connection and finish that setup before starting bootstrap. Once these
+modifications are installed, use the provided manual calibration workflows
+instead of rerunning Creality's automatic calibration.
 
 ### Start bootstrap and open the installer menu
 
@@ -91,6 +95,26 @@ sh /mnt/UDISK/root/k2-improvements/menu.sh
 ```
 
 Bootstrap installs Entware when needed, configures the larger persistent root home, and clones or updates this branch at `/mnt/UDISK/root/k2-improvements`.
+
+### If installing Cartographer, prepare its hardware first
+
+If you are keeping the stock PR Touch probe, skip this section and continue to
+**Choose an installation path**, then select the stock PR Touch path.
+
+Complete the stock Creality setup and factory calibrations first. Then power
+off the printer and physically install the correct Cartographer mount, any
+spacers required by that mount, its wiring, and its USB connection. Confirm
+whether the connected probe is Cartographer V3 or V4.
+
+After bootstrap opens the installer, review **Cartographer tools -> Firmware
+flash** before selecting the Cartographer installation path. Use only the
+bundled, tested firmware matching the connected hardware. Normal USB/Katapult
+flashing is preferred; use DFU recovery only when normal flashing cannot
+communicate with the probe.
+
+Selecting the wrong mount preset, omitting required spacers, or flashing
+firmware for the wrong hardware can produce incorrect probe positioning or
+leave the probe unavailable.
 
 ## Choose an installation path
 
@@ -247,7 +271,7 @@ See the project [FAQ](./FAQ.md) for common questions and troubleshooting.
 
 ## Project lineage and credits
 
-This repository builds on [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements), which provides the original features and installers. Jacob had also planned a menu-driven installation path.
+This project was originally started by [Jamin Collins](https://github.com/jamincollins/k2-improvements). [Jacob10383](https://github.com/Jacob10383/k2-improvements) forked that foundation, expanded its features and installers, and continues to maintain and develop the project. Jacob had also planned a menu-driven installation path.
 
 The working menu implementation in this fork is based substantially on [erondiel's `v1.1.24` fork](https://github.com/erondiel/k2-improvements/tree/v1.1.24). That fork provided the practical foundation and design reference for the guided menu system, which has since been reorganized and extended here with setup detection, resumable install paths, status reporting, recovery tools, and additional safety checks.
 
@@ -264,7 +288,7 @@ Original-project acknowledgements:
 - [Entware](https://github.com/Entware/Entware)
 - [Cartographer 3D](https://github.com/Cartographer3D)
 
-Donations to support Jacob's original work are available through [Jacob10383's Ko-fi](https://ko-fi.com/jacob10383).
+Donations to support Jacob's continued maintenance and development are available through [Jacob10383's Ko-fi](https://ko-fi.com/jacob10383).
 
 ## Disclaimer
 
