@@ -7,10 +7,10 @@ Before using KAMP:
   3. Confirm the template contains M109 before LINE_PURGE.
 
 Creality Print templates:
-  slicer-templates/creality-print-material-machine-start.gcode
-  slicer-templates/creality-print-plate-selection-machine-start.gcode
-  slicer-templates/creality-print-kamp-machine-start.gcode
-  slicer-templates/creality-print-kamp-and-plate-selection-machine-start.gcode
+  slicer-templates/creality-start-material-only.gcode
+  slicer-templates/creality-start-material-kamp.gcode
+  slicer-templates/creality-start-material-surface-profiles.gcode
+  slicer-templates/creality-start-material-surface-profiles-kamp.gcode
 
 Orca template:
   slicer-templates/orca-machine-start.gcode

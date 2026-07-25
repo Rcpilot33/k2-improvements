@@ -7,10 +7,10 @@ Creality's system preset unchanged as a fallback.
 
 | File | Material | Plate selection | KAMP purge | Status |
 |---|---|---|---|---|
-| `creality-print-material-machine-start.gcode` | Yes | No; loads `default` | No | Creality Print 7.1.1 |
-| `creality-print-plate-selection-machine-start.gcode` | Yes | Yes | No | Creality Print 7.1.1 |
-| `creality-print-kamp-machine-start.gcode` | Yes | No; loads `default` | Yes | Creality Print 7.1.1 |
-| `creality-print-kamp-and-plate-selection-machine-start.gcode` | Yes | Yes | Yes | Creality Print 7.1.1 |
+| `creality-start-material-only.gcode` | Yes | No; loads `default` | No | Creality Print 7.1.1 |
+| `creality-start-material-surface-profiles.gcode` | Yes | Yes | No | Creality Print 7.1.1 |
+| `creality-start-material-kamp.gcode` | Yes | No; loads `default` | Yes | Creality Print 7.1.1 |
+| `creality-start-material-surface-profiles-kamp.gcode` | Yes | Yes | Yes | Creality Print 7.1.1 |
 | `orca-machine-start.gcode` | Yes | Yes | Yes | Verify plate-name values against your profile |
 
 The plate-selection variants pass `SURFACE=` to the printer's Cartographer

@@ -38,10 +38,10 @@ printer profile. Keep the slicer's system preset unchanged as a fallback.
 
 | Template | Material | Plate selection | KAMP purge |
 |---|---|---|---|
-| [`creality-print-material-machine-start.gcode`](./slicer-templates/creality-print-material-machine-start.gcode) | Yes | No; uses `default` | No |
-| [`creality-print-plate-selection-machine-start.gcode`](./slicer-templates/creality-print-plate-selection-machine-start.gcode) | Yes | Yes | No |
-| [`creality-print-kamp-machine-start.gcode`](./slicer-templates/creality-print-kamp-machine-start.gcode) | Yes | No; uses `default` | Yes |
-| [`creality-print-kamp-and-plate-selection-machine-start.gcode`](./slicer-templates/creality-print-kamp-and-plate-selection-machine-start.gcode) | Yes | Yes | Yes |
+| [`creality-start-material-only.gcode`](./slicer-templates/creality-start-material-only.gcode) | Yes | No; uses `default` | No |
+| [`creality-start-material-surface-profiles.gcode`](./slicer-templates/creality-start-material-surface-profiles.gcode) | Yes | Yes | No |
+| [`creality-start-material-kamp.gcode`](./slicer-templates/creality-start-material-kamp.gcode) | Yes | No; uses `default` | Yes |
+| [`creality-start-material-surface-profiles-kamp.gcode`](./slicer-templates/creality-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
 | [`orca-machine-start.gcode`](./slicer-templates/orca-machine-start.gcode) | Yes | Yes | Yes |
 
 In the slicer:
