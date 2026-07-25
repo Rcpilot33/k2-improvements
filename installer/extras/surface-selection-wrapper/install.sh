@@ -28,12 +28,6 @@ grep -qE '^\[cartographer\]' "$CFG_DIR/printer.cfg" "$CFG_DIR/custom/"*.cfg 2>/d
 TARGET=$(readlink -f "$SYMLINK" 2>/dev/null || echo "$SYMLINK")
 [ -f "$TARGET" ] || { echo "ERROR: $TARGET not found"; exit 1; }
 
-# Match both clean and parenthetical-variant markers
-if grep -qE '^[[:space:]]*# === BEGIN surface-selection wrapper' "$TARGET"; then
-    echo "I: surface-selection wrapper already present in $TARGET"
-    exit 0
-fi
-
 if ! grep -q 'STATUS_MSG.*MSG="Preheating' "$TARGET"; then
     echo "ERROR: anchor not found in $TARGET"
     echo "  expected line containing: STATUS_MSG ... MSG=\"Preheating ...\""
@@ -43,6 +37,23 @@ fi
 
 BACKUP="${TARGET}.before-surface-wrapper-$(date +%s)"
 cp "$TARGET" "$BACKUP"
+
+# Remove any previous version of our marked block. This upgrades installations
+# that used the earlier default/pei/coolplate naming scheme. Require a complete
+# pair of markers so a malformed local edit cannot truncate the macro file.
+if grep -qE '^[[:space:]]*# === BEGIN surface-selection wrapper' "$TARGET"; then
+    if ! grep -qE '^[[:space:]]*# === END surface-selection wrapper' "$TARGET"; then
+        echo "ERROR: incomplete surface-selection wrapper in $TARGET"
+        echo "       restore or remove the incomplete block before retrying"
+        exit 1
+    fi
+    awk '
+        /^[[:space:]]*# === BEGIN surface-selection wrapper/ { dropping=1; next }
+        /^[[:space:]]*# === END surface-selection wrapper/ { dropping=0; next }
+        !dropping { print }
+    ' "$TARGET" > "${TARGET}.without-surface-wrapper"
+    mv "${TARGET}.without-surface-wrapper" "$TARGET"
+fi
 
 awk '
 /STATUS_MSG.*MSG="Preheating/ && !inserted {

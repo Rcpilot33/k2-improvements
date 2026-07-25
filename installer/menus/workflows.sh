@@ -146,8 +146,14 @@ EOF
     if is_carto_plate_workflow; then
         cat <<'EOF'
   3. Cartographer plate profiles and automatic selection are installed. With
-     the correct plate on the bed, use its supplied CARTO_CALIBRATE_* and
-     CARTO_TOUCH_CAL_* buttons in Fluidd, then run:
+     the correct plate on the bed, calibrate the matching profiles in Fluidd:
+
+       Epoxy Resin Plate  -> A31 / A32 / A33
+       High Temp Plate    -> A41 / A42 / A43
+       Textured PEI Plate -> A21 / A22 / A23
+       Customized Plate   -> A51 / A52 / A53
+
+     Run its scan and touch calibration buttons, then run:
 
        BED_MESH_CALIBRATE
 
