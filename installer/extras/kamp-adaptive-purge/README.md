@@ -34,14 +34,15 @@ project's `START_PRINT` and Cartographer flow already provide those functions.
 ## Slicer setup
 
 For Creality Print, choose the template matching the features enabled in that
-printer profile. Keep the slicer's stock profile unchanged as a fallback.
+printer profile. Keep the slicer's system preset unchanged as a fallback.
 
-| Template | Plate selection | KAMP purge |
-|---|---|---|
-| [`creality-print-plate-selection-machine-start.gcode`](./slicer-templates/creality-print-plate-selection-machine-start.gcode) | Yes | No |
-| [`creality-print-kamp-machine-start.gcode`](./slicer-templates/creality-print-kamp-machine-start.gcode) | No; uses `default` | Yes |
-| [`creality-print-kamp-and-plate-selection-machine-start.gcode`](./slicer-templates/creality-print-kamp-and-plate-selection-machine-start.gcode) | Yes | Yes |
-| [`orca-machine-start.gcode`](./slicer-templates/orca-machine-start.gcode) | Yes | Yes |
+| Template | Material | Plate selection | KAMP purge |
+|---|---|---|---|
+| [`creality-print-material-machine-start.gcode`](./slicer-templates/creality-print-material-machine-start.gcode) | Yes | No; uses `default` | No |
+| [`creality-print-plate-selection-machine-start.gcode`](./slicer-templates/creality-print-plate-selection-machine-start.gcode) | Yes | Yes | No |
+| [`creality-print-kamp-machine-start.gcode`](./slicer-templates/creality-print-kamp-machine-start.gcode) | Yes | No; uses `default` | Yes |
+| [`creality-print-kamp-and-plate-selection-machine-start.gcode`](./slicer-templates/creality-print-kamp-and-plate-selection-machine-start.gcode) | Yes | Yes | Yes |
+| [`orca-machine-start.gcode`](./slicer-templates/orca-machine-start.gcode) | Yes | Yes | Yes |
 
 In the slicer:
 
@@ -51,8 +52,8 @@ In the slicer:
 3. Replace the complete block with the appropriate supplied template.
 4. Save the printer profile and slice a test object.
 
-The KAMP-only template omits `SURFACE=`, causing the Cartographer wrapper to
-load `default` on each print. See the
+The material-only and KAMP-only templates omit `SURFACE=`, causing the
+Cartographer wrapper to load `default` on each print. See the
 [template notes](./slicer-templates/README.md) for details and verification.
 
 ## Verify before printing

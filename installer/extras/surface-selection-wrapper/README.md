@@ -32,6 +32,7 @@ unrecognized bed type.
 Creality Print users can copy one of these complete machine-start G-code
 templates:
 
+- [material pass only](../kamp-adaptive-purge/slicer-templates/creality-print-material-machine-start.gcode), which loads `default`;
 - [plate selection only](../kamp-adaptive-purge/slicer-templates/creality-print-plate-selection-machine-start.gcode);
 - [KAMP only](../kamp-adaptive-purge/slicer-templates/creality-print-kamp-machine-start.gcode), which omits `SURFACE` and loads `default`; or
 - [KAMP and plate selection](../kamp-adaptive-purge/slicer-templates/creality-print-kamp-and-plate-selection-machine-start.gcode).
