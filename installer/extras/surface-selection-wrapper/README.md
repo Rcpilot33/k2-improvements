@@ -29,9 +29,16 @@ wrapper falls back to `default` when `SURFACE` is omitted; the supplied
 Creality Print template explicitly falls back to `textured_pei` for an
 unrecognized bed type.
 
-Use the machine-start G-code templates supplied with the optional print
-workflow features, or add a matching `SURFACE` value to your existing slicer
-configuration.
+Creality Print users can copy one of these complete machine-start G-code
+templates:
+
+- [plate selection only](../kamp-adaptive-purge/slicer-templates/creality-print-plate-selection-machine-start.gcode);
+- [KAMP only](../kamp-adaptive-purge/slicer-templates/creality-print-kamp-machine-start.gcode), which omits `SURFACE` and loads `default`; or
+- [KAMP and plate selection](../kamp-adaptive-purge/slicer-templates/creality-print-kamp-and-plate-selection-machine-start.gcode).
+
+Keep Creality's stock profile unchanged as a fallback. The KAMP templates
+require the optional KAMP adaptive-purge feature; the plate-selection-only
+template does not.
 
 ## Safety and updates
 

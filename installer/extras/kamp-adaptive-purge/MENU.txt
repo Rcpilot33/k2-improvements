@@ -6,8 +6,12 @@ Before using KAMP:
   2. Use the bundled machine-start G-code template for your slicer.
   3. Confirm the template contains M109 before LINE_PURGE.
 
-Templates:
-  slicer-templates/creality-print-machine-start.gcode
+Creality Print templates:
+  slicer-templates/creality-print-plate-selection-machine-start.gcode
+  slicer-templates/creality-print-kamp-machine-start.gcode
+  slicer-templates/creality-print-kamp-and-plate-selection-machine-start.gcode
+
+Orca template:
   slicer-templates/orca-machine-start.gcode
 
 The installer does not restart Klipper. After restarting the firmware,

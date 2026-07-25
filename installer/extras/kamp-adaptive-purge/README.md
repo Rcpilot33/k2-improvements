@@ -33,22 +33,27 @@ project's `START_PRINT` and Cartographer flow already provide those functions.
 
 ## Slicer setup
 
-Use the template matching your slicer:
+For Creality Print, choose the template matching the features enabled in that
+printer profile. Keep the slicer's stock profile unchanged as a fallback.
 
-| Template | Status |
-|---|---|
-| [`creality-print-machine-start.gcode`](./slicer-templates/creality-print-machine-start.gcode) | Verified with Creality Print 7.1.1 |
-| [`orca-machine-start.gcode`](./slicer-templates/orca-machine-start.gcode) | Verify plate-name values against your Orca profile |
+| Template | Plate selection | KAMP purge |
+|---|---|---|
+| [`creality-print-plate-selection-machine-start.gcode`](./slicer-templates/creality-print-plate-selection-machine-start.gcode) | Yes | No |
+| [`creality-print-kamp-machine-start.gcode`](./slicer-templates/creality-print-kamp-machine-start.gcode) | No; uses `default` | Yes |
+| [`creality-print-kamp-and-plate-selection-machine-start.gcode`](./slicer-templates/creality-print-kamp-and-plate-selection-machine-start.gcode) | Yes | Yes |
+| [`orca-machine-start.gcode`](./slicer-templates/orca-machine-start.gcode) | Yes | Yes |
 
 In the slicer:
 
-1. Enable **Label objects** or **Use exclude_object**.
+1. If using a KAMP template, enable **Label objects** or
+   **Use exclude_object**.
 2. Open the printer profile's **Machine start G-code** setting.
 3. Replace the complete block with the appropriate supplied template.
 4. Save the printer profile and slice a test object.
 
-See the [template notes](./slicer-templates/README.md) for the relevant slicer
-locations.
+The KAMP-only template omits `SURFACE=`, causing the Cartographer wrapper to
+load `default` on each print. See the
+[template notes](./slicer-templates/README.md) for details and verification.
 
 ## Verify before printing
 
