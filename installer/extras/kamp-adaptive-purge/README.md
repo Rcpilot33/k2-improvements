@@ -44,6 +44,10 @@ printer profile. Keep the slicer's system preset unchanged as a fallback.
 | [`creality-start-material-surface-profiles-kamp.gcode`](./slicer-templates/creality-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
 | [`orca-machine-start.gcode`](./slicer-templates/orca-machine-start.gcode) | Yes | Yes | Yes |
 
+All four Creality Print variants passed printer testing on firmware `1.1.5.5`.
+The Orca template remains dependent on the exact plate-name values emitted by
+the user's Orca profile and is not included in that Creality Print validation.
+
 In the slicer:
 
 1. If using a KAMP template, enable **Label objects** or

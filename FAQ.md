@@ -33,3 +33,13 @@ T[initial_no_support_extruder]
 ## Fluidd seems to hang at 99% even though the print appears to have finished
 
 A: It apepars that this is an issue with Creality Print not placing a newline at the end of the sliced gcode.
+
+## Why did Cartographer keep using the previous or default model after I pressed a plate selector?
+
+A: The `A11` through `A15` buttons select a profile for the shared actions; they
+do not load it immediately. After selecting the plate, press
+`A23_CARTO_LOAD_SELECTED` to load both its saved Scan and Touch models.
+
+For calibration, select the plate and then press
+`A21_CARTO_SCAN_SELECTED` or `A22_CARTO_TOUCH_SELECTED`. The selection resets to
+`default` after a Klipper restart.

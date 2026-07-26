@@ -39,3 +39,7 @@ After installation:
 3. Follow the [Cartographer setup guide](./SETUP.md).
 4. Flash probe firmware only if needed; firmware flashing is a separate menu
    action.
+
+For automatic per-surface model selection, install the **Cartographer plate
+workflow** from Extras and follow its
+[selector/action guide](../../installer/extras/cartographer-macros/README.md).

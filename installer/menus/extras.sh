@@ -4,7 +4,7 @@
 # name|detector|description|script_path|requires  (one per line; script_path
 # relative to INSTALLER_DIR; requires is the name of a function that must
 # return 0 for the extra to be installable - empty if no precondition).
-_EXTRAS='prtouch-cleanup|is_prtouch_clean|Remove orphan [prtouch_v3] SAVE_CONFIG header|installer/extras/prtouch-cleanup/install.sh|
+_EXTRAS='prtouch-cleanup|is_prtouch_clean|Remove orphan [prtouch_v3] SAVE_CONFIG header|installer/extras/prtouch-cleanup/install.sh|is_cartographer
 surface-selection-wrapper|is_surface_wrap|START_PRINT SURFACE= param loads matching scan/touch model|installer/extras/surface-selection-wrapper/install.sh|is_cartographer
 cartographer-offset-setup|is_carto_offset_set|Cartographer probe X/Y offset (Jamin/JimmyV/custom)|installer/extras/cartographer-offset-setup/install.sh|is_cartographer
 cartographer-macros|is_carto_macros|CARTO_* macro buttons for Fluidd (calibrate/load/touch home)|installer/extras/cartographer-macros/install.sh|is_cartographer
@@ -150,18 +150,33 @@ menu_extras() {
         printf '\n Print workflow\n'
         ui_menu_item 2 'KAMP adaptive purge' "$(extra_state kamp-adaptive-purge)"
         ui_menu_item 3 'Axis twist compensation' "$(extra_state axis_twist_compensation)"
-        ui_menu_item 4 'Cartographer plate workflow' "$(carto_plate_workflow_state)"
-        printf '\n Security\n'
-        ui_menu_item 5 'Secure Auth' "$(extra_state secure-auth)"
-
-        printf '\n  0. Back\n\nSelect [0-5]: '
+        if is_cartographer; then
+            ui_menu_item 4 'Cartographer plate workflow' "$(carto_plate_workflow_state)"
+            printf '\n Security\n'
+            ui_menu_item 5 'Secure Auth' "$(extra_state secure-auth)"
+            printf '\n  0. Back\n\nSelect [0-5]: '
+        else
+            printf '\n Security\n'
+            ui_menu_item 4 'Secure Auth' "$(extra_state secure-auth)"
+            printf '\n  0. Back\n\nSelect [0-4]: '
+        fi
         read -r c
         case "$c" in
             1) run_extra_name r3men-bed ;;
             2) run_extra_name kamp-adaptive-purge ;;
             3) run_extra_name axis_twist_compensation ;;
-            4) run_carto_plate_workflow ;;
-            5) run_extra_name secure-auth ;;
+            4)
+                if is_cartographer; then
+                    run_carto_plate_workflow
+                else
+                    run_extra_name secure-auth
+                fi
+                ;;
+            5)
+                if is_cartographer; then
+                    run_extra_name secure-auth
+                fi
+                ;;
             0|b|B|q|Q) return ;;
             *) ;;
         esac

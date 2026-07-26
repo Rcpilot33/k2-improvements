@@ -50,19 +50,21 @@ show_status() {
     if [ -f "$INSTALLER_DIR/installer/extras/kamp-adaptive-purge/install.sh" ]; then
         status_line 'KAMP adaptive purge' is_kamp
     fi
-    if is_carto_plate_workflow; then
-        printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_installed)"
-    elif is_carto_macros || is_surface_wrap; then
-        printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_incomplete)"
-    else
-        printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_not_installed)"
-    fi
+    if is_cartographer; then
+        if is_carto_plate_workflow; then
+            printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_installed)"
+        elif is_carto_macros || is_surface_wrap; then
+            printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_incomplete)"
+        else
+            printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_not_installed)"
+        fi
 
-    printf '\n Maintenance\n'
-    if is_prtouch_clean; then
-        printf '  %-43s %s\n' 'prtouch_v3 SAVE_CONFIG clean' "$(state_complete)"
-    else
-        printf '  %-43s %s\n' 'prtouch_v3 SAVE_CONFIG clean' "$(state_available)"
+        printf '\n Maintenance\n'
+        if is_prtouch_clean; then
+            printf '  %-43s %s\n' 'prtouch_v3 SAVE_CONFIG clean' "$(state_complete)"
+        else
+            printf '  %-43s %s\n' 'prtouch_v3 SAVE_CONFIG clean' "$(state_available)"
+        fi
     fi
     printf '\n'
     press_enter

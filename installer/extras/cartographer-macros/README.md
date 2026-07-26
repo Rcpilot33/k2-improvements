@@ -23,15 +23,38 @@ The model names mirror the four bed types shown by Creality Print 7.1:
 when `START_PRINT` is called without a `SURFACE` value; Creality Print's
 explicit unknown-plate branch instead uses `textured_pei`.
 
-First click the matching **Select** button. Then use the shared `A21` Scan,
-`A22` Touch, or `A23` Load button. Each shared action explicitly uses the
-selected model instead of Fluidd's native calibration buttons, which default to
-the `default` model when called without a `MODEL=` parameter.
+The workflow always has two explicit steps. First click exactly one matching
+**Select** button:
+
+```text
+A11_CARTO_SELECT_DEFAULT
+A12_CARTO_SELECT_TEXTURED_PEI
+A13_CARTO_SELECT_EPOXY
+A14_CARTO_SELECT_HIGH_TEMP
+A15_CARTO_SELECT_CUSTOM
+```
+
+Then click the required shared action:
+
+```text
+A21_CARTO_SCAN_SELECTED
+A22_CARTO_TOUCH_SELECTED
+A23_CARTO_LOAD_SELECTED
+```
+
+The selector only records the profile for the shared actions; it does **not**
+load a model. `A21` calibrates the selected Scan model, `A22` calibrates the
+selected Touch model, and `A23` loads both existing models. Each action
+explicitly uses the selected model instead of Fluidd's native calibration
+buttons, which use the `default` model when called without a `MODEL=`
+parameter.
 
 To calibrate a plate, install that physical plate, select its profile, run
 `A21_CARTO_SCAN_SELECTED`, and then separately run
 `A22_CARTO_TOUCH_SELECTED`. Use `A23_CARTO_LOAD_SELECTED` when an existing pair
-of saved models only needs to be loaded.
+of saved models needs to be loaded. Run `SAVE_CONFIG` after calibration. After
+the resulting Klipper restart and required printer power cycle, select the
+profile again before loading it.
 
 The numeric prefixes keep the selection and shared action buttons at the top
 of Fluidd's alphabetical macro list. The selected profile resets to `default`
@@ -41,6 +64,14 @@ Utility buttons provide touch homing, model listing, and probe information.
 The buttons call the Cartographer plugin commands directly, including
 `CARTOGRAPHER_SCAN_CALIBRATE`, `CARTOGRAPHER_TOUCH_CALIBRATE`, and the scan and
 touch model loaders.
+
+## Validation
+
+The complete selector/action redesign passed printer testing on firmware
+`1.1.5.5`, including all five selectors, selected Scan calibration, selected
+Touch calibration, combined Scan + Touch loading, correct model names, and
+Fluidd sorting/readability. See the repository
+[validation report](../../../VALIDATION.md).
 
 ## Custom plates
 

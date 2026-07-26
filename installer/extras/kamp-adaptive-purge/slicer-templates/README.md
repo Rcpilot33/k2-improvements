@@ -7,10 +7,10 @@ Creality's system preset unchanged as a fallback.
 
 | File | Material | Plate selection | KAMP purge | Status |
 |---|---|---|---|---|
-| `creality-start-material-only.gcode` | Yes | No; loads `default` | No | Creality Print 7.1.1 |
-| `creality-start-material-surface-profiles.gcode` | Yes | Yes | No | Creality Print 7.1.1 |
-| `creality-start-material-kamp.gcode` | Yes | No; loads `default` | Yes | Creality Print 7.1.1 |
-| `creality-start-material-surface-profiles-kamp.gcode` | Yes | Yes | Yes | Creality Print 7.1.1 |
+| `creality-start-material-only.gcode` | Yes | No; loads `default` | No | PASS — Creality Print 7.1.1 |
+| `creality-start-material-surface-profiles.gcode` | Yes | Yes | No | PASS — Creality Print 7.1.1 |
+| `creality-start-material-kamp.gcode` | Yes | No; loads `default` | Yes | PASS — Creality Print 7.1.1 |
+| `creality-start-material-surface-profiles-kamp.gcode` | Yes | Yes | Yes | PASS — Creality Print 7.1.1 |
 | `orca-machine-start.gcode` | Yes | Yes | Yes | Verify plate-name values against your profile |
 
 The plate-selection variants pass `SURFACE=` to the printer's Cartographer
@@ -19,6 +19,9 @@ wrapper loads the `default` scan and touch models on every print instead of
 retaining a model from an earlier job. All four Creality variants pass
 `MATERIAL=` so `START_PRINT` can apply the matching offset from
 `_START_PRINT_VARS`.
+
+The four Creality Print variants were validated on printer firmware `1.1.5.5`.
+See the repository [validation report](../../../../VALIDATION.md).
 
 ## Use
 

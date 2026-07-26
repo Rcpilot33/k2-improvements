@@ -36,13 +36,16 @@ path. The redesigned menu and bootstrap are now being revalidated separately:
 
 | Creality firmware | Current menu/bootstrap revalidation |
 |---|:---:|
-| `1.1.5.5` | In progress |
+| `1.1.5.5` | **PASS** |
 | `1.1.3.13` | Pending retest |
 | `1.1.5.2` | Pending retest |
 
-Update this table as each current menu-driven test cycle is completed. Versions
-not listed may work, but have not received the same complete install-and-print
-test cycle.
+The current `1.1.5.5` cycle passed the stock PR Touch path, both Cartographer
+installation paths, feature and detector checks, all four Creality Print
+templates, and the complete Cartographer surface-profile workflow. See the
+[validation report](./VALIDATION.md) for the tested matrix and exact
+selector/action sequence. Versions not listed may work, but have not received
+the same complete install-and-print test cycle.
 
 Cartographer V3 and V4 normal USB/Katapult flashing and bundled STM32 DFU recovery have also been tested on printer hardware.
 

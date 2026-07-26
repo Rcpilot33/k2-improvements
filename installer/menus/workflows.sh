@@ -146,14 +146,21 @@ EOF
     if is_carto_plate_workflow; then
         cat <<'EOF'
   3. Cartographer plate profiles and automatic selection are installed. With
-     the correct plate on the bed, calibrate the matching profiles in Fluidd:
+     the correct plate on the bed, first press exactly one selector in Fluidd:
 
-       Epoxy Resin Plate  -> A31 / A32 / A33
-       High Temp Plate    -> A41 / A42 / A43
-       Textured PEI Plate -> A21 / A22 / A23
-       Customized Plate   -> A51 / A52 / A53
+       A11 Default / fallback
+       A12 Textured PEI Plate
+       A13 Epoxy Resin Plate
+       A14 Smooth PEI / High Temp Plate
+       A15 Customized Plate
 
-     Run its scan and touch calibration buttons, then run:
+     Then press the required shared action:
+
+       A21 Calibrate selected Scan model
+       A22 Calibrate selected Touch model
+       A23 Load selected Scan + Touch models
+
+     Selection alone does not load a model. After calibration, run:
 
        BED_MESH_CALIBRATE
 
@@ -193,15 +200,29 @@ menu_maintenance() {
         ui_heading 'MAINTENANCE AND RECOVERY'
         printf '\n'
         ui_menu_item 1 'Core component installer' "$(c_cyan 'OPEN MENU')"
-        ui_menu_item 2 'PR Touch SAVE_CONFIG cleanup' "$(if is_prtouch_clean; then state_complete; else state_available; fi)"
-        ui_menu_item 3 'Factory reset and cleanup tools' "$(state_destructive)"
-
-        printf '\n  0. Back\n\nSelect [0-3]: '
+        if is_cartographer; then
+            ui_menu_item 2 'PR Touch SAVE_CONFIG cleanup' "$(if is_prtouch_clean; then state_complete; else state_available; fi)"
+            ui_menu_item 3 'Factory reset and cleanup tools' "$(state_destructive)"
+            printf '\n  0. Back\n\nSelect [0-3]: '
+        else
+            ui_menu_item 2 'Factory reset and cleanup tools' "$(state_destructive)"
+            printf '\n  0. Back\n\nSelect [0-2]: '
+        fi
         read -r c
         case "$c" in
             1) menu_features ;;
-            2) run_extra_name prtouch-cleanup ;;
-            3) menu_factory_reset ;;
+            2)
+                if is_cartographer; then
+                    run_extra_name prtouch-cleanup
+                else
+                    menu_factory_reset
+                fi
+                ;;
+            3)
+                if is_cartographer; then
+                    menu_factory_reset
+                fi
+                ;;
             0|b|B|q|Q) return ;;
             *) ;;
         esac

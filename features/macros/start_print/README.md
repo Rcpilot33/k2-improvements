@@ -17,4 +17,15 @@ START_PRINT EXTRUDER_TEMP=[nozzle_temperature_initial_layer] BED_TEMP=[bed_tempe
 ```
 
 Optional extensions such as KAMP or Cartographer plate selection may require
-the machine-start templates supplied with those features.
+the complete machine-start templates supplied with those features. The four
+validated Creality Print variants are documented in the
+[slicer-template guide](../../../installer/extras/kamp-adaptive-purge/slicer-templates/README.md):
+
+- material only;
+- material + KAMP;
+- material + surface profiles; and
+- material + surface profiles + KAMP.
+
+The material-only and KAMP-only templates intentionally omit `SURFACE=`, so
+`START_PRINT` loads the `default` Cartographer models rather than retaining a
+surface from an earlier print.

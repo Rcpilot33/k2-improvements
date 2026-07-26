@@ -41,6 +41,14 @@ Keep Creality's stock profile unchanged as a fallback. The KAMP templates
 require the optional KAMP adaptive-purge feature; the plate-selection-only
 template does not.
 
+## Validation
+
+On firmware `1.1.5.5`, the wrapper passed testing with all four Creality Print
+templates. Explicit `SURFACE=` values loaded the matching model names, and
+templates without `SURFACE=` loaded the `default` Scan and Touch models instead
+of retaining the previous print's selection. See the repository
+[validation report](../../../VALIDATION.md).
+
 ## Safety and updates
 
 - The installer backs up `start_print.cfg` before modifying it.

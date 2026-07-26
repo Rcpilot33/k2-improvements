@@ -47,3 +47,18 @@ Option 2. Route the cable through the gasket in the back of the machine where th
 ## Calibration
 
 Follow steps 1-6 in the [scan calibration guide](https://docs.cartographer3d.com/cartographer-probe/installation-and-setup/software-configuration/scan-calibration), then complete steps 1-4 in the [touch calibration guide](https://docs.cartographer3d.com/cartographer-probe/installation-and-setup/software-configuration/touch-calibration).
+
+If the optional Cartographer plate workflow is installed, use its shared
+selector/action buttons for each physical plate:
+
+1. Select `default`, `textured_pei`, `epoxy`, `high_temp`, or `custom` with
+   `A11` through `A15`.
+2. Run `A21_CARTO_SCAN_SELECTED`.
+3. Run `A22_CARTO_TOUCH_SELECTED`.
+4. Run `SAVE_CONFIG`.
+5. After Klipper restarts and the printer is power-cycled, select the profile
+   again and run `A23_CARTO_LOAD_SELECTED`.
+
+Selection by itself does not load a model. Full button names, fallback
+behavior, and validation results are in the
+[Cartographer macro guide](../../installer/extras/cartographer-macros/README.md).
