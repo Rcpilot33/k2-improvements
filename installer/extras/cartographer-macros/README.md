@@ -65,6 +65,29 @@ The buttons call the Cartographer plugin commands directly, including
 `CARTOGRAPHER_SCAN_CALIBRATE`, `CARTOGRAPHER_TOUCH_CALIBRATE`, and the scan and
 touch model loaders.
 
+### Touch calibration starting threshold
+
+`A22_CARTO_TOUCH_SELECTED` reads its default `START=` threshold from:
+
+```ini
+[gcode_macro _START_PRINT_VARS]
+variable_carto_touch_calibrate_start: 500
+```
+
+The seeded value of `500` matches the Cartographer plugin default. Change the
+value in `custom/overrides.cfg` to use a different minimum for every selected
+Touch calibration. For example:
+
+```ini
+variable_carto_touch_calibrate_start: 2100
+```
+
+For a one-time test, the stored value can be overridden from the console:
+
+```gcode
+A22_CARTO_TOUCH_SELECTED START=2100
+```
+
 ## Validation
 
 The complete selector/action redesign passed printer testing on firmware
