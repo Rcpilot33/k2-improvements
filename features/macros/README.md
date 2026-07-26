@@ -8,7 +8,14 @@ Installs the four macro components used by both guided setup paths:
 - `custom/overrides.cfg`
 
 The overrides file is created only when missing. Re-running the installer
-preserves existing mount selections and user changes.
+preserves existing mount selections and user changes. New files seed the PLA,
+PETG, ABS, ASA, default, and probe offsets at `0`, along with a zero-minute
+heat soak.
+
+The same overrides template serves both setup paths. When Cartographer is
+present, its installer also adds `[cartographer touch]` with the stock
+`max_noisy_samples: 2` value. That Cartographer-only section is not activated
+for a stock PR Touch installation.
 
 Each macro is included from `custom/main.cfg`. The installers reload Klipper;
 power-cycle the printer before the next `G28`.

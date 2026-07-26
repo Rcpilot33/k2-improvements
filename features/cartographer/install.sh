@@ -56,6 +56,13 @@ sed -i "s|serial: /dev/cartographer|serial: ${CARTO_SERIAL}|g" ~/printer_data/co
 python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg cartographer.cfg
 
+# A conversion from the no-Cartographer path already has the shared
+# overrides.cfg. Add the Cartographer-only touch default without replacing
+# any existing user value. On a direct install, the macros installer repeats
+# this after it creates overrides.cfg.
+sh "${SCRIPT_DIR}/../macros/overrides/enable_cartographer_touch.sh" \
+    ~/printer_data/config/custom/overrides.cfg
+
 # install klipper patches
 ln -sf ${SCRIPT_DIR}/patches/mcu.py ~/klipper/klippy/mcu.py
 ln -sf ${SCRIPT_DIR}/patches/serialhdl.py ~/klipper/klippy/serialhdl.py
