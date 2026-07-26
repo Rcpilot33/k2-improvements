@@ -51,12 +51,17 @@ of retaining the previous print's selection. See the repository
 
 ## Safety and updates
 
-- The installer backs up `start_print.cfg` before modifying it.
-- Re-running refreshes an older wrapper and is a no-op when it is current.
+- The installer backs up the active `custom/start_print.cfg`.
+- It replaces the macro symlink with a managed custom copy built from the
+  current tracked source, then inserts the wrapper into that copy.
+- The tracked repository source is never modified, so installing the workflow
+  does not block future `git pull` updates.
+- Re-running refreshes the managed copy from the latest source and reinstalls
+  the current wrapper.
 - If the expected insertion point is missing, installation stops without
   changing the file.
-- A repository update may replace the patched upstream macro. If status shows
-  this workflow as incomplete afterward, rerun it from Extras.
+- Re-run the workflow after repository macro updates to refresh the managed
+  copy.
 
 Power-cycle the printer before the next `G28` after the configuration reload.
 

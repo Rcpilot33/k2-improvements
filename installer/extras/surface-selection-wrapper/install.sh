@@ -1,61 +1,54 @@
 #!/bin/sh
-# Insert the SURFACE-selection wrapper into start_print.cfg so the
-# slicer can pass SURFACE=<name> and have START_PRINT load the matching
-# Cartographer scan and touch models.
-#
-# Idempotent — detects the BEGIN marker and exits if already inserted.
+# Install a managed START_PRINT copy with slicer-driven Cartographer model
+# selection. The tracked macro source is never modified.
 
 set -eu
 
+SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
 CFG_DIR="${PRINTER_CFG_DIR:-/mnt/UDISK/printer_data/config}"
-SYMLINK="$CFG_DIR/custom/start_print.cfg"
+TARGET="$CFG_DIR/custom/start_print.cfg"
+SOURCE="$SCRIPT_DIR/../../../features/macros/start_print/start_print.cfg"
 
-# Precondition: Cartographer must be installed. The wrapper inserts
-# CARTOGRAPHER_SCAN_MODEL / CARTOGRAPHER_TOUCH_MODEL calls into START_PRINT,
-# which error at runtime if the cartographer module isn't loaded.
+# The wrapper calls Cartographer commands and must not be installed on the
+# stock PR Touch path.
 grep -qE '^\[cartographer\]' "$CFG_DIR/printer.cfg" "$CFG_DIR/custom/"*.cfg 2>/dev/null || {
     echo "ERROR: no [cartographer] section found in printer config."
-    echo "       This wrapper patches START_PRINT to call CARTOGRAPHER_*"
-    echo "       commands, which need Cartographer installed first."
-    echo "       Install via Jacob10383's gimme-the-jamin.sh or the menu's"
-    echo "       'Install Essentials' before adding this extra."
+    echo "       Install Cartographer before adding the plate workflow."
     exit 1
 }
 
-[ -e "$SYMLINK" ] || { echo "ERROR: $SYMLINK not found — install macros feature first"; exit 1; }
+[ -e "$TARGET" ] || {
+    echo "ERROR: $TARGET not found - install macros first"
+    exit 1
+}
+[ -f "$SOURCE" ] || {
+    echo "ERROR: tracked source macro not found: $SOURCE"
+    exit 1
+}
 
-# Resolve symlink so we patch the actual file
-TARGET=$(readlink -f "$SYMLINK" 2>/dev/null || echo "$SYMLINK")
-[ -f "$TARGET" ] || { echo "ERROR: $TARGET not found"; exit 1; }
-
-if ! grep -q 'STATUS_MSG.*MSG="Preheating' "$TARGET"; then
-    echo "ERROR: anchor not found in $TARGET"
+if ! grep -q 'STATUS_MSG.*MSG="Preheating' "$SOURCE"; then
+    echo "ERROR: anchor not found in $SOURCE"
     echo "  expected line containing: STATUS_MSG ... MSG=\"Preheating ...\""
-    echo "  upstream macros file may have changed; bail out"
+    echo "  upstream macros file may have changed; stopping without modification"
+    exit 1
+fi
+
+if grep -qE '^[[:space:]]*# === BEGIN surface-selection wrapper' "$SOURCE" &&
+   ! grep -qE '^[[:space:]]*# === END surface-selection wrapper' "$SOURCE"; then
+    echo "ERROR: incomplete surface-selection wrapper in $SOURCE"
+    echo "       restore the tracked source before retrying"
     exit 1
 fi
 
 BACKUP="${TARGET}.before-surface-wrapper-$(date +%s)"
 cp "$TARGET" "$BACKUP"
 
-# Remove any previous version of our marked block. This upgrades installations
-# that used the earlier default/pei/coolplate naming scheme. Require a complete
-# pair of markers so a malformed local edit cannot truncate the macro file.
-if grep -qE '^[[:space:]]*# === BEGIN surface-selection wrapper' "$TARGET"; then
-    if ! grep -qE '^[[:space:]]*# === END surface-selection wrapper' "$TARGET"; then
-        echo "ERROR: incomplete surface-selection wrapper in $TARGET"
-        echo "       restore or remove the incomplete block before retrying"
-        exit 1
-    fi
-    awk '
-        /^[[:space:]]*# === BEGIN surface-selection wrapper/ { dropping=1; next }
-        /^[[:space:]]*# === END surface-selection wrapper/ { dropping=0; next }
-        !dropping { print }
-    ' "$TARGET" > "${TARGET}.without-surface-wrapper"
-    mv "${TARGET}.without-surface-wrapper" "$TARGET"
-fi
-
+# Rebuild from the latest tracked source each time. Dropping any marked block
+# from the input keeps this safe if an older checkout already contains one.
 awk '
+/^[[:space:]]*# === BEGIN surface-selection wrapper/ { dropping=1; next }
+/^[[:space:]]*# === END surface-selection wrapper/ { dropping=0; next }
+dropping { next }
 /STATUS_MSG.*MSG="Preheating/ && !inserted {
     print "  # === BEGIN surface-selection wrapper ==="
     print "  {% set SURFACE = params.SURFACE|default(\047default\047)|lower %}"
@@ -66,8 +59,13 @@ awk '
     inserted=1
 }
 { print }
-' "$TARGET" > "${TARGET}.new" && mv "${TARGET}.new" "$TARGET"
+' "$SOURCE" > "${TARGET}.new"
 
-echo "I: surface-selection wrapper inserted into $TARGET"
+# Replacing the destination path converts the macro symlink into a regular,
+# managed custom file rather than writing through it into the Git checkout.
+mv "${TARGET}.new" "$TARGET"
+
+echo "I: managed surface-selection wrapper installed at $TARGET"
 echo "I: backup at $BACKUP"
+echo "I: tracked source left unchanged at $SOURCE"
 echo "I: active on next Klipper restart"
