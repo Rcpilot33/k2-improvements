@@ -24,12 +24,28 @@ back to an unsuitable purge position.
 Use **Extras -> KAMP adaptive purge**. The installer adds:
 
 - the KAMP repository under `/mnt/UDISK/root`;
-- `Line_Purge.cfg` and K2-specific settings;
+- a validated K2-compatible copy of upstream `Line_Purge.cfg`;
+- K2-specific settings;
 - `[exclude_object]` when it is not already configured; and
 - optional firmware retraction when selected.
 
 It intentionally does not install KAMP Smart Park or Adaptive Meshing. The
 project's `START_PRINT` and Cartographer flow already provide those functions.
+
+The installed `Line_Purge.cfg` makes two compatibility corrections to the
+upstream macro:
+
+1. `G10` and `G11` are quoted when stored as Jinja strings for firmware
+   retraction.
+2. KAMP restores its own final retract after the short string-breaking move.
+   The slicer can then perform its normal retract, travel to the object, and
+   unretract immediately before the first extrusion without carrying an extra
+   KAMP retraction into the first wall.
+
+The upstream checkout remains unchanged and can still fast-forward normally.
+The corrected macro is generated as a regular file under `custom/` whenever
+the KAMP installer runs. If the upstream macro structure changes, installation
+stops instead of silently installing an unverified patch.
 
 ## Slicer setup
 

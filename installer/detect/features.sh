@@ -23,7 +23,9 @@ is_macros() {
 is_kamp() {
     local custom="$PRINTER_CFG_DIR/custom"
     local main="$custom/main.cfg"
-    [ -L "$custom/Line_Purge.cfg" ] &&
+    [ -f "$custom/Line_Purge.cfg" ] &&
+    grep -q 'k2-improvements: balance LINE_PURGE retraction before slicer travel' \
+        "$custom/Line_Purge.cfg" 2>/dev/null &&
     [ -f "$custom/kamp_settings.cfg" ] &&
     [ -f "$main" ] &&
     grep -q '^\[include kamp_settings\.cfg\]$' "$main" 2>/dev/null &&

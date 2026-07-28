@@ -1,8 +1,8 @@
 #!/bin/ash
 #
 # Install KAMP (Klipper Adaptive Meshing & Purging) for adaptive line-purge
-# on the K2 Plus. Clones upstream KAMP, symlinks Line_Purge.cfg into
-# custom/, drops a K2 Plus-tailored kamp_settings.cfg + an [exclude_object]
+# on the K2 Plus. Clones upstream KAMP, installs a corrected Line_Purge.cfg
+# copy into custom/, drops K2 Plus-tailored settings + an [exclude_object]
 # block, and ensures all three are included from custom/main.cfg.
 #
 # Does NOT restart Klipper — the new macros are available on next config
@@ -28,10 +28,16 @@ else
 fi
 
 # ------------------------------------------------------------
-# 2. Symlink KAMP's Line_Purge.cfg into custom/
+# 2. Install a corrected copy of KAMP's Line_Purge.cfg into custom/
 # ------------------------------------------------------------
-echo "I: symlinking Line_Purge.cfg into custom/"
-ln -sfn "${KAMP_DIR}/Configuration/Line_Purge.cfg" \
+#
+# Upstream currently leaves G10/G11 unquoted in its Jinja assignments and
+# retracts before the final string-break move without restoring that filament
+# before returning to the slicer. Build a validated local copy so the slicer's
+# own retract/travel/unretract sequence starts from a balanced extrusion state.
+echo "I: creating K2-compatible Line_Purge.cfg from upstream KAMP"
+python3 "${SCRIPT_DIR}/patch_line_purge.py" \
+    "${KAMP_DIR}/Configuration/Line_Purge.cfg" \
     ~/printer_data/config/custom/Line_Purge.cfg
 
 # ------------------------------------------------------------
