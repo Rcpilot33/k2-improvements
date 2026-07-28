@@ -3,6 +3,14 @@ set -e
 
 SCRIPT_DIR=$(readlink -f $(dirname ${0}))
 
+# Preserve tuned Cartographer offsets on a reinstall. If Cartographer was not
+# configured when this run began, any material offsets belong to the stock
+# probe and must not carry into the new probe setup.
+CARTOGRAPHER_WAS_CONFIGURED=0
+if [ -f ~/printer_data/config/custom/cartographer.cfg ]; then
+    CARTOGRAPHER_WAS_CONFIGURED=1
+fi
+
 cd ${HOME}
 
 # clone cartographer plugin
@@ -66,6 +74,13 @@ cp ${SCRIPT_DIR}/cartographer.cfg ~/printer_data/config/custom
 sed -i "s|serial: /dev/cartographer|serial: ${CARTO_SERIAL}|g" ~/printer_data/config/custom/cartographer.cfg
 python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg cartographer.cfg
+
+if [ "$CARTOGRAPHER_WAS_CONFIGURED" -eq 0 ]; then
+    python3 "${SCRIPT_DIR}/../macros/overrides/reset_probe_offsets.py" \
+        ~/printer_data/config/custom/overrides.cfg
+else
+    echo "I: preserving existing Cartographer material offsets"
+fi
 
 # install klipper patches
 ln -sf ${SCRIPT_DIR}/patches/mcu.py ~/klipper/klippy/mcu.py

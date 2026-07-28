@@ -21,6 +21,13 @@ Installing Cartographer replaces the active stock `prtouch_v3` configuration.
 Choose the correct physical mount preset and power-cycle the printer before
 the first homing move after installation.
 
+On a direct Cartographer install or a conversion from the stock-probe setup,
+the installer resets the PLA, PETG, ABS, ASA, DEFAULT, and PROBE offsets in
+`custom/overrides.cfg` to zero. Those values are probe-dependent and must be
+retuned for Cartographer. Other overrides are preserved. Rerunning the
+installer when Cartographer is already configured preserves the existing
+Cartographer offsets.
+
 ## Hardware
 
 - [Cartographer V4 AIO Standard](https://cartographer3d.com/products/cartographer-v4-aio-standard), or

@@ -54,10 +54,31 @@ apply_overlay() {
     echo "I:   patched $dst"
 }
 
+install_overlay() {
+    local src="$1"
+    local dst="$2"
+    if [ ! -f "$src" ]; then
+        echo "W:   required overlay helper missing: $src"
+        return 1
+    fi
+    mkdir -p "$(dirname "$dst")"
+    if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+        echo "I:   $dst already matches overlay (no-op)"
+        return 0
+    fi
+    if [ -f "$dst" ]; then
+        cp "$dst" "${dst}.before-erondiel-overlay" 2>/dev/null || true
+    fi
+    cp "$src" "$dst"
+    echo "I:   installed $dst"
+}
+
 apply_overlay "$OVERLAY/gimme-the-jamin.sh"                   "$D/gimme-the-jamin.sh"
 apply_overlay "$OVERLAY/features/better-root/install.sh"      "$D/features/better-root/install.sh"
 apply_overlay "$OVERLAY/features/better-init/install.sh"      "$D/features/better-init/install.sh"
 apply_overlay "$OVERLAY/features/cartographer/install.sh"     "$D/features/cartographer/install.sh"
 apply_overlay "$OVERLAY/features/secure-auth/install.sh"      "$D/features/secure-auth/install.sh"
+install_overlay "$OVERLAY/features/macros/overrides/reset_probe_offsets.py" \
+    "$D/features/macros/overrides/reset_probe_offsets.py"
 
 echo "I: erondiel portable fixes applied to $D"
