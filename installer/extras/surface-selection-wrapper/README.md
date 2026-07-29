@@ -43,11 +43,12 @@ template does not.
 
 ## Validation
 
-On firmware `1.1.5.5`, the wrapper passed testing with all four Creality Print
-templates. Explicit `SURFACE=` values loaded the matching model names, and
-templates without `SURFACE=` loaded the `default` Scan and Touch models instead
-of retaining the previous print's selection. See the repository
-[validation report](../../../VALIDATION.md).
+The wrapper and default fallback passed print testing on firmware `1.1.3.13`,
+`1.1.5.2`, and `1.1.5.5`. On firmware `1.1.5.5`, the exhaustive template cycle
+passed with all four Creality Print templates. Explicit `SURFACE=` values
+loaded the matching model names, and templates without `SURFACE=` loaded the
+`default` Scan and Touch models instead of retaining the previous print's
+selection. See the repository [validation report](../../../VALIDATION.md).
 
 ## Safety and updates
 

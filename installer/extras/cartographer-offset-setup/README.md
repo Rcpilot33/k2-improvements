@@ -26,7 +26,8 @@ With those overrides absent, the values in `cartographer.cfg` are effective:
 
 ### JimmyV back-mount
 
-The installer writes the mount author's specified overrides:
+This profile has not been tested on printer hardware in this fork. The
+installer writes the offsets specified in JimmyV's mount documentation:
 
 | Setting | Value |
 | --- | --- |

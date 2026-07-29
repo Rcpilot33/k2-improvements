@@ -78,7 +78,7 @@ echo "  position_min:     $STOCK_MIN"
 echo
 echo "Pick your mount:"
 echo "  1. Jamin/default - remove mount overrides and use cartographer.cfg"
-echo "  2. JimmyV         - y=36, mesh=5,36 to 345,340, stock stepper_y"
+echo "  2. JimmyV UNTESTED - documented y=36, mesh=5,36 to 345,340, stock stepper_y"
 echo "  3. Custom          - enter offsets, mesh limits, and stepper_y source"
 echo "  b. Cancel"
 echo

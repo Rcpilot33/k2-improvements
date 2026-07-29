@@ -24,7 +24,8 @@ back to an unsuitable purge position.
 Use **Extras -> KAMP adaptive purge**. The installer adds:
 
 - the KAMP repository under `/mnt/UDISK/root`;
-- a validated K2-compatible copy of upstream `Line_Purge.cfg`;
+- a validated K2-compatible regular-file copy of upstream `Line_Purge.cfg`
+  (intentionally not a symlink);
 - K2-specific settings;
 - `[exclude_object]` when it is not already configured; and
 - optional firmware retraction when selected.
@@ -43,9 +44,12 @@ upstream macro:
    KAMP retraction into the first wall.
 
 The upstream checkout remains unchanged and can still fast-forward normally.
-The corrected macro is generated as a regular file under `custom/` whenever
-the KAMP installer runs. If the upstream macro structure changes, installation
-stops instead of silently installing an unverified patch.
+The installer intentionally copies and patches `Line_Purge.cfg` into
+`custom/`; it does not symlink the live macro back to the upstream checkout.
+This preserves the tested K2-specific `UNRETRACT` handoff while allowing the
+upstream repository to update independently. If the upstream macro structure
+changes, installation stops instead of silently installing an unverified
+patch.
 
 ## Slicer setup
 

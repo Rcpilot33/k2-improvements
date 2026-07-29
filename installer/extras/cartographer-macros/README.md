@@ -56,6 +56,12 @@ of saved models needs to be loaded. Run `SAVE_CONFIG` after calibration. After
 the resulting Klipper restart and required printer power cycle, select the
 profile again before loading it.
 
+Touch calibration finds and verifies the detection threshold and model speed;
+it does not guarantee the final first-layer height. The Touch model's initial
+`z_offset` must still be tuned during a real print. Use live Z to obtain the
+correct first layer, then save that adjustment to establish the final print Z
+for the selected model.
+
 The numeric prefixes keep the selection and shared action buttons at the top
 of Fluidd's alphabetical macro list. The selected profile resets to `default`
 after a Klipper restart, so select a plate again before calibrating or loading.
@@ -90,11 +96,11 @@ A22_CARTO_TOUCH_SELECTED START=2100
 
 ## Validation
 
-The complete selector/action redesign passed printer testing on firmware
-`1.1.5.5`, including all five selectors, selected Scan calibration, selected
-Touch calibration, combined Scan + Touch loading, correct model names, and
-Fluidd sorting/readability. See the repository
-[validation report](../../../VALIDATION.md).
+The selector/action workflow passed printer testing on firmware `1.1.3.13`,
+`1.1.5.2`, and `1.1.5.5`. The exhaustive `1.1.5.5` cycle included all five
+selectors, selected Scan calibration, selected Touch calibration, combined
+Scan + Touch loading, correct model names, and Fluidd sorting/readability. See
+the repository [validation report](../../../VALIDATION.md).
 
 ## Custom plates
 

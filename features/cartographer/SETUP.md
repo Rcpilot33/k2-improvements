@@ -62,3 +62,8 @@ selector/action buttons for each physical plate:
 Selection by itself does not load a model. Full button names, fallback
 behavior, and validation results are in the
 [Cartographer macro guide](../../installer/extras/cartographer-macros/README.md).
+
+Touch calibration chooses and verifies the model's detection threshold and
+speed. Its initial `z_offset` is not the final print-tuned Z height. Complete a
+first-layer print, adjust live Z as needed, and save that result to establish
+the final print Z for the selected Touch model.

@@ -9,3 +9,15 @@ available. Cartographer uses its adaptive mesh flow from `START_PRINT`.
 
 Profiles are named from the requested bed and chamber temperatures, such as
 `60c_0c`.
+
+## Stock PR Touch prerequisite
+
+On a no-Cartographer / stock PR Touch installation, create and save a
+`default` mesh before the first print. That mesh must be generated with the
+same `[bed_mesh] probe_count` that is currently configured.
+
+Recreate and save `default` whenever `probe_count` changes. Mesh dimensions are
+not interchangeable: a saved `5,5` default mesh cannot be used with an active
+`19,19` configuration, and a saved `19,19` mesh cannot be used with `5,5`.
+Keeping the saved default mesh and active probe count matched avoids a
+first-print stall or mesh-processing failure.
