@@ -50,9 +50,9 @@ Back up the printer configuration, custom macros, saved meshes, calibration
 data, and any other files you want to keep. A factory reset and some recovery
 operations are destructive.
 
-### Optional clean factory reset
+### Optional stock factory reset
 
-A clean reset is recommended when replacing earlier third-party modifications:
+Creality's standard reset can be triggered over SSH:
 
 ```sh
 echo "all" | /usr/bin/nc -U /var/run/wipe.sock
@@ -62,6 +62,13 @@ echo "all" | /usr/bin/nc -U /var/run/wipe.sock
 > This command is destructive. Do not run it until the required files are
 > backed up. After the reset, complete the stock on-screen setup before
 > installing these modifications.
+
+The standard `wipe.sock` reset does not reliably remove every leftover
+top-level directory under `/mnt/UDISK`. When replacing or recovering an
+existing K2 Improvements or other third-party installation, use the menu's
+**Maintenance and recovery → Factory reset and cleanup tools** instead. Its
+`factory-reset-improved` workflow removes the leftover UDISK directories
+identified by its dry run and then invokes the standard `wipe.sock` reset.
 
 ## Bootstrap
 
@@ -299,13 +306,45 @@ so they do not block later updates.
 ## Factory reset and cleanup
 
 **Maintenance and recovery → Factory reset and cleanup tools** offers a dry
-run and a separately confirmed destructive reset. Review the dry run first.
+run and two separately confirmed destructive reset paths:
 
-The improved reset preserves `/mnt/UDISK/root` and `/mnt/UDISK/bin`, removes
-most other top-level UDISK directories—including
-`/mnt/UDISK/printer_data`—and then triggers Creality's factory reset.
-Configuration, custom macros, saved meshes, logs, and backups under
-`printer_data` will be removed.
+1. **Improved cleanup + Creality factory reset** preserves
+   `/mnt/UDISK/root` and `/mnt/UDISK/bin`, removes most other top-level UDISK
+   directories—including `/mnt/UDISK/printer_data`—and then sends `all` to
+   Creality's `wipe.sock`. Review the dry run first.
+2. **Creality factory reset only** sends `wipe.sock all` without pre-deleting
+   UDISK directories. Third-party files that Creality does not remove may
+   remain afterward.
+
+Both paths are destructive. Configuration, custom macros, saved meshes, logs,
+and backups may be removed. On success, `wipe.sock` normally returns `ok` and
+the printer reset terminates the SSH session. A remaining menu session with a
+large failure banner means the reset did not complete.
+
+### Firmware reinstall does not always restore a clean state
+
+Reinstalling or changing Creality firmware may leave persistent configuration
+or modified files under `/mnt/UDISK`. If the printer still enters the same
+Klipper error state after a firmware reinstall, inspect
+`/mnt/UDISK/printer_data/logs/klippy.log` rather than assuming the firmware
+image itself is defective.
+
+The generic touchscreen code `XS3002` does not identify the root cause. One
+confirmed post-update failure paired stock `prtouch_v3_wrapper.py` with an
+incompatible `bed_mesh.py` interface. Before that update, an attempted improved
+menu reset had failed while removing a live directory and stopped before
+reaching `wipe.sock all`. The newer firmware was therefore installed without a
+completed factory wipe. Running the plain `wipe.sock all` command afterward
+restored a matched stock environment.
+
+This sequence does not prove that a correctly completed wipe followed by a
+cross-version update produces the same failure. A successful menu reset reaches
+`Begin factory reset...`, receives `ok`, and terminates the SSH connection as
+the printer resets. Do not copy an arbitrary upstream Klipper module onto the
+printer because Creality's K2 Plus build contains vendor-specific interfaces.
+
+See the [XS3002 recovery entry in the FAQ](./FAQ.md) for log commands and the
+validated recovery sequence.
 
 ## Legacy entry points
 

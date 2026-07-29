@@ -39,7 +39,29 @@ for DIR in "$UDISK_ROOT"/* "$UDISK_ROOT"/.[!.]* "$UDISK_ROOT"/..?*; do
                 echo "REMOVE: $DIR"
             else
                 echo "Removing: $DIR"
-                rm -rf "$DIR"
+                if ! rm -rf "$DIR"; then
+                    echo "" >&2
+                    echo "============================================================" >&2
+                    echo "!!! FACTORY RESET FAILED !!!" >&2
+                    echo "============================================================" >&2
+                    echo "Could not completely remove: $DIR" >&2
+                    echo "The Creality wipe.sock reset was NOT started." >&2
+                    echo "Review the removal error above, then retry." >&2
+                    echo "============================================================" >&2
+                    exit 1
+                fi
+
+                if [ -e "$DIR" ]; then
+                    echo "" >&2
+                    echo "============================================================" >&2
+                    echo "!!! FACTORY RESET FAILED !!!" >&2
+                    echo "============================================================" >&2
+                    echo "Directory still exists after removal: $DIR" >&2
+                    echo "The Creality wipe.sock reset was NOT started." >&2
+                    echo "Review active services or files, then retry." >&2
+                    echo "============================================================" >&2
+                    exit 1
+                fi
             fi
             ;;
         *)
@@ -57,4 +79,13 @@ fi
 
 echo ""
 echo "Begin factory reset..."
-echo "all" | /usr/bin/nc -U /var/run/wipe.sock
+if ! echo "all" | /usr/bin/nc -U /var/run/wipe.sock; then
+    echo "" >&2
+    echo "============================================================" >&2
+    echo "!!! FACTORY RESET FAILED !!!" >&2
+    echo "============================================================" >&2
+    echo "Creality wipe.sock did not accept the reset request." >&2
+    echo "The printer may require manual recovery or a power cycle." >&2
+    echo "============================================================" >&2
+    exit 1
+fi
