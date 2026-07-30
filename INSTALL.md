@@ -329,22 +329,14 @@ Klipper error state after a firmware reinstall, inspect
 `/mnt/UDISK/printer_data/logs/klippy.log` rather than assuming the firmware
 image itself is defective.
 
-The generic touchscreen code `XS3002` does not identify the root cause. One
-confirmed post-update failure paired stock `prtouch_v3_wrapper.py` with an
-incompatible `bed_mesh.py` interface. Before that update, an attempted improved
-menu reset had failed while removing a live directory and stopped before
-reaching `wipe.sock all`. The newer firmware was therefore installed without a
-completed factory wipe. Running the plain `wipe.sock all` command afterward
-restored a matched stock environment.
+The generic touchscreen code `XS3002` only reports that Klipper entered an
+error state. One confirmed case followed an incomplete reset that never reached
+Creality's wipe service; a later firmware install then started with mismatched
+persistent files. Do not copy arbitrary upstream Klipper modules onto the
+printer because Creality's build contains vendor-specific interfaces.
 
-This sequence does not prove that a correctly completed wipe followed by a
-cross-version update produces the same failure. A successful menu reset reaches
-`Begin factory reset...`, receives `ok`, and terminates the SSH connection as
-the printer resets. Do not copy an arbitrary upstream Klipper module onto the
-printer because Creality's K2 Plus build contains vendor-specific interfaces.
-
-See the [XS3002 recovery entry in the FAQ](./FAQ.md) for log commands and the
-validated recovery sequence.
+See the [XS3002 recovery entry in the FAQ](./FAQ.md) for diagnostic commands,
+the confirmed failure sequence, and the validated recovery.
 
 ## Legacy entry points
 

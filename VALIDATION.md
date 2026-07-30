@@ -7,6 +7,12 @@ on all three supported Creality firmware versions.
 
 **Overall status: PASS**
 
+In this report, `PASS` means the listed path or feature was installed on real
+printer hardware, reached the expected ready state, and completed the
+applicable calibration or print workflow. It does not mean that every hardware
+revision, third-party mount, slicer version, filament, or optional combination
+has been tested.
+
 ### Installation paths
 
 | Path | `1.1.3.13` | `1.1.5.2` | `1.1.5.5` |

@@ -1,4 +1,4 @@
-# cartographer-offset-setup
+# Cartographer Mount Offset Setup
 
 Switches between the Jamin/default and JimmyV Cartographer mounts by editing
 only `custom/overrides.cfg`. It never modifies `custom/cartographer.cfg` or

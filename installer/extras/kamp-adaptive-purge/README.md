@@ -97,6 +97,17 @@ If `EXCLUDE_OBJECT_DEFINE` is missing, object labels are not active. If
 `LINE_PURGE` is missing, the wrong printer profile or start-G-code block was
 used.
 
+To verify that the installed macro is the K2-compatible patched copy:
+
+```sh
+grep -nE "set (RETRACT|UNRETRACT)|balance LINE_PURGE" \
+  /mnt/UDISK/printer_data/config/custom/Line_Purge.cfg
+```
+
+The output should show quoted `G10`/`G11` firmware-retraction strings when that
+mode is enabled and the balancing `UNRETRACT` handoff lines near the end of the
+purge paths.
+
 ## Tuning
 
 Edit `custom/kamp_settings.cfg`, or override values in

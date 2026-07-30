@@ -67,6 +67,10 @@ python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githu
 
 Enter `y` when bootstrap offers to open the installer menu.
 
+Bootstrap prepares the required command-line tools, persistent root
+environment, and repository checkout. The menu then performs the printer setup
+path or optional feature you select.
+
 > [!NOTE]
 > On the first run, `better-root` may intentionally close the SSH connection.
 > Reconnect and run:
@@ -79,7 +83,7 @@ For factory-reset preparation, Cartographer hardware and firmware steps,
 unattended bootstrap, recovery procedures, and detailed menu behavior, read
 the [complete installation guide](./INSTALL.md).
 
-## Choose an installation path
+## Choose your path in the menu
 
 | Goal | Menu path |
 |---|---|

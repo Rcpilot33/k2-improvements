@@ -10,6 +10,23 @@ K1/lite is still available as a fallback if you see timing issues (for example T
 
 Flashing instructions are available [here](./firmware/README.md).
 
+## Recommended K2 menu workflow
+
+1. Install Cartographer through **Install or change setup -> Cartographer
+   setup**, or use **Convert stock setup to Cartographer** when the supported
+   stock-probe path is already installed.
+2. Select the mount profile matching the physical mount. Jamin is
+   printer-tested; JimmyV uses the offsets documented with that mount but is
+   untested in this project.
+3. Fully reboot or power-cycle the printer before the next `G28`.
+4. Home the printer, run `Z_TILT_ADJUST`, then re-home Z before calibration.
+5. Complete Scan calibration, Touch calibration, and `SAVE_CONFIG`.
+6. After Klipper restarts, fully reboot or power-cycle again before homing.
+7. Tune final Z with an actual first-layer print. Touch calibration establishes
+   the model threshold and speed; it does not replace print-level Z tuning.
+8. Optionally install **Cartographer plate workflow** to maintain separate
+   `default`, `textured_pei`, `epoxy`, `high_temp`, and `custom` model pairs.
+
 ## Print Mount and spacers for K2
 
 The mount and spacers required for the cartographer installation have been provided by stranula, [here](https://www.printables.com/model/1198696-k2-plus-cartographer-mount-shroud-and-spacers). We recommend printing these at a minimum in PETG, but ABS, ASA or any other high glass transition temp filament is preferred.
@@ -44,7 +61,7 @@ Option 2. Route the cable through the gasket in the back of the machine where th
 
  ![image](https://github.com/user-attachments/assets/3b00fb9d-981c-4f1a-8497-1a4a6e8cef47)
 
-## Calibration
+## Calibration details
 
 Follow steps 1-6 in the [scan calibration guide](https://docs.cartographer3d.com/cartographer-probe/installation-and-setup/software-configuration/scan-calibration), then complete steps 1-4 in the [touch calibration guide](https://docs.cartographer3d.com/cartographer-probe/installation-and-setup/software-configuration/touch-calibration).
 

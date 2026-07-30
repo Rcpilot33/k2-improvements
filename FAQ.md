@@ -1,38 +1,39 @@
 # FAQ
 
-## Can I still use the auto calibrate features?
+## Can I still use the automatic calibration features?
 
-A: Unfortunately, at this time they are not supported. No.
+No. K2 Improvements uses the documented manual calibration, mesh, and tuning
+workflows. Do not enable Creality's automatic print-calibration workflow.
 
-## I've installed the Fluidd update, but the camera doesn't show up
+## Fluidd is installed, but the camera does not appear
 
-A: Have you tried using Firefox?  As far as we can tell this is due to an odd interaction between Creality's WebRTC implementation and Chrome based browsers.
+Older reports found that Firefox could display Creality's WebRTC camera when a
+Chromium-based browser could not. This has not been revalidated across the
+current browser and firmware combinations, so treat it as a troubleshooting
+step rather than a confirmed current limitation.
 
-## My bed crashes into the bottom! What did you do?
+## I see homing or temperature-display problems on old `1.1.2.x` firmware
 
-A: This has nothing to do with the K2 improvements.  Sadly, many of us have seen this with the stock 1.1.2.x series firmware.
+Reports of the bed moving into the bottom, homing toward the back, or the
+touchscreen withholding temperatures until homing were observed on stock
+`1.1.2.x` firmware. Those releases are outside the currently validated firmware
+matrix. Use one of the versions listed in [VALIDATION.md](./VALIDATION.md).
 
-## Why is the printer homing to the back and erroring? What did you do?
+## When I print from the side spool, the printer still acts like I am using the CFS
 
-A: See above, this is a bug with the 1.1.2.x firmware.
+This is a legacy, unconfirmed report. If it still occurs, first verify the
+selected filament source and inspect the generated machine-start G-code. As a
+diagnostic test, older configurations removed this tool-selection line from a
+dedicated side-spool printer profile:
 
-## My touch screen doesn't show temperatures until I home my printer! What did you do?
-
-A: See above, this is a bug with the 1.1.2.x firmware.
-
-## When I print from the side spool, the printer still acts like I'm using the CFS
-
-A: This is an issue with the k2-improvements.  We suspect it has something to do with the moonraker update and are investigating.
-
-For now an a work around is to remove this line from your machine start g-code when using the side spool:
-
-```raw
+```text
 T[initial_no_support_extruder]
 ```
 
 ## Fluidd seems to hang at 99% even though the print appears to have finished
 
-A: It apepars that this is an issue with Creality Print not placing a newline at the end of the sliced gcode.
+This has been associated with Creality Print not placing a final newline at the
+end of the sliced G-code. The print itself may already be complete.
 
 ## What should I do if the touchscreen reports XS3002 after reinstalling firmware?
 
