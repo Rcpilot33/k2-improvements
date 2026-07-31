@@ -128,7 +128,7 @@ show_feature_readme() {
         case "$readme" in
             "$INSTALLER_DIR"/*)
                 readme_relative=${readme#"$INSTALLER_DIR"/}
-                readme_url="https://github.com/Rcpilot33/k2-1155-Jacob-Fork/blob/k2-1155-compat/$readme_relative"
+                readme_url="https://github.com/Rcpilot33/k2-improvements/blob/main/$readme_relative"
                 printf '\nFull guide online (Ctrl+click or copy):\n%s\n' "$readme_url"
                 ;;
         esac

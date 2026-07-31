@@ -5,8 +5,8 @@ set -e
 # Downloads the full bootstrap folder to /tmp/bootstrap,
 # then runs the internal Jacob-style bootstrap script.
 
-REPO="Rcpilot33/k2-1155-Jacob-Fork"
-BRANCH="k2-1155-compat"
+REPO="Rcpilot33/k2-improvements"
+BRANCH="main"
 BASE_URL="https://raw.githubusercontent.com/$REPO/$BRANCH"
 
 BOOTSTRAP_DIR="/tmp/bootstrap"

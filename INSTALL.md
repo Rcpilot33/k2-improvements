@@ -84,7 +84,7 @@ home, and clones or updates this branch at:
 Copy this entire command into the printer's SSH session:
 
 ```sh
-python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githubusercontent.com/Rcpilot33/k2-1155-Jacob-Fork/k2-1155-compat/bootstrap.sh", "/tmp/bootstrap.sh")' && sh /tmp/bootstrap.sh localhost --menu
+python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githubusercontent.com/Rcpilot33/k2-improvements/main/bootstrap.sh", "/tmp/bootstrap.sh")' && sh /tmp/bootstrap.sh localhost --menu
 ```
 
 The `--menu` path asks whether to open the installer after bootstrap. Enter
@@ -96,7 +96,7 @@ without opening the menu.
 Use this form to install or update only the bootstrap and repository:
 
 ```sh
-python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githubusercontent.com/Rcpilot33/k2-1155-Jacob-Fork/k2-1155-compat/bootstrap.sh", "/tmp/bootstrap.sh")' && sh /tmp/bootstrap.sh localhost --no-menu
+python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githubusercontent.com/Rcpilot33/k2-improvements/main/bootstrap.sh", "/tmp/bootstrap.sh")' && sh /tmp/bootstrap.sh localhost --no-menu
 ```
 
 The default when no menu flag is supplied is also `--no-menu`.

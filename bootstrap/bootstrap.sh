@@ -3,6 +3,7 @@ set -e
 
 cd $(dirname $0)
 CURDIR=$(pwd)
+REPO_URL="https://github.com/Rcpilot33/k2-improvements.git"
 
 # Run install script from Entware if needed
 if [ -x /opt/bin/opkg ] && [ -x /opt/bin/git ]; then
@@ -18,13 +19,14 @@ cd /mnt/UDISK/root
 if [ -d /mnt/UDISK/root/k2-improvements/.git ]; then
     echo "I: k2-improvements already exists; updating existing repo."
     cd /mnt/UDISK/root/k2-improvements
+    /opt/bin/git remote set-url origin "$REPO_URL"
     /opt/bin/git fetch origin
-    /opt/bin/git checkout k2-1155-compat
-    /opt/bin/git pull --ff-only origin k2-1155-compat
+    /opt/bin/git checkout main
+    /opt/bin/git pull --ff-only origin main
 else
     echo "I: Cloning k2-improvements..."
     cd /mnt/UDISK/root
-    /opt/bin/git clone -b k2-1155-compat https://github.com/Rcpilot33/k2-1155-Jacob-Fork.git k2-improvements
+    /opt/bin/git clone -b main "$REPO_URL" k2-improvements
 fi
 
 START_MENU="no"
