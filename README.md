@@ -51,13 +51,37 @@ recovery have also been tested on printer hardware.
 
 ## Quick start
 
-Before beginning:
+### Recommended clean starting point
+
+For the most predictable installation, start with freshly installed firmware
+or a factory-reset stock printer. Back up the printer configuration, custom
+macros, saved meshes, calibration data, and anything else you want to keep
+before resetting it.
+
+Creality's standard factory reset can be requested from an existing root SSH
+session with this command:
+
+```sh
+echo "all" | /usr/bin/nc -U /var/run/wipe.sock
+```
+
+> [!WARNING]
+> This command is destructive. It removes the printer configuration and other
+> user data. The SSH session is expected to disconnect while the printer
+> resets. Afterward, repeat the printer's on-screen setup, reconnect it to the
+> network, and enable root access again.
+
+The standard reset may leave files from an existing K2 Improvements or other
+third-party installation under `/mnt/UDISK`. For a previously modified
+printer, follow the [factory-reset preparation and improved cleanup
+instructions](./INSTALL.md#recommended-clean-starting-point) instead.
+
+After installing the firmware or completing the reset:
 
 1. Complete the printer's normal on-screen setup and factory calibrations.
 2. Enable root access under **Settings → General → Root Account Information**.
 3. Record the root password and printer IP address.
 4. Connect over SSH as `root` on port `22` and make sure no print is active.
-5. Back up the printer configuration and anything else you want to preserve.
 
 Copy this entire command into the printer's SSH session:
 

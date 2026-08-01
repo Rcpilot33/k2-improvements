@@ -29,9 +29,39 @@ See [VALIDATION.md](./VALIDATION.md) for the complete test matrix.
 
 ## Before installation
 
+### Back up the printer
+
+Back up the printer configuration, custom macros, saved meshes, calibration
+data, and any other files you want to keep. A factory reset and some recovery
+operations are destructive.
+
+### Recommended clean starting point
+
+For the most predictable installation, start with freshly installed firmware
+or a factory-reset stock printer.
+
+Creality's standard reset can be triggered over SSH:
+
+```sh
+echo "all" | /usr/bin/nc -U /var/run/wipe.sock
+```
+
+> [!WARNING]
+> This command is destructive. Do not run it until the required files are
+> backed up. The SSH session is expected to disconnect while the printer
+> resets. After the reset, complete the stock on-screen setup before installing
+> these modifications.
+
+The standard `wipe.sock` reset does not reliably remove every leftover
+top-level directory under `/mnt/UDISK`. When replacing or recovering an
+existing K2 Improvements or other third-party installation, use the menu's
+**Maintenance and recovery → Factory reset and cleanup tools** instead. Its
+`factory-reset-improved` workflow removes the leftover UDISK directories
+identified by its dry run and then invokes the standard `wipe.sock` reset.
+
 ### Complete the stock setup
 
-On a fresh or reset printer:
+After installing the firmware or completing the reset:
 
 1. Complete the full on-screen Creality setup.
 2. Run its factory calibrations, including cutter calibration and input shaping.
@@ -43,32 +73,6 @@ On a fresh or reset printer:
 
 [MobaXterm](https://mobaxterm.mobatek.net/) is a convenient Windows SSH client
 and includes a graphical SFTP browser.
-
-### Back up the printer
-
-Back up the printer configuration, custom macros, saved meshes, calibration
-data, and any other files you want to keep. A factory reset and some recovery
-operations are destructive.
-
-### Optional stock factory reset
-
-Creality's standard reset can be triggered over SSH:
-
-```sh
-echo "all" | /usr/bin/nc -U /var/run/wipe.sock
-```
-
-> [!WARNING]
-> This command is destructive. Do not run it until the required files are
-> backed up. After the reset, complete the stock on-screen setup before
-> installing these modifications.
-
-The standard `wipe.sock` reset does not reliably remove every leftover
-top-level directory under `/mnt/UDISK`. When replacing or recovering an
-existing K2 Improvements or other third-party installation, use the menu's
-**Maintenance and recovery → Factory reset and cleanup tools** instead. Its
-`factory-reset-improved` workflow removes the leftover UDISK directories
-identified by its dry run and then invokes the standard `wipe.sock` reset.
 
 ## Bootstrap
 
