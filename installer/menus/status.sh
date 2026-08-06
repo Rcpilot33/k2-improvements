@@ -32,16 +32,16 @@ show_status() {
     printf '\n Bootstrap\n'
     status_line 'Entware (opkg, git, curl)' is_entware
     status_line 'better-root ($HOME -> UDISK)' is_better_root
-    status_line 'better-init (PATH/profile.d)' is_better_init
 
     printf '\n Core components\n'
-    status_line 'cartographer' is_cartographer
+    status_line 'better-init (PATH/profile.d)' is_better_init
+    status_line 'skip-setup' is_skip_setup
     status_line 'moonraker' is_moonraker
     status_line 'fluidd' is_fluidd
-    status_line 'macros (start_print/m191/bed_mesh)' is_macros
     status_line 'screws_tilt_adjust' is_screws_tilt
+    status_line 'cartographer' is_cartographer
     status_line 'abort_homing' is_abort_homing
-    status_line 'skip-setup' is_skip_setup
+    status_line 'macros (start_print/m191/bed_mesh)' is_macros
 
     printf '\n Optional extras\n'
     status_line 'axis_twist_compensation' is_axis_twist

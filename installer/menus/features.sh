@@ -2,16 +2,16 @@
 # k2-improvements feature install sub-menu. Install only - uninstall is v2.
 
 # name|detector|description (one per line)
-_FEATURES='abort_homing|is_abort_homing|Abort homing on M112/cancel
-better-init|is_better_init|Profile and PATH loader
+_FEATURES='entware|is_entware|Package tools (git/curl/dialog)
 better-root|is_better_root|Persistent root home on UDISK
-cartographer|is_cartographer|Probe and Klipper patches
-entware|is_entware|Package tools (git/curl/dialog)
-fluidd|is_fluidd|Updated printer web UI
-macros|is_macros|START_PRINT / M191 / bed mesh
+better-init|is_better_init|Profile and PATH loader
+skip-setup|is_skip_setup|Skip first-run wizard
 moonraker|is_moonraker|Mainline Klipper API server
+fluidd|is_fluidd|Updated printer web UI
 screws_tilt_adjust|is_screws_tilt|Manual bed-screw assist
-skip-setup|is_skip_setup|Skip first-run wizard'
+cartographer|is_cartographer|Probe and Klipper patches
+abort_homing|is_abort_homing|Abort homing on M112/cancel
+macros|is_macros|START_PRINT / M191 / bed mesh'
 
 menu_features() {
     while :; do
