@@ -23,9 +23,12 @@ The installer also adds a status-only compatibility layer for the stock K2
 touchscreen. Creality's live Z-offset page reads the nonstandard
 `probe.z_offset` status field. Cartographer normally omits that field, which
 leaves the value blank even though live adjustment works. The compatibility
-layer publishes the active Cartographer touch/scan model offset through that
-field; Klipper's existing object subscription sends changes to the screen.
+layer publishes Klipper's live `gcode_move.homing_origin.z` adjustment through
+that field; Klipper's existing object subscription sends changes to the screen.
 It does not poll Fluidd, issue G-code, or move an axis.
+
+After installation, `K2_CARTOGRAPHER_TOUCHSCREEN_STATUS` reports the value
+being published to the touchscreen.
 
 Choose the correct physical mount preset and power-cycle the printer before
 the first homing move after installation.

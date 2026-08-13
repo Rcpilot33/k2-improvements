@@ -33,14 +33,36 @@ class FakeCartographer:
         self.touch_mode = FakeMode(-0.10, homing_time=20.0)
 
 
+class FakeOrigin:
+    def __init__(self, z):
+        self.z = z
+
+
+class FakeGCodeMove:
+    def __init__(self, z_offset=0.0):
+        self.z_offset = z_offset
+
+    def get_status(self, eventtime):
+        del eventtime
+        return {"homing_origin": FakeOrigin(self.z_offset)}
+
+
 class FakeProbe:
     def get_status(self, eventtime):
         return {"name": "cartographer", "eventtime": eventtime}
 
 
+class FakeGCode:
+    def __init__(self):
+        self.commands = {}
+
+    def register_command(self, name, callback, desc=None):
+        self.commands[name] = (callback, desc)
+
+
 class FakePrinter:
     def __init__(self, objects):
-        self.objects = objects
+        self.objects = {"gcode": FakeGCode(), **objects}
         self.handlers = {}
 
     def lookup_object(self, name, default=None):
@@ -62,36 +84,47 @@ class CompatibilityTests(unittest.TestCase):
     def setUp(self):
         self.carto = FakeCartographer()
         self.probe = FakeProbe()
+        self.gcode_move = FakeGCodeMove(-0.03)
         self.printer = FakePrinter(
-            {"cartographer": self.carto, "probe": self.probe}
+            {
+                "cartographer": self.carto,
+                "probe": self.probe,
+                "gcode_move": self.gcode_move,
+            }
         )
         self.compat = MODULE.K2CartographerTouchscreen(FakeConfig(self.printer))
         self.printer.handlers["klippy:ready"]()
 
-    def test_adds_touch_offset_without_removing_standard_fields(self):
+    def test_adds_live_offset_without_removing_standard_fields(self):
         status = self.probe.get_status(12.5)
         self.assertEqual(status["name"], "cartographer")
         self.assertEqual(status["eventtime"], 12.5)
-        self.assertEqual(status["z_offset"], -0.10)
+        self.assertEqual(status["z_offset"], -0.03)
 
-    def test_status_tracks_model_changes_without_polling_or_commands(self):
-        self.assertEqual(self.probe.get_status(0)["z_offset"], -0.10)
+    def test_status_tracks_fluidd_live_offset_without_commands(self):
+        self.assertEqual(self.probe.get_status(0)["z_offset"], -0.03)
+        self.gcode_move.z_offset = -0.04
         self.carto.touch_mode.model = FakeModel(-0.13)
-        self.assertEqual(self.probe.get_status(1)["z_offset"], -0.13)
+        self.assertEqual(self.probe.get_status(1)["z_offset"], -0.04)
 
-    def test_uses_same_active_mode_rule_as_cartographer(self):
-        self.carto.scan_mode.last_homing_time = 30.0
-        self.assertEqual(self.probe.get_status(0)["z_offset"], 1.25)
-
-    def test_omits_offset_when_active_mode_has_no_model(self):
-        self.carto.touch_mode._has_model = False
-        self.assertNotIn("z_offset", self.probe.get_status(0))
+    def test_saved_model_change_does_not_change_displayed_live_offset(self):
+        self.carto.touch_mode.model = FakeModel(-0.50)
+        self.assertEqual(self.probe.get_status(0)["z_offset"], -0.03)
 
     def test_stays_inactive_without_cartographer(self):
-        printer = FakePrinter({"probe": FakeProbe()})
+        printer = FakePrinter(
+            {"probe": FakeProbe(), "gcode_move": FakeGCodeMove()}
+        )
         compat = MODULE.K2CartographerTouchscreen(FakeConfig(printer))
         printer.handlers["klippy:ready"]()
         self.assertFalse(compat.get_status(0)["installed"])
+
+    def test_registers_status_command(self):
+        self.assertIn(
+            "K2_CARTOGRAPHER_TOUCHSCREEN_STATUS",
+            self.printer.objects["gcode"].commands,
+        )
+        self.assertEqual(self.compat.get_status(0)["z_offset"], -0.03)
 
 
 if __name__ == "__main__":
