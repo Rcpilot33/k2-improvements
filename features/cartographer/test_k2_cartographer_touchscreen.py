@@ -99,17 +99,17 @@ class CompatibilityTests(unittest.TestCase):
         status = self.probe.get_status(12.5)
         self.assertEqual(status["name"], "cartographer")
         self.assertEqual(status["eventtime"], 12.5)
-        self.assertEqual(status["z_offset"], -0.03)
+        self.assertEqual(status["z_offset"], 0.03)
 
     def test_status_tracks_fluidd_live_offset_without_commands(self):
-        self.assertEqual(self.probe.get_status(0)["z_offset"], -0.03)
+        self.assertEqual(self.probe.get_status(0)["z_offset"], 0.03)
         self.gcode_move.z_offset = -0.04
         self.carto.touch_mode.model = FakeModel(-0.13)
-        self.assertEqual(self.probe.get_status(1)["z_offset"], -0.04)
+        self.assertEqual(self.probe.get_status(1)["z_offset"], 0.04)
 
     def test_saved_model_change_does_not_change_displayed_live_offset(self):
         self.carto.touch_mode.model = FakeModel(-0.50)
-        self.assertEqual(self.probe.get_status(0)["z_offset"], -0.03)
+        self.assertEqual(self.probe.get_status(0)["z_offset"], 0.03)
 
     def test_stays_inactive_without_cartographer(self):
         printer = FakePrinter(
@@ -125,6 +125,7 @@ class CompatibilityTests(unittest.TestCase):
             self.printer.objects["gcode"].commands,
         )
         self.assertEqual(self.compat.get_status(0)["z_offset"], -0.03)
+        self.assertEqual(self.compat.get_status(0)["probe_z_offset"], 0.03)
 
 
 if __name__ == "__main__":

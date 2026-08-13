@@ -3,8 +3,11 @@
 The stock c440x touchscreen reads ``probe.z_offset`` while its live Z-offset
 page is open.  Cartographer's Klipper probe adapter intentionally follows the
 upstream probe status API, which does not include that Creality-only field.
-This compatibility layer adds the field from ``gcode_move.homing_origin.z``
-without changing motion, the live offset, or Cartographer's saved models.
+This compatibility layer derives that field from
+``gcode_move.homing_origin.z`` without changing motion, the live offset, or
+Cartographer's saved models.  Creality's screen treats ``probe.z_offset`` as
+the inverse of the displayed live adjustment, matching the stock probe's
+``Z_OFFSET_APPLY_PROBE`` behavior.
 """
 
 import logging
@@ -53,30 +56,41 @@ class K2CartographerTouchscreen:
         self.probe.get_status = self._get_probe_status
         self.installed = True
         logging.info(
-            "%s exposing live gcode_move.homing_origin.z as probe.z_offset",
+            "%s exposing inverse live gcode_move.homing_origin.z as probe.z_offset",
             LOG_PREFIX,
         )
 
     def _get_probe_status(self, eventtime):
         status = dict(self.original_get_status(eventtime))
-        status["z_offset"] = round(self._get_live_z_offset(eventtime), 6)
+        status["z_offset"] = self._get_probe_z_offset(eventtime)
         return status
 
     def _get_live_z_offset(self, eventtime):
         origin = self.gcode_move.get_status(eventtime)["homing_origin"]
         return float(origin.z)
 
+    def _get_probe_z_offset(self, eventtime):
+        return round(-self._get_live_z_offset(eventtime), 6)
+
     def get_status(self, eventtime):
         return {
             "installed": self.installed,
             "z_offset": self._get_live_z_offset(eventtime) if self.installed else None,
+            "probe_z_offset": self._get_probe_z_offset(eventtime)
+            if self.installed
+            else None,
         }
 
     def cmd_status(self, gcmd):
         status = self.get_status(0.0)
         gcmd.respond_info(
-            "%s installed=%s z_offset=%s"
-            % (LOG_PREFIX, status["installed"], status["z_offset"])
+            "%s installed=%s z_offset=%s probe_z_offset=%s"
+            % (
+                LOG_PREFIX,
+                status["installed"],
+                status["z_offset"],
+                status["probe_z_offset"],
+            )
         )
 
 
