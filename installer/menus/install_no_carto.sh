@@ -8,8 +8,8 @@ better-init|is_better_init|features/better-init/install.sh
 skip-setup|is_skip_setup|features/skip-setup/install.sh
 moonraker|is_moonraker|features/moonraker/install.sh
 fluidd|is_fluidd|features/fluidd/install.sh
-screws_tilt_adjust|is_screws_tilt|features/screws_tilt_adjust/install.sh
-abort_homing|is_abort_homing|features/abort_homing/install.sh
+screws_tilt_adjust|is_screws_tilt_firmware_restart|features/screws_tilt_adjust/install.sh
+abort_homing|is_abort_homing_firmware_restart|features/abort_homing/install.sh
 save-config-restart|is_save_config_restart|features/save-config-restart/install.sh
 macros|is_macros|features/macros/install.sh'
 

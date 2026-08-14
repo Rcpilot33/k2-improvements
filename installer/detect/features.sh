@@ -33,6 +33,10 @@ is_kamp() {
     grep -rEhq '^\[exclude_object\]' "$PRINTER_CFG_DIR" 2>/dev/null
 }
 is_screws_tilt()   { [ -L "$PRINTER_CFG_DIR/custom/screws_tilt_adjust.cfg" ]; }
+is_screws_tilt_firmware_restart() {
+    is_screws_tilt &&
+    [ -f /mnt/UDISK/root/.k2-improvements/installer-state/screws-tilt-firmware-restart-v1 ]
+}
 is_r3men_bed() {
     grep -qE '^\[thermistor R3men_bed\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null &&
     grep -qE '^[[:space:]]*sensor_type:[[:space:]]*R3men_bed' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null
@@ -60,6 +64,10 @@ is_abort_homing() {
     local klipper_dir="${KLIPPER_DIR:-/usr/share/klipper}"
     grep -q '_handle_force_stop_homing' "$klipper_dir/klippy/webhooks.py" 2>/dev/null &&
     grep -q 'can_force_stop_homing' "$klipper_dir/klippy/webhooks.py" 2>/dev/null
+}
+is_abort_homing_firmware_restart() {
+    is_abort_homing &&
+    [ -f /mnt/UDISK/root/.k2-improvements/installer-state/abort-homing-firmware-restart-v1 ]
 }
 is_save_config_restart() {
     local root_configfile="${HOME:-/mnt/UDISK/root}/klipper/klippy/configfile.py"

@@ -12,5 +12,5 @@ ln -sfn ${SCRIPT_DIR}/configfile.py ${TARGET}
 echo "I: installed K2 Plus SAVE_CONFIG firmware-restart protection"
 
 if [ "${1:-}" != "--no-restart" ]; then
-    echo "I: a full printer power cycle is required before homing"
+    sh ${SCRIPT_DIR}/../../scripts/firmware_restart.sh
 fi

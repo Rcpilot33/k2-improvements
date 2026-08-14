@@ -9,6 +9,7 @@ This shared core feature preserves Klipper's normal `SAVE_CONFIG` file update
 and changes its requested restart from a host-only restart to
 `FIRMWARE_RESTART`, which also resets the printer MCU and motor controllers.
 
-The stock-probe and Cartographer installers both install this feature. After
-installation or any restart-related recovery, fully power-cycle the printer
-before the next homing test.
+The stock-probe and Cartographer installers both install this feature. When
+installed individually, it requests `FIRMWARE_RESTART` through Moonraker and
+waits for Klipper to return ready. If that request fails, fully power-cycle the
+printer before the next homing test.

@@ -15,3 +15,7 @@ python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     screws_tilt_adjust.cfg
 
 sh ${SCRIPT_DIR}/../../scripts/firmware_restart.sh
+
+STATE_DIR=/mnt/UDISK/root/.k2-improvements/installer-state
+mkdir -p ${STATE_DIR}
+touch ${STATE_DIR}/screws-tilt-firmware-restart-v1
