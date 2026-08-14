@@ -26,17 +26,36 @@ fi
 # Give Klipper time to enter its restart before checking for the ready state.
 sleep 3
 COUNT=0
+READY=0
 while [ "$COUNT" -lt 60 ]; do
     INFO=$("$CURL" -fsS --max-time 2 "$API_URL/printer/info" 2>/dev/null || true)
     if printf '%s' "$INFO" | \
         grep -qE '"state"[[:space:]]*:[[:space:]]*"ready"'; then
-        echo "I: Klipper returned ready after FIRMWARE_RESTART"
-        exit 0
+        READY=1
+        break
     fi
     COUNT=$((COUNT + 1))
     sleep 1
 done
 
-echo "E: Klipper did not return ready within 60 seconds" >&2
-echo "E: check Fluidd before continuing; power-cycle before any homing test" >&2
-exit 1
+if [ "$READY" -ne 1 ]; then
+    echo "E: Klipper did not return ready within 60 seconds" >&2
+    echo "E: check Fluidd before continuing; power-cycle before any homing test" >&2
+    exit 1
+fi
+
+# On the K2 Plus, Moonraker can report Klipper ready while Creality's motor
+# controller initialization is still producing startup traffic. Do not return
+# control to an installer until that observed 15-20 second window has passed.
+echo "I: Klipper API is ready; waiting 25 seconds for K2 motor initialization"
+sleep 25
+
+INFO=$("$CURL" -fsS --max-time 2 "$API_URL/printer/info" 2>/dev/null || true)
+if ! printf '%s' "$INFO" | \
+    grep -qE '"state"[[:space:]]*:[[:space:]]*"ready"'; then
+    echo "E: Klipper was not ready after the K2 stabilization interval" >&2
+    echo "E: check Fluidd before continuing; power-cycle before any homing test" >&2
+    exit 1
+fi
+
+echo "I: Klipper ready and K2 motor initialization interval complete"
