@@ -470,7 +470,7 @@ class PrinterConfig:
                 logging.exception(msg)
                 raise gcode.error(msg)
         
-    cmd_SAVE_CONFIG_help = "Overwrite config file and restart"
+    cmd_SAVE_CONFIG_help = "Overwrite config file and restart firmware"
     def cmd_SAVE_CONFIG(self, gcmd):
         if not self.autosave.fileconfig.sections():
             return
@@ -515,8 +515,12 @@ class PrinterConfig:
             msg = "Unable to write config file during SAVE_CONFIG"
             logging.exception(msg)
             raise gcode.error(msg)
-        # Request a restart
-        gcode.request_restart('restart')
+        # A host-only restart can leave the K2 Plus motor controllers in their
+        # previous runtime state, causing the first subsequent G28 to move in
+        # the wrong direction.  Reset the MCU as well; this is the same restart
+        # mode that restores correct homing when issued manually after
+        # SAVE_CONFIG.
+        gcode.request_restart('firmware_restart')
 
     cmd_CXSAVE_CONFIG_help = "Overwrite config file by cx "
     def cmd_CXSAVE_CONFIG(self, gcmd):

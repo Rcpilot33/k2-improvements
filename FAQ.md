@@ -19,6 +19,19 @@ touchscreen withholding temperatures until homing were observed on stock
 `1.1.2.x` firmware. Those releases are outside the currently validated firmware
 matrix. Use one of the versions listed in [VALIDATION.md](./VALIDATION.md).
 
+## Why can the first homing move after `SAVE_CONFIG` run in the wrong direction?
+
+On affected K2 Plus Cartographer installations, Klipper's ordinary
+`SAVE_CONFIG` restart can leave the motor controllers in their previous runtime
+state. A manual `FIRMWARE_RESTART` resets that state and restores correct
+homing.
+
+The Cartographer configfile patch therefore makes `SAVE_CONFIG` request a
+firmware-level restart directly after writing the configuration. This preserves
+the normal save operation while including the MCU reset that the K2 Plus needs.
+Until that patch is installed and validated on the printer, run
+`FIRMWARE_RESTART` after `SAVE_CONFIG` and before attempting to home.
+
 ## When I print from the side spool, the printer still acts like I am using the CFS
 
 This is a legacy, unconfirmed report. If it still occurs, first verify the
