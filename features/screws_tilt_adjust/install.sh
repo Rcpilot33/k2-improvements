@@ -14,4 +14,4 @@ python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg \
     screws_tilt_adjust.cfg
 
-/etc/init.d/klipper restart
+sh ${SCRIPT_DIR}/../../scripts/firmware_restart.sh

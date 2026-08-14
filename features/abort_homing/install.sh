@@ -7,8 +7,7 @@ EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
     rm -f /mnt/UDISK/root/klipper/klippy/webhooks.pyc
-    echo "Restarting Klipper..."
-    /etc/init.d/klipper restart
+    sh ${SCRIPT_DIR}/../../scripts/firmware_restart.sh
 elif [ $EXIT_CODE -eq 1 ]; then
     exit 1
 fi
