@@ -85,6 +85,10 @@ ln -sf ${SCRIPT_DIR}/patches/clocksync.py ~/klipper/klippy/clocksync.py
 ln -sf ${SCRIPT_DIR}/patches/configfile.py ~/klipper/klippy/configfile.py
 ln -sf ${SCRIPT_DIR}/patches/homing.py ~/klipper/klippy/extras/homing.py
 ln -sf ${SCRIPT_DIR}/patches/temperature_mcu.py ~/klipper/klippy/extras/temperature_mcu.py
+rm -f ~/klipper/klippy/extras/k2_safe_move_z.pyc \
+    ~/klipper/klippy/extras/__pycache__/k2_safe_move_z.*.pyc
+ln -sf ${SCRIPT_DIR}/patches/k2_safe_move_z.py \
+    ~/klipper/klippy/extras/k2_safe_move_z.py
 rm -f ~/klipper/klippy/extras/bed_mesh.py*
 ln -sf ${SCRIPT_DIR}/patches/bed_mesh.py ~/klipper/klippy/extras/bed_mesh.py
 sed -i 's/self\.use_offsets = False/self.use_offsets = True/g' ~/klipper/klippy/extras/probe.py || true

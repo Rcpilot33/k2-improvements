@@ -21,6 +21,13 @@ Installing Cartographer replaces the active stock `prtouch_v3` configuration.
 Choose the correct physical mount preset and power-cycle the printer before
 the first homing move after installation.
 
+The Cartographer installation also supplies Creality's inter-print
+`SAFE_MOVE_Z` compatibility command. It restricts the closed print service to
+its observed Z=20 endpoint, performs the move only while the printer is idle,
+and reports completion through `virtual_sdcard.run_dis` as the stock PR Touch
+extension does. Cartographer does not provide the stock nozzle-pressure
+collision sensing during this move.
+
 On a direct Cartographer install or a conversion from the stock-probe setup,
 the installer resets the PLA, PETG, ABS, ASA, DEFAULT, and PROBE offsets in
 `custom/overrides.cfg` to zero. Those values are probe-dependent and must be
