@@ -6,7 +6,38 @@ set -e
 # then runs the internal Jacob-style bootstrap script.
 
 REPO="Rcpilot33/k2-improvements"
-BRANCH="main"
+BRANCH="${K2_BRANCH:-main}"
+
+EXPECT_BRANCH="no"
+for ARG in "$@"; do
+    if [ "$EXPECT_BRANCH" = "yes" ]; then
+        BRANCH="$ARG"
+        EXPECT_BRANCH="no"
+        continue
+    fi
+
+    case "$ARG" in
+        --branch)
+            EXPECT_BRANCH="yes"
+            ;;
+        --branch=*)
+            BRANCH="${ARG#--branch=}"
+            ;;
+    esac
+done
+
+if [ "$EXPECT_BRANCH" = "yes" ]; then
+    echo "E: --branch requires a branch name." >&2
+    exit 2
+fi
+
+case "$BRANCH" in
+    ""|-*|*[!A-Za-z0-9._/-]*)
+        echo "E: invalid branch name: $BRANCH" >&2
+        exit 2
+        ;;
+esac
+
 BASE_URL="https://raw.githubusercontent.com/$REPO/$BRANCH"
 
 BOOTSTRAP_DIR="/tmp/bootstrap"
@@ -43,4 +74,5 @@ chmod +x "$BOOTSTRAP_DIR/entware/install.sh"
 chmod +x "$BOOTSTRAP_DIR/better-root/install.sh"
 
 cd "$BOOTSTRAP_DIR"
+export K2_BRANCH="$BRANCH"
 sh ./bootstrap.sh "$@"

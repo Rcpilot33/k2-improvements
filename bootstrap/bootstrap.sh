@@ -4,6 +4,37 @@ set -e
 cd $(dirname $0)
 CURDIR=$(pwd)
 REPO_URL="https://github.com/Rcpilot33/k2-improvements.git"
+BRANCH="${K2_BRANCH:-main}"
+
+EXPECT_BRANCH="no"
+for ARG in "$@"; do
+    if [ "$EXPECT_BRANCH" = "yes" ]; then
+        BRANCH="$ARG"
+        EXPECT_BRANCH="no"
+        continue
+    fi
+
+    case "$ARG" in
+        --branch)
+            EXPECT_BRANCH="yes"
+            ;;
+        --branch=*)
+            BRANCH="${ARG#--branch=}"
+            ;;
+    esac
+done
+
+if [ "$EXPECT_BRANCH" = "yes" ]; then
+    echo "E: --branch requires a branch name." >&2
+    exit 2
+fi
+
+case "$BRANCH" in
+    ""|-*|*[!A-Za-z0-9._/-]*)
+        echo "E: invalid branch name: $BRANCH" >&2
+        exit 2
+        ;;
+esac
 
 # Run install script from Entware if needed
 if [ -x /opt/bin/opkg ] && [ -x /opt/bin/git ]; then
@@ -21,12 +52,16 @@ if [ -d /mnt/UDISK/root/k2-improvements/.git ]; then
     cd /mnt/UDISK/root/k2-improvements
     /opt/bin/git remote set-url origin "$REPO_URL"
     /opt/bin/git fetch origin
-    /opt/bin/git checkout main
-    /opt/bin/git pull --ff-only origin main
+    if /opt/bin/git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+        /opt/bin/git checkout "$BRANCH"
+    else
+        /opt/bin/git checkout -b "$BRANCH" "origin/$BRANCH"
+    fi
+    /opt/bin/git pull --ff-only origin "$BRANCH"
 else
     echo "I: Cloning k2-improvements..."
     cd /mnt/UDISK/root
-    /opt/bin/git clone -b main "$REPO_URL" k2-improvements
+    /opt/bin/git clone -b "$BRANCH" "$REPO_URL" k2-improvements
 fi
 
 START_MENU="no"
