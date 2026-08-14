@@ -1,4 +1,4 @@
-# Code for reading and writing the Klipper config file
+# Creality K2 Plus-safe code for reading and writing the Klipper config file
 #
 # Copyright (C) 2016-2021  Kevin O'Connor <kevin@koconnor.net>
 #

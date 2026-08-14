@@ -86,7 +86,7 @@ fi
 ln -sf ${SCRIPT_DIR}/patches/mcu.py ~/klipper/klippy/mcu.py
 ln -sf ${SCRIPT_DIR}/patches/serialhdl.py ~/klipper/klippy/serialhdl.py
 ln -sf ${SCRIPT_DIR}/patches/clocksync.py ~/klipper/klippy/clocksync.py
-ln -sf ${SCRIPT_DIR}/patches/configfile.py ~/klipper/klippy/configfile.py
+sh ${SCRIPT_DIR}/../save-config-restart/install.sh --no-restart
 ln -sf ${SCRIPT_DIR}/patches/homing.py ~/klipper/klippy/extras/homing.py
 ln -sf ${SCRIPT_DIR}/patches/temperature_mcu.py ~/klipper/klippy/extras/temperature_mcu.py
 rm -f ~/klipper/klippy/extras/k2_safe_move_z.pyc \

@@ -192,6 +192,7 @@ omits those components.
 | [screws_tilt_adjust](./features/screws_tilt_adjust/README.md) | Manual bed-screw adjustment support. |
 | Cartographer | Probe support and K2-specific Klipper patches; Cartographer path only. |
 | abort_homing | Allows an emergency stop to abort homing. |
+| [SAVE_CONFIG restart protection](./features/save-config-restart/README.md) | Uses a firmware restart after saving so the motor controllers reset safely. |
 | [Macros](./features/macros/README.md) | Installs `START_PRINT`, `M191`, bed-mesh, and overrides support. |
 
 Optional quality-of-life and hardware-specific features are deliberately

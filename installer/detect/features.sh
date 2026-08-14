@@ -61,6 +61,12 @@ is_abort_homing() {
     grep -q '_handle_force_stop_homing' "$klipper_dir/klippy/webhooks.py" 2>/dev/null &&
     grep -q 'can_force_stop_homing' "$klipper_dir/klippy/webhooks.py" 2>/dev/null
 }
+is_save_config_restart() {
+    local root_configfile="${HOME:-/mnt/UDISK/root}/klipper/klippy/configfile.py"
+    local system_configfile="${KLIPPER_DIR:-/usr/share/klipper}/klippy/configfile.py"
+    grep -q "gcode.request_restart('firmware_restart')" \
+        "$root_configfile" "$system_configfile" 2>/dev/null
+}
 is_better_init()   { [ -f /etc/profile.d/better-init.sh ]; }
 
 is_surface_wrap()  { grep -q 'surface-selection wrapper' "$PRINTER_CFG_DIR/custom/start_print.cfg" 2>/dev/null; }
@@ -106,6 +112,7 @@ is_essentials_core() {
     is_fluidd &&
     is_screws_tilt &&
     is_abort_homing &&
+    is_save_config_restart &&
     is_macros
 }
 

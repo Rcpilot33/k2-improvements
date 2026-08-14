@@ -41,6 +41,7 @@ show_status() {
     status_line 'screws_tilt_adjust' is_screws_tilt
     status_line 'cartographer' is_cartographer
     status_line 'abort_homing' is_abort_homing
+    status_line 'SAVE_CONFIG firmware restart protection' is_save_config_restart
     status_line 'macros (start_print/m191/bed_mesh)' is_macros
 
     printf '\n Optional extras\n'

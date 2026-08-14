@@ -25,6 +25,7 @@ fluidd|is_fluidd|features/fluidd/install.sh
 screws_tilt_adjust|is_screws_tilt|features/screws_tilt_adjust/install.sh
 cartographer|is_cartographer|features/cartographer/install.sh
 abort_homing|is_abort_homing|features/abort_homing/install.sh
+save-config-restart|is_save_config_restart|features/save-config-restart/install.sh
 prtouch-cleanup|is_prtouch_clean|installer/extras/prtouch-cleanup/install.sh
 macros|is_macros|features/macros/install.sh'
 

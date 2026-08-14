@@ -27,7 +27,7 @@ EOF
         ln -sf ${SCRIPT_DIR}/patches/mcu.py ~/klipper/klippy/mcu.py
         ln -sf ${SCRIPT_DIR}/patches/serialhdl.py ~/klipper/klippy/serialhdl.py
         ln -sf ${SCRIPT_DIR}/patches/clocksync.py ~/klipper/klippy/clocksync.py
-        ln -sf ${SCRIPT_DIR}/patches/configfile.py ~/klipper/klippy/configfile.py
+        sh ~/k2-improvements/features/save-config-restart/install.sh --no-restart
         ln -sf ${SCRIPT_DIR}/patches/homing.py ~/klipper/klippy/extras/homing.py
         ln -sf ${SCRIPT_DIR}/patches/temperature_mcu.py ~/klipper/klippy/extras/temperature_mcu.py
         rm -f ~/klipper/klippy/extras/bed_mesh.py*
@@ -64,7 +64,7 @@ EOF
         rm -f ${KLIPPER_OVERLAY}/klippy/mcu.py
         rm -f ${KLIPPER_OVERLAY}/klippy/serialhdl.py
         rm -f ${KLIPPER_OVERLAY}/klippy/clocksync.py
-        rm -f ${KLIPPER_OVERLAY}/klippy/configfile.py
+        sh ~/k2-improvements/features/save-config-restart/install.sh --no-restart
         /etc/init.d/cartographer stop 2>/dev/null || true
         rm -f /overlay/upper/etc/init.d/cartographer
         rm -f /overlay/upper/opt/etc/init.d/S50cartographer
