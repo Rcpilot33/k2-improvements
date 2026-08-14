@@ -32,6 +32,10 @@ sys.path.insert(0, '/mnt/UDISK/root/cartographer3d-plugin/src')
 from cartographer.extra import *
 EOF
 
+# The stock c440x touchscreen expects probe.z_offset, a Creality extension
+# that Cartographer's standard probe status does not publish.
+sh ${SCRIPT_DIR}/install_touchscreen_compat.sh --no-restart
+
 # check if native USB ACM support is built into kernel
 # skip all usb handling (bridge, service) if so
 if ! zcat /proc/config.gz 2>/dev/null | grep -q "CONFIG_USB_ACM=y"; then

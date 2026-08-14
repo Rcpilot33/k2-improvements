@@ -18,6 +18,20 @@ installation therefore includes the probe plugin, bridge service, Klipper
 configuration, and K2-specific macros.
 
 Installing Cartographer replaces the active stock `prtouch_v3` configuration.
+
+The installer also adds a status-only compatibility layer for the stock K2
+touchscreen. Creality's live Z-offset page reads the nonstandard
+`probe.z_offset` status field. Cartographer normally omits that field, which
+leaves the value blank even though live adjustment works. The compatibility
+layer publishes the inverse of Klipper's live `gcode_move.homing_origin.z`
+adjustment through that field because Creality's screen negates the stock
+probe value for display. Klipper's existing object subscription sends changes
+to the screen. The layer does not poll Fluidd, issue G-code, or move an axis.
+
+After installation, `K2_CARTOGRAPHER_TOUCHSCREEN_STATUS` reports both the live
+`z_offset` shown by Fluidd and the inverse `probe_z_offset` published to the
+touchscreen.
+
 Choose the correct physical mount preset and power-cycle the printer before
 the first homing move after installation.
 
