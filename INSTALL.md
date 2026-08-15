@@ -5,6 +5,12 @@ recovery information for the K2 Plus Improvements menu installer. For the
 project overview and shortest supported path, begin with the
 [main README](./README.md).
 
+> [!IMPORTANT]
+> **Supported printer: Creality K2 Plus only.** Do not run these installers on
+> a K2 Pro or any other K2-series printer. This project modifies K2 Plus-specific
+> Klipper components, services, homing logic, motor-controller behavior, and
+> configuration files. Other models are not supported or validated.
+
 ## Safety and compatibility
 
 > [!WARNING]

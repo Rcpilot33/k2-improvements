@@ -1,5 +1,12 @@
 # K2 Plus Improvements — Menu Installer
 
+> [!IMPORTANT]
+> **This project supports the Creality K2 Plus only.** Do not install it on a
+> K2 Pro or any other K2-series printer. The scripts, Klipper patches, service
+> paths, homing behavior, motor-controller handling, and printer configuration
+> are specific to the K2 Plus. Other models are not supported or validated and
+> may be damaged by these changes.
+
 This fork is built on the primary technical work maintained by
 [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements).
 It adds a guided, status-aware installer and firmware-aware workflows for the

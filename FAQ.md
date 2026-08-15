@@ -1,5 +1,12 @@
 # FAQ
 
+## Can I install this on a Creality K2 Pro or another K2 model?
+
+No. This project supports and has been validated on the **Creality K2 Plus
+only**. Its scripts and patches depend on K2 Plus-specific Klipper components,
+service paths, homing behavior, motor controllers, and printer configuration.
+Do not run the installer on a K2 Pro or any other K2-series printer.
+
 ## Can I still use the automatic calibration features?
 
 No. K2 Improvements uses the documented manual calibration, mesh, and tuning
