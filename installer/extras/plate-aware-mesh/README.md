@@ -76,6 +76,12 @@ per-plate reuse.
 From the main installer, select **Optional extras -> Plate-aware saved
 meshes**. The installer adds one marker config and performs a firmware restart.
 
+This feature completed K2 Plus `1.1.5.5` hardware validation on the stock PR
+Touch path. Testing covered legacy naming with no `SURFACE`, creation and reuse
+of plate-specific `19,19` profiles, persistence through protected
+`SAVE_CONFIG`, and a zero-minute missing-profile soak. Epoxy,
+high-temperature, and textured PEI profiles produced distinct saved matrices.
+
 Before moving the printer, preview both naming paths in the Fluidd console:
 
 ```gcode

@@ -56,6 +56,7 @@ For the no-Cartographer path, a saved `default` mesh must match the active
 | Factory reset and cleanup tools | PASS |
 | Cartographer plate/surface wrapper | PASS |
 | Cartographer Fluidd macro buttons | PASS |
+| Plate-aware saved meshes (stock PR Touch) | PASS |
 
 ### Restart and homing safety (`1.1.5.5`)
 
@@ -138,23 +139,27 @@ print, then save that result to establish the final print Z for that model.
 
 ### Plate-aware saved mesh testing
 
-The optional stock-PR-Touch plate-aware mesh feature is under evaluation on
-the `plate-aware-mesh-testing` branch and is not included in the overall PASS
-status above.
+The optional stock-PR-Touch plate-aware mesh feature completed hardware
+validation on K2 Plus firmware `1.1.5.5` using the normal `19,19` probe count.
 
 | Test | Status |
 |---|:---:|
 | Optional-extra installation and firmware restart | PASS |
-| `SURFACE=<name>` creates/loads `<name>_<bed>c_<chamber>c` | PENDING |
+| `SURFACE=<name>` creates/loads `<name>_<bed>c_<chamber>c` | PASS |
 | Omitted `SURFACE` retains `<bed>c_<chamber>c` | PASS |
 | Existing matching plate profile is reused | PASS |
-| Different slicer plate selection uses a different profile | PENDING |
-| `variable_bed_mesh_soak: 0` skips the added missing-profile soak | PENDING |
+| Different slicer plate selection uses a different profile | PASS |
+| Plate-specific profile persists through protected `SAVE_CONFIG` | PASS |
+| `variable_bed_mesh_soak: 0` skips the added missing-profile soak | PASS |
 | Cartographer setup does not offer or install the extra | STATIC PASS |
 
-Initial motion testing should use a temporary `3,3` probe count. Restore the
-normal `19,19` count and recreate any test profiles before final print
-validation.
+Hardware tests covered omitted `SURFACE`, profile creation, protected
+`SAVE_CONFIG`, restart persistence, and reuse without remeshing. Plate-aware
+profiles were created for epoxy, high-temperature, and textured PEI plates.
+Their saved matrices showed local differences up to `0.080 mm`, confirming
+that the plate selector produced distinct and practically useful meshes. The
+missing-profile soak was set to zero on an already heat-soaked printer and the
+console reported `Soaking for 0.0 minutes` before beginning the mesh.
 
 ### Scope note: first-corner retraction
 
