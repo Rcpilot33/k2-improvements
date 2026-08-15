@@ -8,7 +8,8 @@ Before installing:
 
 After installing:
   1. Select the matching mount-offset profile.
-  2. Power-cycle the printer before homing.
+  2. Confirm the firmware restart and K2 initialization wait completed.
+     Power-cycle before homing only if that sequence reported an error.
   3. Complete Cartographer calibration.
 
 Probe firmware flashing is a separate, optional menu action.

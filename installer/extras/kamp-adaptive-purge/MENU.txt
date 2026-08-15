@@ -15,5 +15,6 @@ Creality Print templates:
 Orca template:
   slicer-templates/orca-machine-start.gcode
 
-The installer does not restart Klipper. After restarting the firmware,
-power-cycle the printer before the next G28.
+The installer does not restart Klipper. When no print is active, run
+FIRMWARE_RESTART and wait for the complete K2 startup sequence. Power-cycle
+before the next G28 only if that restart reports an error.

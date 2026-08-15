@@ -9,4 +9,6 @@ Only custom/overrides.cfg is changed. cartographer.cfg and printer.cfg are
 preserved. The installer creates a backup and retains the two newest matching
 backups.
 
-Power-cycle the printer before the next G28 after applying a change.
+When no print is active, run FIRMWARE_RESTART and wait for the complete K2
+startup sequence. Power-cycle before the next G28 only if that restart reports
+an error.

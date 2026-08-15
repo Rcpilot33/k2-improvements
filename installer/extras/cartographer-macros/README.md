@@ -112,8 +112,9 @@ include so repository updates do not overwrite them.
 
 ## Activation
 
-The macros appear after Klipper reloads the configuration. Power-cycle the K2
-Plus before the next `G28`.
+The macros appear after Klipper reloads the configuration. When no print is
+active, run `FIRMWARE_RESTART` and wait for the complete K2 startup sequence.
+Power-cycle before the next `G28` only if that restart reports an error.
 
 ## Credit
 

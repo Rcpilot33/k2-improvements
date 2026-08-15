@@ -109,4 +109,5 @@ PY
 touch /tmp/r3men-bed
 
 echo "I: R3MEN bed thermistor profile installed."
-echo "I: Restart Klipper for the printer.cfg change to take effect."
+echo "I: when no print is active, run FIRMWARE_RESTART and wait for the complete K2 startup sequence."
+echo "I: power-cycle before homing only if that restart reports an error."

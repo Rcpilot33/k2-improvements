@@ -30,4 +30,4 @@ else
 fi
 
 echo "I: cartographer-macros installed. CARTO_* macros appear in Fluidd"
-echo "I: after a Klipper restart (FIRMWARE_RESTART)."
+echo "I: after FIRMWARE_RESTART completes the full K2 startup sequence."

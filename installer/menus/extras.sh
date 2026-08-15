@@ -134,7 +134,8 @@ run_carto_plate_workflow() {
 
     if [ "$failed" -eq 0 ] && is_carto_plate_workflow; then
         printf '\n%s\n' "$(c_green 'Cartographer plate workflow installed successfully.')"
-        printf 'Power-cycle the printer before homing.\n'
+        printf 'When no print is active, run FIRMWARE_RESTART and wait for the complete\n'
+        printf 'K2 startup sequence. Power-cycle before homing only if it reports an error.\n'
     else
         printf '\n%s\n' "$(c_yellow 'Plate workflow is incomplete; review the errors above.')"
     fi
