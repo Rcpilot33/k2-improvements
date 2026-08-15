@@ -291,6 +291,7 @@ Install extras individually from **Optional extras**:
 | Cartographer plate workflow ([macros](./installer/extras/cartographer-macros/README.md), [automatic selection](./installer/extras/surface-selection-wrapper/README.md)) | Installs selector/action controls and slicer-driven surface selection; requires Cartographer. |
 | [Axis twist compensation](./features/axis_twist_compensation/README.md) | Compensates optional Z drift across X. |
 | [KAMP adaptive purge](./installer/extras/kamp-adaptive-purge/README.md) | Installs the patched adaptive purge workflow and slicer templates. |
+| [Plate-aware saved meshes](./installer/extras/plate-aware-mesh/README.md) | Separates stock PR Touch meshes by slicer plate choice, bed temperature, and chamber temperature. |
 | [R3MEN bed profile](./features/r3men-bed/README.md) | Adds the R3MEN graphite-bed thermistor profile. |
 | [Secure Auth](./features/secure-auth/README.md) | Disables SSH password login only after detecting a valid-looking public key. |
 | [PR Touch cleanup](./installer/extras/prtouch-cleanup/README.md) | Removes an orphan `[prtouch_v3]` `SAVE_CONFIG` header. |

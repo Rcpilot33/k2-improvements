@@ -8,7 +8,11 @@ soaking the bed. On the stock probe path, an existing profile is reused when
 available. Cartographer uses its adaptive mesh flow from `START_PRINT`.
 
 Profiles are named from the requested bed and chamber temperatures, such as
-`60c_0c`.
+`60.0c_0.0c`. The optional
+[plate-aware mesh feature](../../../installer/extras/plate-aware-mesh/README.md)
+can prefix that name with the slicer's selected build plate on stock PR Touch
+installations, while retaining the temperature-only format when no plate is
+passed.
 
 ## Stock PR Touch prerequisite
 

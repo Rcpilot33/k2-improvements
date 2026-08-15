@@ -9,6 +9,7 @@ surface-selection-wrapper|is_surface_wrap|START_PRINT SURFACE= param loads match
 cartographer-offset-setup|is_carto_offset_set|Cartographer probe X/Y offset (Jamin/JimmyV/custom)|installer/extras/cartographer-offset-setup/install.sh|is_cartographer
 cartographer-macros|is_carto_macros|CARTO_* macro buttons for Fluidd (calibrate/load/touch home)|installer/extras/cartographer-macros/install.sh|is_cartographer
 axis_twist_compensation|is_axis_twist|Optional Z-drift compensation across X|features/axis_twist_compensation/install.sh|
+plate-aware-mesh|is_plate_aware_mesh|Saved meshes selected by build plate and temperature|installer/extras/plate-aware-mesh/install.sh|is_stock_probe
 secure-auth|is_secure_auth|Disable SSH password login (requires a tested public key)|features/secure-auth/install.sh|
 r3men-bed|is_r3men_bed|R3MEN graphite-bed thermistor profile|features/r3men-bed/install.sh|'
 
@@ -24,6 +25,7 @@ fi
 _extras_requires_label() {
     case "$1" in
         is_cartographer) echo "needs Cartographer" ;;
+        is_stock_probe)  echo "stock PR Touch only" ;;
         *)               echo "blocked: $1" ;;
     esac
 }
@@ -44,6 +46,7 @@ extra_state() {
     elif [ -n "$req" ] && ! "$req" 2>/dev/null; then
         case "$req" in
             is_cartographer) state_requires 'CARTOGRAPHER' ;;
+            is_stock_probe) state_requires 'STOCK PR TOUCH' ;;
             *) state_blocked ;;
         esac
     else
@@ -157,9 +160,10 @@ menu_extras() {
             ui_menu_item 5 'Secure Auth' "$(extra_state secure-auth)"
             printf '\n  0. Back\n\nSelect [0-5]: '
         else
+            ui_menu_item 4 'Plate-aware saved meshes' "$(extra_state plate-aware-mesh)"
             printf '\n Security\n'
-            ui_menu_item 4 'Secure Auth' "$(extra_state secure-auth)"
-            printf '\n  0. Back\n\nSelect [0-4]: '
+            ui_menu_item 5 'Secure Auth' "$(extra_state secure-auth)"
+            printf '\n  0. Back\n\nSelect [0-5]: '
         fi
         read -r c
         case "$c" in
@@ -170,14 +174,10 @@ menu_extras() {
                 if is_cartographer; then
                     run_carto_plate_workflow
                 else
-                    run_extra_name secure-auth
+                    run_extra_name plate-aware-mesh
                 fi
                 ;;
-            5)
-                if is_cartographer; then
-                    run_extra_name secure-auth
-                fi
-                ;;
+            5) run_extra_name secure-auth ;;
             0|b|B|q|Q) return ;;
             *) ;;
         esac
@@ -213,6 +213,11 @@ install_extra() {
                 printf '    - Or Jacob10383'"'"'s original gimme-the-jamin.sh\n\n'
                 printf '  Once Cartographer is installed and Klipper has restarted with the\n'
                 printf '  new config, this extra will become available.\n\n'
+                ;;
+            is_stock_probe)
+                printf '  This extra is for a K2 Plus using the stock PR Touch probe.\n'
+                printf '  Cartographer installations create adaptive meshes per print and use\n'
+                printf '  the separate Cartographer plate workflow.\n\n'
                 ;;
             *)
                 printf '  Precondition function "%s" returned false.\n\n' "$req"

@@ -163,6 +163,7 @@ Install extras individually from **Optional extras**:
 | Cartographer plate profiles and slicer selection | [Macro controls](./installer/extras/cartographer-macros/README.md) · [Automatic selection](./installer/extras/surface-selection-wrapper/README.md) |
 | KAMP adaptive purge | [KAMP guide and slicer templates](./installer/extras/kamp-adaptive-purge/README.md) |
 | Axis twist compensation | [Axis twist guide](./features/axis_twist_compensation/README.md) |
+| Plate-aware saved meshes | [Stock PR Touch plate-and-temperature mesh profiles](./installer/extras/plate-aware-mesh/README.md) |
 | R3MEN bed thermistor profile | [R3MEN guide](./features/r3men-bed/README.md) |
 | Secure Auth | [Overview](./features/secure-auth/README.md) · [Key setup](./features/secure-auth/SETUP.md) |
 | PR Touch `SAVE_CONFIG` cleanup | [Cleanup guide](./installer/extras/prtouch-cleanup/README.md) |

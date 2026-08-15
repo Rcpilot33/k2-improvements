@@ -51,6 +51,9 @@ show_status() {
     if [ -f "$INSTALLER_DIR/installer/extras/kamp-adaptive-purge/install.sh" ]; then
         status_line 'KAMP adaptive purge' is_kamp
     fi
+    if ! is_cartographer; then
+        status_line 'Plate-aware saved meshes' is_plate_aware_mesh
+    fi
     if is_cartographer; then
         if is_carto_plate_workflow; then
             printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_installed)"

@@ -60,6 +60,16 @@ is_axis_twist() {
     grep -q '^\[include axis_twist_compensation\.cfg\]$' "$main" 2>/dev/null &&
     [ -e "$klipper_dir/klippy/extras/axis_twist_compensation.py" ]
 }
+is_stock_probe() { ! is_cartographer; }
+is_plate_aware_mesh() {
+    local custom="$PRINTER_CFG_DIR/custom"
+    local cfg="$custom/plate_aware_mesh.cfg"
+    local main="$custom/main.cfg"
+    [ -e "$cfg" ] &&
+    grep -q '^\[gcode_macro _PLATE_AWARE_MESH\]$' "$cfg" 2>/dev/null &&
+    [ -f "$main" ] &&
+    grep -q '^\[include plate_aware_mesh\.cfg\]$' "$main" 2>/dev/null
+}
 is_abort_homing() {
     local klipper_dir="${KLIPPER_DIR:-/usr/share/klipper}"
     grep -q '_handle_force_stop_homing' "$klipper_dir/klippy/webhooks.py" 2>/dev/null &&

@@ -1,0 +1,8 @@
+Uses the selected Creality Print build-plate type as part of the saved bed
+mesh name on stock PR Touch installations.
+
+Examples:
+  SURFACE=textured_pei -> textured_pei_70.0c_0.0c
+  no SURFACE parameter -> 70.0c_0.0c (existing behavior)
+
+Cartographer is not changed by this feature.

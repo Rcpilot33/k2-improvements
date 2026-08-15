@@ -77,7 +77,8 @@ In the slicer:
 4. Save the printer profile and slice a test object.
 
 The material-only and KAMP-only templates omit `SURFACE=`, causing the
-Cartographer wrapper to load `default` on each print. See the
+Cartographer wrapper to load `default` on each print or the optional stock
+PR Touch plate-aware workflow to retain its temperature-only mesh name. See the
 [template notes](./slicer-templates/README.md) for details and verification.
 
 ## Verify before printing

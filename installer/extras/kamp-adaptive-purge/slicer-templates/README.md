@@ -13,12 +13,14 @@ Creality's system preset unchanged as a fallback.
 | `creality-start-material-surface-profiles-kamp.gcode` | Yes | Yes | Yes | PASS — Creality Print 7.1.1 |
 | `orca-machine-start.gcode` | Yes | Yes | Yes | Verify plate-name values against your profile |
 
-The plate-selection variants pass `SURFACE=` to the printer's Cartographer
-wrapper. The material-only and KAMP-only variants intentionally omit it, so the
-wrapper loads the `default` scan and touch models on every print instead of
-retaining a model from an earlier job. All four Creality variants pass
-`MATERIAL=` so `START_PRINT` can apply the matching offset from
-`_START_PRINT_VARS`.
+The plate-selection variants pass `SURFACE=` to either the Cartographer plate
+workflow or the optional stock-PR-Touch plate-aware mesh feature. On a
+Cartographer setup it selects matching scan and touch models. On a stock-probe
+setup it becomes part of the saved mesh profile name. The material-only and
+KAMP-only variants intentionally omit `SURFACE=`; Cartographer then loads its
+`default` models, while the stock-probe path retains its original
+temperature-only mesh name. All four Creality variants pass `MATERIAL=` so
+`START_PRINT` can apply the matching offset from `_START_PRINT_VARS`.
 
 The four Creality Print variants were validated on printer firmware `1.1.5.5`.
 See the repository [validation report](../../../../VALIDATION.md).

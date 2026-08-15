@@ -136,6 +136,25 @@ threshold and records the model speed. Its saved `z_offset` is only the
 starting point for printing. Tune the actual first layer with live Z during a
 print, then save that result to establish the final print Z for that model.
 
+### Plate-aware saved mesh testing
+
+The optional stock-PR-Touch plate-aware mesh feature is under evaluation on
+the `plate-aware-mesh-testing` branch and is not included in the overall PASS
+status above.
+
+| Test | Status |
+|---|:---:|
+| Optional-extra installation and firmware restart | PENDING |
+| `SURFACE=textured_pei` creates/loads `textured_pei_<bed>c_<chamber>c` | PENDING |
+| Omitted `SURFACE` retains `<bed>c_<chamber>c` | PENDING |
+| Existing matching plate profile is reused | PENDING |
+| Different slicer plate selection uses a different profile | PENDING |
+| Cartographer setup does not offer or install the extra | STATIC PASS |
+
+Initial motion testing should use a temporary `3,3` probe count. Restore the
+normal `19,19` count and recreate any test profiles before final print
+validation.
+
 ### Scope note: first-corner retraction
 
 The first-corner behavior encountered during testing was traced to slicer
