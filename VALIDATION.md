@@ -144,11 +144,12 @@ status above.
 
 | Test | Status |
 |---|:---:|
-| Optional-extra installation and firmware restart | PENDING |
-| `SURFACE=textured_pei` creates/loads `textured_pei_<bed>c_<chamber>c` | PENDING |
-| Omitted `SURFACE` retains `<bed>c_<chamber>c` | PENDING |
-| Existing matching plate profile is reused | PENDING |
+| Optional-extra installation and firmware restart | PASS |
+| `SURFACE=<name>` creates/loads `<name>_<bed>c_<chamber>c` | PENDING |
+| Omitted `SURFACE` retains `<bed>c_<chamber>c` | PASS |
+| Existing matching plate profile is reused | PASS |
 | Different slicer plate selection uses a different profile | PENDING |
+| `variable_bed_mesh_soak: 0` skips the added missing-profile soak | PENDING |
 | Cartographer setup does not offer or install the extra | STATIC PASS |
 
 Initial motion testing should use a temporary `3,3` probe count. Restore the

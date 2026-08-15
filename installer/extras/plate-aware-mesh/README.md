@@ -54,6 +54,17 @@ When a profile is created for the first time, finish or cancel the print
 safely and then use **Save Config & Restart** to persist it in `printer.cfg`.
 Wait for the protected firmware restart to complete before the next `G28`.
 
+The additional soak used only when creating a missing profile is controlled in
+`custom/overrides.cfg`:
+
+```ini
+variable_bed_mesh_soak: 5
+```
+
+Set it to `0` if the printer is already heat soaked before you send a print.
+The plate-aware installer adds the five-minute default to older preserved
+overrides files when it is missing; it does not change an existing value.
+
 Changing or reseating a plate can still change its measured shape. If a saved
 profile no longer represents the installed plate, remove that profile and let
 the next print recreate it. A fresh mesh every print remains the most

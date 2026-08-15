@@ -13,6 +13,9 @@ else
     echo "I: preserving existing custom/overrides.cfg"
 fi
 
+sh "${SCRIPT_DIR}/ensure_bed_mesh_soak.sh" \
+    ~/printer_data/config/custom/overrides.cfg
+
 # The same overrides seed is used by both setup paths. Activate the
 # Cartographer-only defaults only when Cartographer is actually configured.
 if [ -f ~/printer_data/config/custom/cartographer.cfg ]; then

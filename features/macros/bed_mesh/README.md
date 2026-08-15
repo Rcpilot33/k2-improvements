@@ -14,6 +14,18 @@ can prefix that name with the slicer's selected build plate on stock PR Touch
 installations, while retaining the temperature-only format when no plate is
 passed.
 
+The missing-mesh heat soak defaults to five minutes and is configurable in
+`custom/overrides.cfg`:
+
+```ini
+variable_bed_mesh_soak: 5
+```
+
+Set it to `0` when the printer is already heat soaked before a print is sent.
+This skips only the additional delay before creating a missing saved mesh; all
+requested temperature waits, tilt adjustment, homing, cleaning, and probing
+still run.
+
 ## Stock PR Touch prerequisite
 
 On a no-Cartographer / stock PR Touch installation, create and save a
