@@ -95,7 +95,7 @@ is_carto_offset_set() { is_cartographer; }  # always "set" if cartographer is in
 is_motor_guard()   { grep -q 'motor-state-guard' "$PRINTER_CFG_DIR/custom/start_print.cfg" 2>/dev/null; }
 
 # Returns a human label for the currently-installed cartographer offset preset.
-# Echoes one of: "Jamin", "JimmyV", "custom (x=N y=N)", "(no cartographer)"
+# Echoes a recognized mount profile, a custom X/Y label, or no Cartographer.
 detect_carto_offset_label() {
     local cfg="$PRINTER_CFG_DIR/custom/cartographer.cfg"
     local overrides="$PRINTER_CFG_DIR/custom/overrides.cfg"
@@ -113,8 +113,10 @@ detect_carto_offset_label() {
     fi
     case "${x:-?} ${y:-?}" in
         "0 -15") echo "Jamin (x=0 y=-15)" ;;
-        "0 36")  echo "JimmyV (x=0 y=36)" ;;
-        *)       echo "custom (x=${x:-?} y=${y:-?})" ;;
+        "0 36")  echo "JimmyV legacy (x=0 y=36)" ;;
+        "0 12")  echo "JimmyV final no 3DO (x=0 y=12)" ;;
+        "0 17")  echo "JimmyV final 3DO (x=0 y=17)" ;;
+        *)        echo "custom (x=${x:-?} y=${y:-?})" ;;
     esac
 }
 is_homing_hasattr() { grep -q "hasattr.*get_suspended_det_status" "$KLIPPER_DIR/klippy/extras/homing.py" 2>/dev/null; }

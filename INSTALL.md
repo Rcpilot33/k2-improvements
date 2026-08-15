@@ -268,7 +268,9 @@ also fails. Read the complete
 The installer offers a mount picker after the automated Cartographer steps:
 
 - **Jamin:** tested on printer hardware
-- **JimmyV:** untested; uses JimmyV's documented mount offsets
+- **JimmyV legacy:** untested; retains the documented 36 mm back-mount profile
+- **JimmyV final without 3DO camera:** untested; uses the published 12 mm profile
+- **JimmyV final with 3DO camera:** untested; uses the published 17 mm profile
 - **Custom:** uses offsets entered by the user
 
 Managed values are written to `overrides.cfg`, where they take precedence
@@ -287,7 +289,7 @@ Install extras individually from **Optional extras**:
 
 | Extra | Purpose |
 |---|---|
-| [Cartographer offset setup](./installer/extras/cartographer-offset-setup/README.md) | Select Jamin, JimmyV, or custom offsets; requires Cartographer. |
+| [Cartographer offset setup](./installer/extras/cartographer-offset-setup/README.md) | Select Jamin, JimmyV legacy/final, or custom offsets; requires Cartographer. |
 | Cartographer plate workflow ([macros](./installer/extras/cartographer-macros/README.md), [automatic selection](./installer/extras/surface-selection-wrapper/README.md)) | Installs selector/action controls and slicer-driven surface selection; requires Cartographer. |
 | [Axis twist compensation](./features/axis_twist_compensation/README.md) | Compensates optional Z drift across X. |
 | [KAMP adaptive purge](./installer/extras/kamp-adaptive-purge/README.md) | Installs the patched adaptive purge workflow and slicer templates. |

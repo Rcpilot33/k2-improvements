@@ -144,8 +144,10 @@ See the [bed-mesh guide](./features/macros/bed_mesh/README.md).
 ### Cartographer
 
 Confirm that the selected mount profile matches the physical mount and required
-spacers. The Jamin profile is printer-tested. The JimmyV profile is
-**untested** and uses JimmyV's documented offsets. Custom offsets are supported.
+spacers. The Jamin profile is printer-tested. The JimmyV legacy and final
+profiles are **untested** and use JimmyV's published offsets. Final profiles
+are provided for mounts without and with the 3DO nozzle camera. Custom offsets
+are supported.
 
 Complete Scan and Touch calibration, then tune final print Z from an actual
 first layer. Touch calibration selects the detection threshold and speed; its
