@@ -12,10 +12,12 @@ SCRIPT_DIR="$(readlink -f $(dirname $0))"
 for sub in start_print m191 bed_mesh overrides; do
     if [ -f "$SCRIPT_DIR/$sub/install.sh" ]; then
         echo "--- macros/$sub ---"
-        sh "$SCRIPT_DIR/$sub/install.sh"
+        sh "$SCRIPT_DIR/$sub/install.sh" --no-restart
     else
         echo "W: $SCRIPT_DIR/$sub/install.sh not found — skipping"
     fi
 done
+
+sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
 
 echo "I: macros (start_print, m191, bed_mesh, overrides) installed"

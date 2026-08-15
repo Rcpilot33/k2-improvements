@@ -125,8 +125,10 @@ the mesh boundary. Center the print or increase the purge margin if needed.
 
 ## Activation
 
-The installer does not restart Klipper. Reload the configuration when ready,
-then power-cycle the printer before the next `G28`.
+The installer does not restart Klipper so it cannot interrupt an active print.
+When no print is active, run `FIRMWARE_RESTART` and wait for the complete K2
+startup sequence before the next `G28`. If the restart fails, power-cycle the
+printer before homing.
 
 ## Credit
 

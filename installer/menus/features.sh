@@ -17,7 +17,9 @@ macros|is_macros|START_PRINT / M191 / bed mesh'
 menu_features() {
     while :; do
         clear
-        ui_heading 'CORE COMPONENT INSTALLER'
+        printf '%s\n' '================================================================================================'
+        printf ' %s\n' "$(c_cyan 'CORE COMPONENT INSTALLER')"
+        printf '%s\n' '================================================================================================'
         printf '\n%s\n\n' "$(c_yellow 'Advanced: install or repair individual components.')"
         local n=0
         local OLDIFS="$IFS"
@@ -30,7 +32,7 @@ menu_features() {
             local desc=$(printf '%s' "$line" | cut -d'|' -f3)
             local state
             if "$det"; then state=$(state_installed); else state=$(state_not_installed); fi
-            printf '  %2d. %-24s %-31s %s\n' "$n" "$name" "$desc" "$state"
+            printf '  %2d. %-24s %-42s %s\n' "$n" "$name" "$desc" "$state"
         done
         IFS="$OLDIFS"
         printf '\n   0. Back\n\nSelect [0-%s]: ' "$n"

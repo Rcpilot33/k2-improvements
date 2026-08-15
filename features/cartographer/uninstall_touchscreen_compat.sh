@@ -1,6 +1,7 @@
 #!/bin/ash
 set -e
 
+SCRIPT_DIR=$(readlink -f $(dirname ${0}))
 CUSTOM=~/printer_data/config/custom
 MAIN_CFG=${CUSTOM}/main.cfg
 
@@ -12,5 +13,5 @@ fi
 rm -f ~/klipper/klippy/extras/k2_cartographer_touchscreen.py
 rm -f ${CUSTOM}/k2_cartographer_touchscreen.cfg
 
-/etc/init.d/klipper restart
+sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
 echo "I: removed Cartographer touchscreen Z-offset display compatibility"

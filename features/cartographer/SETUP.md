@@ -18,10 +18,12 @@ Flashing instructions are available [here](./firmware/README.md).
 2. Select the mount profile matching the physical mount. Jamin is
    printer-tested; JimmyV uses the offsets documented with that mount but is
    untested in this project.
-3. Fully reboot or power-cycle the printer before the next `G28`.
+3. Confirm the installer firmware restart completed successfully. If it did
+   not, fully power-cycle the printer before the next `G28`.
 4. Home the printer, run `Z_TILT_ADJUST`, then re-home Z before calibration.
 5. Complete Scan calibration, Touch calibration, and `SAVE_CONFIG`.
-6. After Klipper restarts, fully reboot or power-cycle again before homing.
+6. Wait for the protected `SAVE_CONFIG` firmware restart to finish. Power-cycle
+   before homing only if the restart reports an error.
 7. Tune final Z with an actual first-layer print. Touch calibration establishes
    the model threshold and speed; it does not replace print-level Z tuning.
 8. Optionally install **Cartographer plate workflow** to maintain separate
@@ -73,8 +75,8 @@ selector/action buttons for each physical plate:
 2. Run `A21_CARTO_SCAN_SELECTED`.
 3. Run `A22_CARTO_TOUCH_SELECTED`.
 4. Run `SAVE_CONFIG`.
-5. After Klipper restarts and the printer is power-cycled, select the profile
-   again and run `A23_CARTO_LOAD_SELECTED`.
+5. After the protected firmware restart completes, select the profile again
+   and run `A23_CARTO_LOAD_SELECTED`.
 
 Selection by itself does not load a model. Full button names, fallback
 behavior, and validation results are in the

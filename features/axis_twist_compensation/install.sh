@@ -20,4 +20,4 @@ python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
 
 echo "Installed axis_twist_compensation"
 
-/etc/init.d/klipper restart
+sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"

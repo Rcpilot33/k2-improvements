@@ -32,8 +32,9 @@ After installation, `K2_CARTOGRAPHER_TOUCHSCREEN_STATUS` reports both the live
 `z_offset` shown by Fluidd and the inverse `probe_z_offset` published to the
 touchscreen.
 
-Choose the correct physical mount preset and power-cycle the printer before
-the first homing move after installation.
+Choose the correct physical mount preset before the first homing move after
+installation. The installer performs a firmware restart and waits for K2 motor
+initialization before returning.
 
 The Cartographer installation also supplies Creality's inter-print
 `SAFE_MOVE_Z` compatibility command. It restricts the closed print service to
@@ -63,7 +64,8 @@ Use **Install or change setup -> Install Cartographer setup** from the menu.
 After installation:
 
 1. Select the mount and offset profile that matches the installed hardware.
-2. Power-cycle the printer before homing.
+2. Confirm the installer restart completed successfully; otherwise power-cycle
+   before homing.
 3. Follow the [Cartographer setup guide](./SETUP.md).
 4. Flash probe firmware only if needed; firmware flashing is a separate menu
    action.

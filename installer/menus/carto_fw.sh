@@ -107,8 +107,9 @@ If the probe does not reappear, unplug/replug the Cartographer USB or
 power-cycle the printer.
 
 K2 Plus restart note:
-After SAVE_CONFIG, FIRMWARE_RESTART, or installer changes that restart Klipper,
-power-cycle the printer before the next G28.
+Protected SAVE_CONFIG and project installers use a firmware restart plus the K2
+initialization wait. Power-cycle before G28 only if that sequence reports an
+error. Do not substitute a host-only Klipper restart.
 
 EOF
     press_enter
@@ -202,8 +203,8 @@ carto_fw_launch() {
         printf '  lsusb | grep -i cartographer\n\n'
         printf 'If the probe does not reappear, unplug/replug the Cartographer USB or power-cycle the printer.\n\n'
         printf 'K2 Plus restart note:\n'
-        printf 'After SAVE_CONFIG, FIRMWARE_RESTART, or installer changes that restart Klipper,\n'
-        printf 'power-cycle the printer before the next G28.\n\n'
+        printf 'Project installers and protected SAVE_CONFIG use a firmware restart plus\n'
+        printf 'the K2 initialization wait. Power-cycle before G28 only on an error.\n\n'
     else
         warn "flash.py exited non-zero"
         printf '\n'

@@ -117,5 +117,4 @@ else
     echo "W: moonraker not found, skipping update manager registration"
 fi
 
-echo "I: restarting klipper"
-/etc/init.d/klipper restart
+sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"

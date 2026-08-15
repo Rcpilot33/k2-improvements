@@ -6,7 +6,8 @@ mechanically before enabling this optional feature.
 
 ## Calibration
 
-After installation, power-cycle the printer before homing. Then run:
+The installer performs a firmware restart and waits for K2 motor initialization.
+When it completes successfully, run:
 
 ```gcode
 G28

@@ -53,8 +53,8 @@ To calibrate a plate, install that physical plate, select its profile, run
 `A21_CARTO_SCAN_SELECTED`, and then separately run
 `A22_CARTO_TOUCH_SELECTED`. Use `A23_CARTO_LOAD_SELECTED` when an existing pair
 of saved models needs to be loaded. Run `SAVE_CONFIG` after calibration. After
-the resulting Klipper restart and required printer power cycle, select the
-profile again before loading it.
+the protected firmware restart completes, select the profile again before
+loading it. Power-cycle before homing only if the restart reports an error.
 
 Touch calibration finds and verifies the detection threshold and model speed;
 it does not guarantee the final first-layer height. The Touch model's initial

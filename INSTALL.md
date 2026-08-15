@@ -16,9 +16,11 @@ project overview and shortest supported path, begin with the
 > any other loss resulting from installation or use.
 
 > [!CAUTION]
-> After an installer, `SAVE_CONFIG`, or `FIRMWARE_RESTART` restarts Klipper,
-> fully reboot or power-cycle the printer **before running `G28`**. A known K2
-> Plus motor-state issue can otherwise cause homing in the wrong direction.
+> Do not use Klipper's host-only `RESTART` command or
+> `/etc/init.d/klipper restart` before homing. The installers, protected
+> `SAVE_CONFIG`, and documented restart paths use `FIRMWARE_RESTART`, wait for
+> the K2 motor controllers to initialize, and then return control. If that
+> sequence reports an error, power-cycle the printer before running `G28`.
 
 The modifications are not compatible with Creality's automatic calibration
 workflow. Complete the factory setup before installing, then use the provided
@@ -267,8 +269,9 @@ Managed values are written to `overrides.cfg`, where they take precedence
 without deleting inherited `cartographer.cfg` values. The tool retains only
 the two newest `overrides.cfg.before-cartographer-offset-*` backups.
 
-After a complete power cycle, follow the
-[Cartographer setup and calibration guide](./features/cartographer/SETUP.md).
+After the installer reports a successful firmware restart and K2 initialization
+wait, follow the [Cartographer setup and calibration
+guide](./features/cartographer/SETUP.md).
 The mount, offsets, and calibration model must match the physical installation
 and build surface.
 

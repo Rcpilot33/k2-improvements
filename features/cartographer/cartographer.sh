@@ -46,8 +46,7 @@ EOF
             -e 's/^#(.*carto.*)/\1/' \
             ~/printer_data/config/custom/main.cfg
 
-        echo "I: restarting klipper"
-        /etc/init.d/klipper restart
+        sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
         echo ""
         echo "*** ENSURE Y SPACERS ARE INSTALLED ***"
         echo ""
@@ -76,8 +75,7 @@ EOF
             -e 's/^([^#].*carto.*)/#\1/' \
             ~/printer_data/config/custom/main.cfg
 
-        echo "I: restarting klipper"
-        /etc/init.d/klipper restart
+        sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
         echo ""
         echo "*** ENSURE Y SPACERS ARE NOT INSTALLED ***"
         echo ""

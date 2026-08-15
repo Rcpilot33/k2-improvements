@@ -7,7 +7,6 @@ SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 cp -f ${SCRIPT_DIR}/klipper_mcu.init /etc/init.d/klipper_mcu
 /etc/init.d/klipper_mcu restart
 cp -f ${SCRIPT_DIR}/klipper.init /etc/init.d/klipper
-/etc/init.d/klipper restart
 cp -f ${SCRIPT_DIR}/webrtc.init /etc/init.d/webrtc
 /etc/init.d/webrtc restart
 
@@ -21,3 +20,5 @@ ln -sf ${SCRIPT_DIR}/bin/systemctl /mnt/UDISK/bin/
 
 # update the path
 echo 'export PATH=/mnt/UDISK/bin:$PATH' > /etc/profile.d/better-init.sh
+
+sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"

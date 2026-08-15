@@ -12,7 +12,6 @@ python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
 
 echo "I: installed Cartographer touchscreen Z-offset display compatibility"
 
-if [ "${1}" != "--no-restart" ]; then
-    /etc/init.d/klipper restart
-    echo "I: restarted Klipper"
+if [ "${1:-}" != "--no-restart" ]; then
+    sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
 fi

@@ -57,6 +57,21 @@ For the no-Cartographer path, a saved `default` mesh must match the active
 | Cartographer plate/surface wrapper | PASS |
 | Cartographer Fluidd macro buttons | PASS |
 
+### Restart and homing safety (`1.1.5.5`)
+
+| Test | Status |
+|---|:---:|
+| Protected `SAVE_CONFIG` on stock PR Touch followed by `G28` (>10 consecutive cycles) | PASS |
+| Protected `SAVE_CONFIG` on Cartographer followed by `G28` | PASS |
+| Installer `FIRMWARE_RESTART` followed by K2 initialization wait and `G28` | PASS |
+| `screws_tilt_adjust` and `abort_homing` repair installs using the shared restart helper | PASS |
+
+The repeated stock-probe test used a temporary `3,3` mesh to shorten each
+cycle; the configured mesh was restored to `19,19` after testing. Moonraker can
+report Klipper ready before the Creality motor-controller startup messages have
+finished, so the shared helper waits an additional K2-specific stabilization
+interval and verifies that Klipper is still ready before returning.
+
 ### Creality Print templates (`1.1.5.5` exhaustive cycle)
 
 | Template | Status |
@@ -109,10 +124,10 @@ A selector records the profile for the shared actions; it does not load a
 model by itself. `A23_CARTO_LOAD_SELECTED` loads both the saved Scan and Touch
 models. The selection resets to `default` after a Klipper restart.
 
-After calibration, run `SAVE_CONFIG`, allow Klipper to restart, fully reboot or
-power-cycle the printer before the next `G28`, select the intended profile
-again, and use `A23_CARTO_LOAD_SELECTED` when that saved model pair should
-become active.
+After calibration, run `SAVE_CONFIG` and wait for the protected firmware
+restart to complete. Then select the intended profile again and use
+`A23_CARTO_LOAD_SELECTED` when that saved model pair should become active. If
+the restart reports an error, power-cycle before the next `G28`.
 
 ### Touch calibration and final print Z
 

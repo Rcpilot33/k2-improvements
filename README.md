@@ -24,9 +24,11 @@ The menu provides separate, resumable paths for:
 > any other loss resulting from installation or use.
 
 > [!CAUTION]
-> After an installer, `SAVE_CONFIG`, or `FIRMWARE_RESTART` restarts Klipper,
-> fully reboot or power-cycle the printer **before running `G28`**. A known K2
-> Plus motor-state issue can otherwise cause homing in the wrong direction.
+> Do not use Klipper's host-only `RESTART` command or
+> `/etc/init.d/klipper restart` before homing. The installers, protected
+> `SAVE_CONFIG`, and documented restart paths use `FIRMWARE_RESTART`, wait for
+> the K2 motor controllers to initialize, and then return control. If that
+> sequence reports an error, power-cycle the printer before running `G28`.
 
 These improvements are not compatible with Creality's automatic calibration
 workflow. Use the provided manual calibration, bed-mesh, and tuning workflows

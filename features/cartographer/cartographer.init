@@ -19,6 +19,8 @@ reload_service() {
     stop
     sleep 2
     start
-    # restarting the bridge will upset klipper, force restart
-    /etc/init.d/klipper restart
+    # Restarting the bridge upsets Klipper. Reset Klippy and the connected
+    # MCUs, then wait for the K2 motor-controller startup to finish.
+    SCRIPT_DIR=$(dirname "$(readlink -f /etc/init.d/cartographer)")
+    sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
 }

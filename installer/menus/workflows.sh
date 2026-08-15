@@ -140,8 +140,8 @@ show_cartographer_setup_checklist() {
     cat <<'EOF'
 
   1. Confirm the correct physical mount and offset preset is selected.
-  2. Power-cycle the printer before the next G28 after any installer change,
-     SAVE_CONFIG, or FIRMWARE_RESTART.
+  2. Confirm the installer or protected SAVE_CONFIG firmware restart completed.
+     If it reported an error, power-cycle the printer before the next G28.
 EOF
     if is_carto_plate_workflow; then
         cat <<'EOF'

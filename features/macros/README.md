@@ -17,5 +17,6 @@ present, its installer also adds `[cartographer touch]` with the stock
 `max_noisy_samples: 2` value. That Cartographer-only section is not activated
 for a stock PR Touch installation.
 
-Each macro is included from `custom/main.cfg`. The installers reload Klipper;
-power-cycle the printer before the next `G28`.
+Each macro is included from `custom/main.cfg`. The combined installer performs
+one firmware restart after all four components are installed and waits for K2
+motor initialization before returning.

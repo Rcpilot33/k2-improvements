@@ -24,4 +24,6 @@ if ! grep -qE 'include overrides.cfg' ~/printer_data/config/custom/main.cfg; the
     echo '[include overrides.cfg]' >> ~/printer_data/config/custom/main.cfg
 fi
 
-/etc/init.d/klipper restart
+if [ "${1:-}" != "--no-restart" ]; then
+    sh "${SCRIPT_DIR}/../../../scripts/firmware_restart.sh"
+fi

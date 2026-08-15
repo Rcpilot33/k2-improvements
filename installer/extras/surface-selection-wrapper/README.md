@@ -64,7 +64,9 @@ selection. See the repository [validation report](../../../VALIDATION.md).
 - Re-run the workflow after repository macro updates to refresh the managed
   copy.
 
-Power-cycle the printer before the next `G28` after the configuration reload.
+Run `FIRMWARE_RESTART` when no print is active and wait for the complete K2
+startup sequence before the next `G28`. If the restart fails, power-cycle the
+printer before homing.
 
 ## Credit
 

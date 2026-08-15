@@ -10,6 +10,7 @@ and changes its requested restart from a host-only restart to
 `FIRMWARE_RESTART`, which also resets the printer MCU and motor controllers.
 
 The stock-probe and Cartographer installers both install this feature. When
-installed individually, it requests `FIRMWARE_RESTART` through Moonraker and
-waits for Klipper to return ready. If that request fails, fully power-cycle the
-printer before the next homing test.
+installed individually, it requests `FIRMWARE_RESTART` through Moonraker,
+waits for Klipper to return ready, allows the K2 motor-controller startup to
+finish, and verifies that Klipper remains ready. If that request fails, fully
+power-cycle the printer before the next homing test.

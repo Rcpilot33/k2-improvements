@@ -72,5 +72,6 @@ the same key is not already present in `overrides.cfg`.
 
 ## Activation
 
-Run `FIRMWARE_RESTART` after switching. Follow the K2 Plus motor-state safety
-procedure used by your firmware before the next home operation.
+Run `FIRMWARE_RESTART` after switching and wait for the complete K2 startup
+sequence before the next home operation. If the restart fails, power-cycle the
+printer before homing.

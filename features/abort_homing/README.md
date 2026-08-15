@@ -16,5 +16,5 @@ Use **Maintenance and recovery -> Core component installer**, or run:
 sh install.sh
 ```
 
-The installer patches Klipper and restarts the service. Power-cycle the printer
-before the next `G28`.
+The installer patches Klipper, performs a firmware restart, and waits for K2
+motor initialization before returning.

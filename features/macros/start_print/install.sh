@@ -15,4 +15,6 @@ ln -sf ${SCRIPT_DIR}/start_print.cfg \
 python ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg start_print.cfg
 
-/etc/init.d/klipper restart
+if [ "${1:-}" != "--no-restart" ]; then
+    sh "${SCRIPT_DIR}/../../../scripts/firmware_restart.sh"
+fi

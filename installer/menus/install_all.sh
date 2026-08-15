@@ -134,9 +134,8 @@ menu_install_all() {
     fi
 
     printf '\nFinal manual steps:\n'
-    printf '  1. Power-cycle the printer from the mains (the cartographer install\n'
-    printf '     restarted Klipper, which under K2 Plus motor-state caveat means\n'
-    printf '     your next G28 must come AFTER a real boot).\n'
+    printf '  1. Confirm every firmware restart completed successfully. If any\n'
+    printf '     restart reported an error, power-cycle before the next G28.\n'
     printf '  2. Optional QoL: surface-selection-wrapper and axis_twist_compensation\n'
     printf '     are available from Optional extras.\n'
     printf '  3. Optional: firmware flashing is available from Cartographer tools.\n'
