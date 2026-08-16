@@ -172,6 +172,7 @@ Install extras individually from **Optional extras**:
 
 - [Complete installation, update, and recovery guide](./INSTALL.md)
 - [Firmware and feature validation report](./VALIDATION.md)
+- [External dependency preservation record](./DEPENDENCY_PRESERVATION.md)
 - [Cartographer setup and calibration](./features/cartographer/SETUP.md)
 - [Cartographer firmware and DFU recovery](./features/cartographer/firmware/README.md)
 - [Slicer `START_PRINT` setup](./features/macros/start_print/README.md)
@@ -184,9 +185,9 @@ Install extras individually from **Optional extras**:
   created the original K2 Improvements project and deserves original-author
   and first-project credit.
 - [Jacob10383](https://github.com/Jacob10383/k2-improvements) substantially
-  expanded Jamin's foundation and continues to maintain the primary technical
-  project on which this fork depends. Primary ongoing project credit belongs
-  to Jacob and his contributors.
+  expanded Jamin's foundation. This fork continues to depend on components
+  developed in Jacob's related repositories. Major technical credit belongs to
+  Jacob and his contributors.
 - The menu and firmware-aware workflow were influenced substantially by
   [erondiel's `v1.1.24` fork](https://github.com/erondiel/k2-improvements/tree/v1.1.24).
   The plate-profile macros and automatic slicer surface-selection workflow are
@@ -203,8 +204,8 @@ Additional acknowledgements:
 - [Entware](https://github.com/Entware/Entware)
 - [Cartographer 3D](https://github.com/Cartographer3D)
 
-Donations supporting Jacob's continued maintenance and development are
-available through [Jacob10383's Ko-fi](https://ko-fi.com/jacob10383).
+Donations supporting Jacob's work are available through
+[Jacob10383's Ko-fi](https://ko-fi.com/jacob10383).
 
 ## Disclaimer
 
