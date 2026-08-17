@@ -62,3 +62,19 @@ if [ "${SKIP_CAM}" -eq 0 ]; then
 fi
 
 /etc/init.d/moonraker restart
+
+# Do not return to a parent installer until Moonraker is accepting requests
+# again.  The stock-probe and Cartographer workflows install additional
+# components immediately after Fluidd, and those components request a
+# FIRMWARE_RESTART through Moonraker.
+echo "I: waiting for Moonraker after Fluidd restart"
+count=0
+while ! nc -z 127.0.0.1 7125; do
+    if [ "$count" -ge 60 ]; then
+        echo "E: Moonraker did not return after Fluidd restart" >&2
+        exit 1
+    fi
+    count=$((count + 1))
+    sleep 1
+done
+echo "I: Moonraker is accepting connections"
