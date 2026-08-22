@@ -16,7 +16,9 @@ BOUNDARY_CALCULATIONS = r'''    # k2-improvements: constrain the complete LINE_P
     # Include the 10mm string-break move when selecting a safe corridor.
     {% set boundary_inset = 0.5 | float %}
     {% set path_length = purge_amount + 10.0 %}
-    {% set all_points = printer.exclude_object.objects | map(attribute='polygon') | sum(start=[]) %}
+    {% set object_points = printer.exclude_object.objects | map(attribute='polygon') | sum(start=[]) %}
+    {% set tower_points = printer.prime_tower.polygon if object_points | length > 0 and printer.prime_tower is defined and printer.prime_tower.detected else [] %}
+    {% set all_points = object_points + tower_points %}
     {% set stock_purge_fallback = printer["gcode_macro _KAMP_Settings"].stock_purge_fallback | int %}
     {% set object_x_min = (all_points | map(attribute=0) | min | default(0)) | float %}
     {% set object_x_max = (all_points | map(attribute=0) | max | default(0)) | float %}
