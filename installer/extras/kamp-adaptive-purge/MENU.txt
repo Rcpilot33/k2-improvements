@@ -2,9 +2,13 @@ KAMP replaces the fixed front-left purge line with a purge placed near
 the current print and inside the usable bed area.
 
 Before using KAMP:
-  1. Enable "Label objects" in your slicer.
+  1. Enable the slicer option that emits EXCLUDE_OBJECT_DEFINE polygons
+     ("Label objects", "Exclude objects", or "Use exclude_object").
   2. Use the bundled machine-start G-code template for your slicer.
   3. Confirm the template contains M109 before LINE_PURGE.
+
+The K2 boundary guard keeps the purge and its string-break move inside the
+active mesh/machine area. If no safe corridor exists, it warns and skips.
 
 Creality Print templates:
   slicer-templates/creality-start-material-only.gcode
