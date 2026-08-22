@@ -18,8 +18,9 @@ KAMP needs all three of the following:
 3. A blocking `M109` before `LINE_PURGE` so the nozzle reaches printing
    temperature first.
 
-Without those polygons, KAMP cannot determine the print boundary. The K2
-boundary guard prints a warning and safely skips the adaptive purge.
+Without those polygons, KAMP cannot determine the print boundary. By default,
+the K2 boundary guard prints a warning and safely skips the purge. Users may
+explicitly enable the preserved stock-style purge fallback described below.
 
 ## Install
 
@@ -57,6 +58,22 @@ upstream macro:
    print in that order. It warns and skips the adaptive purge if object
    geometry is missing, settings are invalid, axes are not homed, or no safe
    corridor exists.
+
+## Optional stock-purge fallback
+
+`variable_stock_purge_fallback` controls what happens only when the slicer
+provides no `EXCLUDE_OBJECT_DEFINE` geometry:
+
+- `0` (default): warn and skip the purge;
+- `1`: warn and run the original front-left, L-shaped stock-style purge at a
+  conservative fixed speed.
+
+The installer exposes this as **Stock purge if object data is missing (0/1)**
+under **Review/change settings** and preserves it in `custom/overrides.cfg`.
+The fallback cannot know where an unlabeled print is located and its X0/Y0
+path may be outside an active mesh, so every use prints an explicit warning.
+It is never used for a known full-bed/no-safe-corridor condition, invalid
+settings, unhomed axes, or a path outside the configured machine limits.
 
 The upstream checkout remains unchanged and can still fast-forward normally.
 The installer intentionally copies and patches `Line_Purge.cfg` into
@@ -133,6 +150,7 @@ selections are stored in `custom/overrides.cfg` so they survive reinstalls.
 | Variable | Default | Purpose |
 |---|---:|---|
 | `variable_verbose_enable` | `True` | Print purge decisions in the console |
+| `variable_stock_purge_fallback` | `0` | Use stock-style purge only when object geometry is missing |
 | `variable_purge_height` | `0.4` | Purge Z height |
 | `variable_tip_distance` | `0` | Filament-tip distance before purging |
 | `variable_purge_margin` | `10` | Distance from the print boundary |

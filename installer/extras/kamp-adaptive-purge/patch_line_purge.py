@@ -17,6 +17,7 @@ BOUNDARY_CALCULATIONS = r'''    # k2-improvements: constrain the complete LINE_P
     {% set boundary_inset = 0.5 | float %}
     {% set path_length = purge_amount + 10.0 %}
     {% set all_points = printer.exclude_object.objects | map(attribute='polygon') | sum(start=[]) %}
+    {% set stock_purge_fallback = printer["gcode_macro _KAMP_Settings"].stock_purge_fallback | int %}
     {% set object_x_min = (all_points | map(attribute=0) | min | default(0)) | float %}
     {% set object_x_max = (all_points | map(attribute=0) | max | default(0)) | float %}
     {% set object_y_min = (all_points | map(attribute=1) | min | default(0)) | float %}
@@ -28,6 +29,11 @@ BOUNDARY_CALCULATIONS = r'''    # k2-improvements: constrain the complete LINE_P
     {% set axis_x_max = printer.toolhead.axis_maximum.x | float %}
     {% set axis_y_min = printer.toolhead.axis_minimum.y | float %}
     {% set axis_y_max = printer.toolhead.axis_maximum.y | float %}
+    {% set axis_z_min = printer.toolhead.axis_minimum.z | float %}
+    {% set axis_z_max = printer.toolhead.axis_maximum.z | float %}
+    {% set stock_path_fits_machine = axis_x_min <= 0.0 and axis_x_max >= 150.0
+        and axis_y_min <= 0.0 and axis_y_max >= 150.0
+        and axis_z_min <= 0.2 and axis_z_max >= 3.0 %}
     {% set mesh_active = printer.bed_mesh is defined
         and (printer.bed_mesh.mesh_max[0] | float) > (printer.bed_mesh.mesh_min[0] | float)
         and (printer.bed_mesh.mesh_max[1] | float) > (printer.bed_mesh.mesh_min[1] | float) %}
@@ -78,12 +84,32 @@ BOUNDARY_EXECUTION = r'''    # Calculate purge speed
         and flow_rate > 0
         and (purge_height * 2.0) <= (printer.toolhead.axis_maximum.z | float) %}
 
-    {% if all_points | length == 0 %}
-        {action_respond_info("KAMP boundary safety: no exclude-object geometry is available; adaptive purge skipped.")}
-    {% elif not settings_valid %}
+    {% if not settings_valid %}
         {action_respond_info("KAMP boundary safety: one or more purge settings are invalid; adaptive purge skipped.")}
     {% elif 'x' not in printer.toolhead.homed_axes or 'y' not in printer.toolhead.homed_axes or 'z' not in printer.toolhead.homed_axes %}
         {action_respond_info("KAMP boundary safety: XYZ must be homed before LINE_PURGE; adaptive purge skipped.")}
+    {% elif all_points | length == 0 %}
+        {% if stock_purge_fallback == 1 and stock_path_fits_machine %}
+            {action_respond_info("WARNING: No exclude-object geometry is available. Running the enabled stock-style front-left purge fallback; it cannot account for print placement and may be outside the active mesh.")}
+            SAVE_GCODE_STATE NAME=KAMP_Stock_Fallback_State
+            G90
+            M83
+            G1 Z3 F600
+            G1 Y150 F12000
+            G1 X0 F12000
+            G1 Z0.2 F600
+            G1 X0 Y150 F6000
+            G1 E0.8 F300
+            G1 X0 Y0 E9 F2400
+            G1 X150 Y0 E9 F2400
+            G92 E0
+            G1 Z1 F600
+            RESTORE_GCODE_STATE NAME=KAMP_Stock_Fallback_State MOVE=0
+        {% elif stock_purge_fallback == 1 %}
+            {action_respond_info("KAMP stock purge fallback is enabled, but its X0..150/Y0..150/Z0.2..3 path is outside the configured machine limits; purge skipped.")}
+        {% else %}
+            {action_respond_info("KAMP boundary safety: no exclude-object geometry is available and stock purge fallback is disabled; purge skipped.")}
+        {% endif %}
     {% elif cross_section < 5 %}
         {action_respond_info("[Extruder] max_extrude_cross_section is insufficient for purge, please set it to 5 or greater. Purge skipped.")}
     {% elif purge_side == 'none' %}

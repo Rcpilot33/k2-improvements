@@ -57,6 +57,22 @@ class LinePurgePatchTests(unittest.TestCase):
         self.assertIn("no exclude-object geometry is available", result)
         self.assertIn("one or more purge settings are invalid", result)
 
+    def test_stock_fallback_is_opt_in_and_only_handles_missing_geometry(self):
+        result = self.patch()
+
+        self.assertIn("stock_purge_fallback | int", result)
+        self.assertIn("stock_purge_fallback == 1 and stock_path_fits_machine", result)
+        self.assertIn("WARNING: No exclude-object geometry is available", result)
+        self.assertIn("stock purge fallback is disabled", result)
+        self.assertIn("G1 X0 Y0 E9 F2400", result)
+        self.assertIn("G1 X150 Y0 E9 F2400", result)
+        self.assertLess(
+            result.index("{% elif all_points | length == 0 %}"),
+            result.index("{% elif cross_section < 5 %}"),
+        )
+        no_corridor = result[result.index("{% elif purge_side == 'none' %}") :]
+        self.assertNotIn("KAMP_Stock_Fallback_State", no_corridor)
+
     def test_string_break_motion_and_retraction_are_balanced(self):
         result = self.patch()
 

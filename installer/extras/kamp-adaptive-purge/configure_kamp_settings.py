@@ -13,6 +13,12 @@ from typing import Dict, NoReturn, Set
 SECTION = "gcode_macro _KAMP_Settings"
 SETTINGS = (
     ("variable_verbose_enable", "Verbose console messages", "bool", None),
+    (
+        "variable_stock_purge_fallback",
+        "Stock purge if object data is missing (0/1)",
+        "flag",
+        None,
+    ),
     ("variable_purge_height", "Purge height (mm)", "float", lambda value: value > 0),
     ("variable_tip_distance", "Filament tip distance (mm)", "float", lambda value: value >= 0),
     ("variable_purge_margin", "Distance from print boundary (mm)", "float", lambda value: value >= 0),
@@ -56,6 +62,15 @@ def normalize_bool(value: str) -> str:
     raise ValueError("enter True or False")
 
 
+def normalize_flag(value: str) -> str:
+    lowered = value.strip().lower()
+    if lowered in {"1", "true", "yes", "y", "on"}:
+        return "1"
+    if lowered in {"0", "false", "no", "n", "off"}:
+        return "0"
+    raise ValueError("enter 0 or 1")
+
+
 def normalize_number(value: str, validator) -> str:
     number = float(value)
     if not math.isfinite(number) or not validator(number):
@@ -69,6 +84,8 @@ def normalized(key: str, value: str) -> str:
             continue
         if kind == "bool":
             return normalize_bool(value)
+        if kind == "flag":
+            return normalize_flag(value)
         return normalize_number(value, validator)
     raise ValueError("unknown setting {}".format(key))
 
