@@ -166,9 +166,37 @@ def update_overrides(path: Path, values: Dict[str, str]) -> None:
 
         missing = [key for key, *_rest in SETTINGS if key not in found]
         if missing:
-            lines[section_end:section_end] = [
+            insert_at = section_end
+            while insert_at > section_start + 1 and not lines[insert_at - 1].strip():
+                insert_at -= 1
+            lines[insert_at:insert_at] = [
                 "{}: {}\n".format(key, values[key]) for key in missing
             ]
+
+        section_limit = section_end + len(missing)
+        index = section_start + 1
+        while index < section_limit:
+            if lines[index].strip():
+                index += 1
+                continue
+            blank_start = index
+            while index < section_limit and not lines[index].strip():
+                index += 1
+            previous = OPTION_RE.match(lines[blank_start - 1].rstrip("\r\n"))
+            following = (
+                OPTION_RE.match(lines[index].rstrip("\r\n"))
+                if index < section_limit
+                else None
+            )
+            if (
+                previous
+                and previous.group(2) in SETTING_KEYS
+                and following
+                and following.group(2) in SETTING_KEYS
+            ):
+                del lines[blank_start:index]
+                section_limit -= index - blank_start
+                index = blank_start
 
     path.parent.mkdir(parents=True, exist_ok=True)
     mode = path.stat().st_mode if path.exists() else None
