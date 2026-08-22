@@ -14,6 +14,7 @@ class ConfigureKampSettingsTests(unittest.TestCase):
         self.overrides = Path(self.temporary.name) / "overrides.cfg"
         self.values = {
             "variable_verbose_enable": "True",
+            "variable_stock_purge_fallback": "0",
             "variable_purge_height": "0.4",
             "variable_tip_distance": "0",
             "variable_purge_margin": "10",
@@ -58,6 +59,8 @@ class ConfigureKampSettingsTests(unittest.TestCase):
 
     def test_normalizes_and_validates_values(self):
         self.assertEqual(settings.normalized("variable_verbose_enable", "no"), "False")
+        self.assertEqual(settings.normalized("variable_stock_purge_fallback", "yes"), "1")
+        self.assertEqual(settings.normalized("variable_stock_purge_fallback", "off"), "0")
         self.assertEqual(settings.normalized("variable_purge_height", "0.50"), "0.5")
         self.assertEqual(settings.normalized("variable_tip_distance", "0"), "0")
         with self.assertRaises(ValueError):
@@ -66,6 +69,8 @@ class ConfigureKampSettingsTests(unittest.TestCase):
             settings.normalized("variable_purge_margin", "-1")
         with self.assertRaises(ValueError):
             settings.normalized("variable_flow_rate", "inf")
+        with self.assertRaises(ValueError):
+            settings.normalized("variable_stock_purge_fallback", "2")
 
 
 if __name__ == "__main__":

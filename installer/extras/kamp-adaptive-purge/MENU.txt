@@ -9,6 +9,8 @@ Before using KAMP:
 
 The K2 boundary guard keeps the purge and its string-break move inside the
 active mesh/machine area. If no safe corridor exists, it warns and skips.
+An optional preserved 0/1 setting can enable the stock-style purge only when
+the slicer supplies no object geometry; every fallback use prints a warning.
 
 Creality Print templates:
   slicer-templates/creality-start-material-only.gcode
