@@ -11,13 +11,15 @@ an uncorrected part of the bed.
 
 KAMP needs all three of the following:
 
-1. **Label objects** enabled in the slicer.
+1. Slicer-generated `EXCLUDE_OBJECT_DEFINE` polygons. Depending on the slicer,
+   these come from **Label objects**, **Exclude objects**, or
+   **Use exclude_object**.
 2. `LINE_PURGE` in the machine-start G-code instead of the fixed purge moves.
 3. A blocking `M109` before `LINE_PURGE` so the nozzle reaches printing
    temperature first.
 
-Without object labels, KAMP cannot determine the print boundary and may fall
-back to an unsuitable purge position.
+Without those polygons, KAMP cannot determine the print boundary. The K2
+boundary guard prints a warning and safely skips the adaptive purge.
 
 ## Install
 
@@ -40,7 +42,7 @@ them later without reinstalling KAMP.
 It intentionally does not install KAMP Smart Park or Adaptive Meshing. The
 project's `START_PRINT` and Cartographer flow already provide those functions.
 
-The installed `Line_Purge.cfg` makes two compatibility corrections to the
+The installed `Line_Purge.cfg` makes three compatibility corrections to the
 upstream macro:
 
 1. `G10` and `G11` are quoted when stored as Jinja strings for firmware
@@ -49,6 +51,12 @@ upstream macro:
    The slicer can then perform its normal retract, travel to the object, and
    unretract immediately before the first extrusion without carrying an extra
    KAMP retraction into the first wall.
+3. The purge line and its additional 10 mm string-breaking move are kept
+   inside the intersection of the configured machine envelope and the active
+   bed mesh. The macro tries the front, left, rear, and right sides of the
+   print in that order. It warns and skips the adaptive purge if object
+   geometry is missing, settings are invalid, axes are not homed, or no safe
+   corridor exists.
 
 The upstream checkout remains unchanged and can still fast-forward normally.
 The installer intentionally copies and patches `Line_Purge.cfg` into
@@ -108,13 +116,13 @@ used.
 To verify that the installed macro is the K2-compatible patched copy:
 
 ```sh
-grep -nE "set (RETRACT|UNRETRACT)|balance LINE_PURGE" \
+grep -nE "set (RETRACT|UNRETRACT)|balance LINE_PURGE|boundary safety" \
   /mnt/UDISK/printer_data/config/custom/Line_Purge.cfg
 ```
 
 The output should show quoted `G10`/`G11` firmware-retraction strings when that
-mode is enabled and the balancing `UNRETRACT` handoff lines near the end of the
-purge paths.
+mode is enabled, the balancing `UNRETRACT` handoff lines, and the boundary
+safety decisions.
 
 ## Tuning
 
@@ -131,8 +139,10 @@ selections are stored in `custom/overrides.cfg` so they survive reinstalls.
 | `variable_purge_amount` | `25` | Filament length purged |
 | `variable_flow_rate` | `12` | Purge flow in mm3/s |
 
-Prints placed very near the front of the bed can still put the purge close to
-the mesh boundary. Center the print or increase the purge margin if needed.
+The boundary guard includes the complete purge and string-break path when
+choosing a location. A full-bed print, an excessively large purge amount, or a
+large margin can leave no valid corridor; in that case it warns and skips the
+adaptive purge instead of commanding an out-of-bounds move.
 
 ## Activation
 
