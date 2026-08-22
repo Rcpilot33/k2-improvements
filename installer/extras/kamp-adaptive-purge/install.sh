@@ -13,6 +13,22 @@ set -e
 SCRIPT_DIR="$(readlink -f $(dirname $0))"
 KAMP_DIR="${HOME}/Klipper-Adaptive-Meshing-Purging"
 KAMP_REPO="https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging.git"
+OVERRIDES_CFG="${HOME}/printer_data/config/custom/overrides.cfg"
+
+configure_kamp_settings() {
+    python3 "${SCRIPT_DIR}/configure_kamp_settings.py" \
+        "${SCRIPT_DIR}/kamp_settings.cfg" \
+        "${OVERRIDES_CFG}"
+}
+
+if [ "${1:-}" = "--configure-only" ]; then
+    if [ ! -f ~/printer_data/config/custom/kamp_settings.cfg ]; then
+        echo "E: KAMP is not installed; run the complete installer first"
+        exit 1
+    fi
+    configure_kamp_settings
+    exit 0
+fi
 
 test -d ~/printer_data/config/custom || mkdir -p ~/printer_data/config/custom
 
@@ -77,7 +93,18 @@ if [ -f ~/printer_data/config/custom/exclude_object.cfg ]; then
 fi
 
 # ------------------------------------------------------------
-# 6. Optional: enable Klipper firmware retraction
+# 6. Review and preserve user-facing KAMP settings
+# ------------------------------------------------------------
+configure_kamp_settings
+
+# Keep overrides.cfg last so user-selected values win over refreshed defaults.
+# ensure_included.py inserts future feature includes before this one. Add the
+# include only after the settings writer has successfully created the file.
+python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
+    ~/printer_data/config/custom/main.cfg overrides.cfg
+
+# ------------------------------------------------------------
+# 7. Optional: enable Klipper firmware retraction
 # ------------------------------------------------------------
 # KAMP's LINE_PURGE prefers G10/G11 (firmware retraction) over inline
 # G1 E-.5/+.5 fallbacks, and prints a recommendation message at print
@@ -126,7 +153,7 @@ else
 fi
 
 # ------------------------------------------------------------
-# 7. Done — instructions for the user
+# 8. Done — instructions for the user
 # ------------------------------------------------------------
 echo ""
 echo "=================================================================="
@@ -193,12 +220,11 @@ echo ""
 echo "------------------------------------------------------------------"
 echo " 5. Tune (optional)."
 echo ""
-echo "    Defaults are in custom/kamp_settings.cfg. Common knobs:"
-echo "      variable_purge_margin : mm in front of print bbox (default 10)"
-echo "      variable_purge_amount : mm of filament purged    (default 25)"
-echo "      variable_purge_height : Z height during purge    (default 0.4)"
+echo "    Reopen Optional Extras -> KAMP adaptive purge and choose"
+echo "    'Review/change settings'. User selections are stored in"
+echo "    custom/overrides.cfg and survive future KAMP reinstalls."
 echo ""
-echo "    Override in custom/overrides.cfg to survive future re-installs."
+echo "    Maintained defaults remain in custom/kamp_settings.cfg."
 echo ""
 echo "------------------------------------------------------------------"
 echo " See installer/extras/kamp-adaptive-purge/README.md for the full guide."

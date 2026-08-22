@@ -192,6 +192,7 @@ install_extra() {
     local req=$(printf  '%s' "$line" | cut -d'|' -f5)
     local script="$INSTALLER_DIR/$script_rel"
     local readme="$(dirname "$script")/README.md"
+    local script_arg=''
 
     clear
     ui_heading "$name"
@@ -261,6 +262,29 @@ install_extra() {
                 return 0
             fi
             ;;
+        kamp-adaptive-purge)
+            if "$det" 2>/dev/null; then
+                printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"
+                printf '  1. Review/change settings\n'
+                printf '  2. Reinstall/update KAMP\n'
+                printf '  0. Back\n\n'
+                printf 'Select [0-2]: '
+                local kamp_choice
+                read -r kamp_choice
+                case "$kamp_choice" in
+                    1) script_arg='--configure-only' ;;
+                    2) ;;
+                    0|b|B|q|Q|'') return 0 ;;
+                    *)
+                        warn 'invalid selection'
+                        press_enter
+                        return 0
+                        ;;
+                esac
+            else
+                if ! confirm "Apply $name now?"; then return 0; fi
+            fi
+            ;;
         *)
             if "$det" 2>/dev/null; then
                 printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"
@@ -274,7 +298,7 @@ install_extra() {
     local pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
     [ -n "$pwd_home" ] || pwd_home="$HOME"
     info "running $script (HOME=$pwd_home)"
-    if HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script"; then
+    if HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script" $script_arg; then
         info "$name install completed"
     else
         warn "$name install.sh exited non-zero"

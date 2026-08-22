@@ -30,6 +30,13 @@ Use **Extras -> KAMP adaptive purge**. The installer adds:
 - `[exclude_object]` when it is not already configured; and
 - optional firmware retraction when selected.
 
+During an interactive install, the installer displays the K2 Plus KAMP
+settings and lets you keep or change them. User selections are written to the
+later-loaded `custom/overrides.cfg`; reinstalling or updating KAMP refreshes
+the maintained defaults without replacing those selections. Reopen
+**Optional Extras -> KAMP adaptive purge -> Review/change settings** to adjust
+them later without reinstalling KAMP.
+
 It intentionally does not install KAMP Smart Park or Adaptive Meshing. The
 project's `START_PRINT` and Cartographer flow already provide those functions.
 
@@ -111,12 +118,15 @@ purge paths.
 
 ## Tuning
 
-Edit `custom/kamp_settings.cfg`, or override values in
-`custom/overrides.cfg` so local changes survive reinstalls.
+Use **Optional Extras -> KAMP adaptive purge -> Review/change settings**.
+Maintained defaults remain in `custom/kamp_settings.cfg`; effective user
+selections are stored in `custom/overrides.cfg` so they survive reinstalls.
 
 | Variable | Default | Purpose |
 |---|---:|---|
+| `variable_verbose_enable` | `True` | Print purge decisions in the console |
 | `variable_purge_height` | `0.4` | Purge Z height |
+| `variable_tip_distance` | `0` | Filament-tip distance before purging |
 | `variable_purge_margin` | `10` | Distance from the print boundary |
 | `variable_purge_amount` | `25` | Filament length purged |
 | `variable_flow_rate` | `12` | Purge flow in mm3/s |
