@@ -57,6 +57,56 @@ class ConfigureKampSettingsTests(unittest.TestCase):
         self.assertIn("[cartographer touch]\nmax_noisy_samples: 2", contents)
         self.assertEqual(settings.section_values(self.overrides), changed)
 
+    def test_adds_new_setting_before_trailing_blank_lines(self):
+        self.overrides.write_text(
+            "[gcode_macro _KAMP_Settings]\n"
+            "variable_verbose_enable: True\n"
+            "variable_purge_height: 0.3\n"
+            "variable_tip_distance: 0\n"
+            "variable_purge_margin: 9\n"
+            "variable_purge_amount: 25\n"
+            "variable_flow_rate: 12\n"
+            "\n",
+            encoding="utf-8",
+        )
+
+        settings.update_overrides(self.overrides, self.values)
+
+        contents = self.overrides.read_text(encoding="utf-8")
+        self.assertIn(
+            "variable_flow_rate: 12\nvariable_stock_purge_fallback: 0\n\n",
+            contents,
+        )
+        self.assertEqual(settings.section_values(self.overrides), self.values)
+
+    def test_removes_existing_blank_gap_between_managed_settings(self):
+        self.overrides.write_text(
+            "[gcode_macro _KAMP_Settings]\n"
+            "variable_verbose_enable: True\n"
+            "variable_purge_height: 0.4\n"
+            "variable_tip_distance: 0\n"
+            "variable_purge_margin: 10\n"
+            "variable_purge_amount: 25\n"
+            "variable_flow_rate: 12\n"
+            "\n"
+            "variable_stock_purge_fallback: 1\n",
+            encoding="utf-8",
+        )
+        changed = dict(self.values)
+        changed["variable_stock_purge_fallback"] = "1"
+
+        settings.update_overrides(self.overrides, changed)
+
+        contents = self.overrides.read_text(encoding="utf-8")
+        self.assertIn(
+            "variable_flow_rate: 12\nvariable_stock_purge_fallback: 1\n",
+            contents,
+        )
+        self.assertNotIn(
+            "variable_flow_rate: 12\n\nvariable_stock_purge_fallback: 1",
+            contents,
+        )
+
     def test_normalizes_and_validates_values(self):
         self.assertEqual(settings.normalized("variable_verbose_enable", "no"), "False")
         self.assertEqual(settings.normalized("variable_stock_purge_fallback", "yes"), "1")
