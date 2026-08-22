@@ -9,6 +9,8 @@ a large stock-probe mesh.
 - Faster bed scanning
 - Denser mesh data
 - Adaptive meshing around the current print
+- Automatic inclusion of a detected Creality Print prime tower in the
+  adaptive mesh
 - Separate scan and touch models for supported plate workflows
 
 ## Important differences
@@ -18,6 +20,14 @@ installation therefore includes the probe plugin, bridge service, Klipper
 configuration, and K2-specific macros.
 
 Installing Cartographer replaces the active stock `prtouch_v3` configuration.
+
+The installer also adds a printer-side prime-tower scanner. Creality Print
+does not label its prime tower as an exclude object, so its actual
+`;TYPE:Prime tower` extrusion paths are read from the selected G-code file.
+When normal object polygons are available, the detected tower footprint is
+included automatically in the Cartographer adaptive mesh. Rotated, resized,
+sparse, and late-starting towers use their real sliced motion rather than
+slicer metadata. Prints without a tower retain the existing behavior.
 
 The installer also adds a status-only compatibility layer for the stock K2
 touchscreen. Creality's live Z-offset page reads the nonstandard

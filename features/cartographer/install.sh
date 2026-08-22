@@ -83,6 +83,7 @@ else
 fi
 
 # install klipper patches
+sh "${SCRIPT_DIR}/../prime_tower/install.sh"
 ln -sf ${SCRIPT_DIR}/patches/mcu.py ~/klipper/klippy/mcu.py
 ln -sf ${SCRIPT_DIR}/patches/serialhdl.py ~/klipper/klippy/serialhdl.py
 ln -sf ${SCRIPT_DIR}/patches/clocksync.py ~/klipper/klippy/clocksync.py

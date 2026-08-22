@@ -30,6 +30,7 @@ Use **Extras -> KAMP adaptive purge**. The installer adds:
 - a validated K2-compatible regular-file copy of upstream `Line_Purge.cfg`
   (intentionally not a symlink);
 - K2-specific settings;
+- automatic prime-tower footprint detection;
 - `[exclude_object]` when it is not already configured; and
 - optional firmware retraction when selected.
 
@@ -58,6 +59,15 @@ upstream macro:
    print in that order. It warns and skips the adaptive purge if object
    geometry is missing, settings are invalid, axes are not homed, or no safe
    corridor exists.
+4. When Creality Print includes a prime tower, its actual extrusion footprint
+   is added to the occupied print boundary before the purge location is
+   selected. This keeps KAMP from choosing a line through the tower. A tower
+   alone does not substitute for missing object labels; the normal
+   missing-geometry skip or stock-purge fallback still applies.
+
+The same printer-side footprint is consumed by Cartographer adaptive meshing
+when Cartographer is installed. No slicer variable or extra setup choice is
+required beyond the normal object polygons already required by KAMP.
 
 ## Optional stock-purge fallback
 

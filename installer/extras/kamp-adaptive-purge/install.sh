@@ -32,6 +32,10 @@ fi
 
 test -d ~/printer_data/config/custom || mkdir -p ~/printer_data/config/custom
 
+# Install the shared, lazy file scanner. Cartographer uses the same status
+# object for adaptive meshes; KAMP uses it even on the stock-probe path.
+sh "${SCRIPT_DIR}/../../../features/prime_tower/install.sh"
+
 # ------------------------------------------------------------
 # 1. Clone or update KAMP at $HOME/Klipper-Adaptive-Meshing-Purging
 # ------------------------------------------------------------

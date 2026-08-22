@@ -45,6 +45,9 @@ class LinePurgePatchTests(unittest.TestCase):
         self.assertIn("printer.bed_mesh.mesh_min[0]", result)
         self.assertIn("printer.bed_mesh.mesh_max[1]", result)
         self.assertIn("boundary_inset = 0.5", result)
+        self.assertIn("printer.prime_tower.polygon", result)
+        self.assertIn("object_points + tower_points", result)
+        self.assertIn("object_points | length > 0", result)
         self.assertNotIn("G0 X1", result)
 
     def test_selector_checks_all_four_sides_and_has_safe_skip(self):
@@ -66,6 +69,10 @@ class LinePurgePatchTests(unittest.TestCase):
         self.assertIn("stock purge fallback is disabled", result)
         self.assertIn("G1 X0 Y0 E9 F2400", result)
         self.assertIn("G1 X150 Y0 E9 F2400", result)
+        self.assertIn(
+            "tower_points = printer.prime_tower.polygon if object_points | length > 0",
+            result,
+        )
         self.assertLess(
             result.index("{% elif all_points | length == 0 %}"),
             result.index("{% elif cross_section < 5 %}"),
