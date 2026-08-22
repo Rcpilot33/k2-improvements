@@ -3,6 +3,14 @@ set -e
 
 # Request Moonraker's complete Klipper restart. Unlike restarting the Klipper
 # init service, this resets both the Klippy host process and connected MCUs.
+# Full setup workflows set K2_DEFER_FIRMWARE_RESTART while installing their
+# individual components, then invoke this script once without that flag after
+# every component and setup prompt has completed.
+if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" = "1" ]; then
+    echo "I: deferring FIRMWARE_RESTART until the full setup is complete"
+    exit 0
+fi
+
 API_URL="${MOONRAKER_URL:-http://127.0.0.1:7125}"
 
 if [ -x /opt/bin/curl ]; then

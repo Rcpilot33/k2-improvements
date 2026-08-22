@@ -73,7 +73,9 @@ menu_install_no_carto() {
 
         local pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
         info "running $name (HOME=$pwd_home)"
-        if HOME="$pwd_home" sh "$script"; then
+        # A full setup reloads Klipper once after every component is installed.
+        # Individual component installers retain their immediate restart.
+        if HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 sh "$script"; then
             installed=$((installed+1))
         else
             warn "$name install.sh failed (continuing)"
@@ -90,6 +92,13 @@ menu_install_no_carto() {
         ln -sf /etc/init.d/unslung /etc/rc.d/S99unslung
         ln -sf /etc/init.d/unslung /etc/rc.d/K01unslung
         info "Entware unslung boot hook installed (S99unslung)"
+    fi
+
+    printf '\n--- final firmware restart ---\n'
+    if ! K2_DEFER_FIRMWARE_RESTART=0 \
+        sh "$INSTALLER_DIR/scripts/firmware_restart.sh"; then
+        warn "final firmware restart failed"
+        failed=$((failed+1))
     fi
 
     printf '\n%s\n' '----------------------------------------------------------------'
