@@ -9,8 +9,8 @@
 
 This fork is built on the primary technical work maintained by
 [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements).
-It adds a guided, status-aware installer and firmware-aware workflows for the
-Creality K2 Plus.
+It adds a guided, status-aware installer and documented installation,
+calibration, and maintenance workflows for the Creality K2 Plus.
 
 The menu provides separate, resumable paths for:
 
@@ -172,6 +172,7 @@ Install extras individually from **Optional extras**:
 
 ## Documentation
 
+- [Step-by-step K2 Plus installation, calibration, and troubleshooting videos](https://www.youtube.com/@Rcpilot33)
 - [Complete installation, update, and recovery guide](./INSTALL.md)
 - [Firmware and feature validation report](./VALIDATION.md)
 - [External dependency preservation record](./DEPENDENCY_PRESERVATION.md)
@@ -190,7 +191,7 @@ Install extras individually from **Optional extras**:
   expanded Jamin's foundation. This fork continues to depend on components
   developed in Jacob's related repositories. Major technical credit belongs to
   Jacob and his contributors.
-- The menu and firmware-aware workflow were influenced substantially by
+- The menu structure and guided workflow were influenced substantially by
   [erondiel's `v1.1.24` fork](https://github.com/erondiel/k2-improvements/tree/v1.1.24).
   The plate-profile macros and automatic slicer surface-selection workflow are
   also adapted from erondiel's work.
