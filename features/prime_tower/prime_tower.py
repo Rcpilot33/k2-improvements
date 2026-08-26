@@ -12,6 +12,7 @@ import logging
 import math
 import os
 import re
+import threading
 
 
 _NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
@@ -21,11 +22,37 @@ _COMMAND_RE = re.compile(r"^\s*([GMT]\d+)\b", re.IGNORECASE)
 _TYPE_RE = re.compile(r"^\s*;\s*TYPE\s*:\s*(.*?)\s*$", re.IGNORECASE)
 _TOWER_END_RE = re.compile(
     r"^\s*;\s*WIPE_TOWER_END\b", re.IGNORECASE)
+_TOWER_MARKER_BYTES_RE = re.compile(
+    br"(?im)^[ \t]*;[ \t]*TYPE[ \t]*:[ \t]*Prime[ \t]+tower[ \t]*\r?$"
+)
+_MARKER_SCAN_CHUNK = 1024 * 1024
+_MARKER_SCAN_OVERLAP = 512
 
 
 def _finite_point(point):
     return point[0] is not None and point[1] is not None \
         and math.isfinite(point[0]) and math.isfinite(point[1])
+
+
+def _file_contains_prime_tower(path):
+    """Quickly reject files without a prime-tower type marker.
+
+    This scan operates on large byte chunks so a normal single-color G-code
+    does not pay the cost of decoding and applying several regular
+    expressions to every motion line.  The overlap preserves markers split
+    across read boundaries; a false positive only falls back to the detailed
+    parser and is therefore safe.
+    """
+    overlap = b""
+    with open(path, "rb") as handle:
+        while True:
+            chunk = handle.read(_MARKER_SCAN_CHUNK)
+            if not chunk:
+                return False
+            data = overlap + chunk
+            if _TOWER_MARKER_BYTES_RE.search(data) is not None:
+                return True
+            overlap = data[-_MARKER_SCAN_OVERLAP:]
 
 
 def parse_prime_tower(path, padding=0.5):
@@ -37,6 +64,14 @@ def parse_prime_tower(path, padding=0.5):
     metadata so rotation, resizing, sparse layers, and late-starting towers
     are handled without slicer-specific geometry calculations.
     """
+    if not _file_contains_prime_tower(path):
+        return {
+            "detected": False,
+            "polygon": [],
+            "bounds": [],
+            "blocks": 0,
+        }
+
     absolute_xy = True
     absolute_e = True
     x_pos = None
@@ -144,12 +179,17 @@ def parse_prime_tower(path, padding=0.5):
 class PrimeTower:
     def __init__(self, config):
         self.printer = config.get_printer()
+        self.reactor = self.printer.get_reactor()
+        self.gcode = self.printer.lookup_object("gcode")
         self.padding = config.getfloat("padding", 0.5, minval=0.0)
         self._cache_key = None
         self._status = self._empty_status()
+        self.gcode.register_command(
+            "PRIME_TOWER_WAIT", self.cmd_PRIME_TOWER_WAIT,
+            desc="Wait cooperatively for prime-tower footprint discovery")
 
     @staticmethod
-    def _empty_status(source=None, error=None):
+    def _empty_status(source=None, error=None, ready=True):
         return {
             "detected": False,
             "polygon": [],
@@ -157,6 +197,7 @@ class PrimeTower:
             "blocks": 0,
             "source": source,
             "error": error,
+            "ready": ready,
         }
 
     def _selected_path(self, eventtime):
@@ -168,6 +209,50 @@ class PrimeTower:
         except Exception:
             logging.exception("prime_tower: unable to query virtual_sdcard")
             return None
+
+    def _finish_scan(self, eventtime, cache_key, path, status, error):
+        if cache_key != self._cache_key:
+            return
+        if error is not None:
+            logging.error("prime_tower: scan failed for %s: %s", path, error)
+            self._status = self._empty_status(path, error)
+            return
+        status["source"] = path
+        status["error"] = None
+        status["ready"] = True
+        self._status = status
+        if status["detected"]:
+            logging.info(
+                "prime_tower: detected %d blocks at "
+                "X[%.3f, %.3f] Y[%.3f, %.3f] in %s",
+                status["blocks"], status["bounds"][0],
+                status["bounds"][2], status["bounds"][1],
+                status["bounds"][3], path)
+
+    def _scan_worker(self, cache_key, path):
+        status = None
+        error = None
+        try:
+            status = parse_prime_tower(path, self.padding)
+        except Exception as err:
+            error = str(err)
+        try:
+            self.reactor.register_async_callback(
+                lambda eventtime: self._finish_scan(
+                    eventtime, cache_key, path, status, error))
+        except Exception:
+            logging.exception(
+                "prime_tower: unable to publish scan result for %s", path)
+
+    def _start_scan(self, cache_key, path):
+        self._cache_key = cache_key
+        self._status = self._empty_status(path, ready=False)
+        worker = threading.Thread(
+            target=self._scan_worker,
+            args=(cache_key, path),
+            name="prime-tower-scan")
+        worker.daemon = True
+        worker.start()
 
     def get_status(self, eventtime):
         path = self._selected_path(eventtime)
@@ -187,23 +272,23 @@ class PrimeTower:
             return dict(self._status)
 
         if cache_key != self._cache_key:
-            try:
-                status = parse_prime_tower(path, self.padding)
-                status["source"] = path
-                status["error"] = None
-                self._status = status
-                if status["detected"]:
-                    logging.info(
-                        "prime_tower: detected %d blocks at "
-                        "X[%.3f, %.3f] Y[%.3f, %.3f] in %s",
-                        status["blocks"], status["bounds"][0],
-                        status["bounds"][2], status["bounds"][1],
-                        status["bounds"][3], path)
-            except Exception as err:
-                logging.exception("prime_tower: scan failed for %s", path)
-                self._status = self._empty_status(path, str(err))
-            self._cache_key = cache_key
+            self._start_scan(cache_key, path)
         return dict(self._status)
+
+    def wait_for_scan(self, eventtime):
+        """Wait for the selected-file scan while continuing reactor service."""
+        status = self.get_status(eventtime)
+        while not status.get("ready", True):
+            eventtime = self.reactor.pause(eventtime + 0.050)
+            status = self.get_status(eventtime)
+        return status
+
+    def cmd_PRIME_TOWER_WAIT(self, gcmd):
+        status = self.wait_for_scan(self.reactor.monotonic())
+        if status.get("error"):
+            gcmd.respond_info(
+                "prime_tower: footprint scan failed; continuing without "
+                "tower geometry: %s" % (status["error"],))
 
 
 def load_config(config):

@@ -33,7 +33,8 @@ class LinePurgePatchTests(unittest.TestCase):
     def patch(self, text=UPSTREAM_SAMPLE):
         text = PATCHER.quote_firmware_commands(text)
         text = PATCHER.harden_boundaries(text)
-        return PATCHER.add_balancing_unretracts(text)
+        text = PATCHER.add_balancing_unretracts(text)
+        return PATCHER.add_prime_tower_wait_wrapper(text)
 
     def test_complete_path_is_constrained_to_active_mesh_and_machine(self):
         result = self.patch()
@@ -90,8 +91,18 @@ class LinePurgePatchTests(unittest.TestCase):
 
     def test_patch_is_idempotent(self):
         once = self.patch()
-        twice = PATCHER.add_balancing_unretracts(PATCHER.harden_boundaries(once))
+        twice = PATCHER.add_prime_tower_wait_wrapper(
+            PATCHER.add_balancing_unretracts(PATCHER.harden_boundaries(once)))
         self.assertEqual(twice, once)
+
+    def test_waits_before_rendering_internal_purge_macro(self):
+        result = self.patch()
+
+        self.assertEqual(result.count(PATCHER.WAIT_MARKER), 1)
+        self.assertIn("[gcode_macro LINE_PURGE]", result)
+        self.assertIn("[gcode_macro _KAMP_LINE_PURGE]", result)
+        self.assertLess(result.index("PRIME_TOWER_WAIT"),
+                        result.index("_KAMP_LINE_PURGE {rawparams}"))
 
     def test_unrecognized_upstream_layout_is_rejected(self):
         with self.assertRaises(SystemExit):
@@ -122,6 +133,7 @@ class LinePurgePatchTests(unittest.TestCase):
             installed = destination.read_text(encoding="utf-8")
             self.assertIn(PATCHER.BOUNDARY_MARKER, installed)
             self.assertEqual(installed.count(PATCHER.MARKER), 2)
+            self.assertEqual(installed.count(PATCHER.WAIT_MARKER), 1)
 
 
 if __name__ == "__main__":

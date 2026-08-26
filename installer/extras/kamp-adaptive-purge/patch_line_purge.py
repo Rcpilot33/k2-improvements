@@ -10,6 +10,17 @@ from pathlib import Path
 
 MARKER = "k2-improvements: balance LINE_PURGE retraction before slicer travel"
 BOUNDARY_MARKER = "k2-improvements: constrain the complete LINE_PURGE motion path"
+WAIT_MARKER = "k2-improvements: wait cooperatively for prime-tower geometry"
+
+
+WAIT_WRAPPER = r'''[gcode_macro LINE_PURGE]
+description: K2-safe KAMP purge with prime-tower synchronization
+gcode:
+    # k2-improvements: wait cooperatively for prime-tower geometry
+    PRIME_TOWER_WAIT
+    _KAMP_LINE_PURGE {rawparams}
+
+'''
 
 
 BOUNDARY_CALCULATIONS = r'''    # k2-improvements: constrain the complete LINE_PURGE motion path
@@ -259,6 +270,25 @@ def add_balancing_unretracts(text):
     return result
 
 
+def add_prime_tower_wait_wrapper(text):
+    """Defer rendering the purge calculation until tower scanning finishes.
+
+    Klipper renders an entire gcode_macro before executing its first command.
+    A wrapper is therefore required: PRIME_TOWER_WAIT runs first, and the
+    renamed implementation is rendered only after that cooperative wait.
+    """
+    if WAIT_MARKER in text:
+        if text.count(WAIT_MARKER) != 1:
+            fail("installed LINE_PURGE has duplicate prime-tower wait markers")
+        return text
+
+    header = "[gcode_macro LINE_PURGE]"
+    internal_header = "[gcode_macro _KAMP_LINE_PURGE]"
+    if text.count(header) != 1 or internal_header in text:
+        fail("LINE_PURGE macro header is not recognized")
+    return WAIT_WRAPPER + text.replace(header, internal_header, 1)
+
+
 def write_atomic(destination, text, mode):
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
@@ -296,6 +326,7 @@ def main():
     text = quote_firmware_commands(text)
     text = harden_boundaries(text)
     text = add_balancing_unretracts(text)
+    text = add_prime_tower_wait_wrapper(text)
 
     # os.replace() must target the installed file, not an older upstream symlink.
     if destination.is_symlink():

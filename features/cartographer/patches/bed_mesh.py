@@ -458,7 +458,11 @@ class BedMeshCalibrate:
         prime_tower = self.printer.lookup_object("prime_tower", None)
         if prime_tower is not None:
             eventtime = self.printer.get_reactor().monotonic()
-            tower_status = prime_tower.get_status(eventtime)
+            wait_for_scan = getattr(prime_tower, "wait_for_scan", None)
+            if wait_for_scan is not None:
+                tower_status = wait_for_scan(eventtime)
+            else:
+                tower_status = prime_tower.get_status(eventtime)
             if tower_status.get("detected"):
                 objects.append({
                     "name": "__prime_tower_footprint__",
