@@ -25,12 +25,32 @@ _TOWER_END_RE = re.compile(
 _TOWER_MARKER_BYTES_RE = re.compile(
     br"(?im)^[ \t]*;[ \t]*TYPE[ \t]*:[ \t]*Prime[ \t]+tower[ \t]*\r?$"
 )
+_NO_SPARSE_BYTES_RE = re.compile(
+    br"(?im)^[ \t]*;[ \t]*wipe_tower_no_sparse_layers[ \t]*="
+    br"[ \t]*(?:1|true)[ \t]*(?:;[^\r\n]*)?\r*$"
+)
+_TOWER_ENABLED_BYTES_RE = re.compile(
+    br"(?im)^[ \t]*;[ \t]*enable_prime_tower[ \t]*="
+    br"[ \t]*(?:1|true)[ \t]*(?:;[^\r\n]*)?\r*$"
+)
 _MARKER_SCAN_CHUNK = 1024 * 1024
 _MARKER_SCAN_OVERLAP = 512
+_METADATA_TAIL_SIZE = 1024 * 1024
 _DETAILED_CANCEL_INTERVAL = 4096
+
+_NO_SPARSE_BLOCK_REASON = (
+    "Prime-tower safety: Creality Print 'No sparse layers (beta)' is "
+    "enabled. On the K2 Plus, a delayed tower can raise a partially "
+    "printed model into the toolhead or X rail. Disable that setting, "
+    "reslice, and resend this file."
+)
 
 
 class _ScanCancelled(Exception):
+    pass
+
+
+class _UnsupportedPrimeTower(Exception):
     pass
 
 
@@ -44,6 +64,7 @@ class _ScanJob:
         self.done_event = threading.Event()
         self.status = None
         self.error = None
+        self.block_reason = None
 
 
 def _check_cancel(cancel_event):
@@ -78,6 +99,25 @@ def _file_contains_prime_tower(path, cancel_event=None):
             overlap = data[-_MARKER_SCAN_OVERLAP:]
 
 
+def _read_prime_tower_footer(path, cancel_event=None):
+    """Read Creality Print's effective per-job tower settings."""
+    _check_cancel(cancel_event)
+    with open(path, "rb") as handle:
+        handle.seek(0, os.SEEK_END)
+        file_size = handle.tell()
+        handle.seek(max(0, file_size - _METADATA_TAIL_SIZE), os.SEEK_SET)
+        metadata = handle.read()
+    _check_cancel(cancel_event)
+    return {
+        "enabled": _TOWER_ENABLED_BYTES_RE.search(metadata) is not None,
+        "no_sparse": _NO_SPARSE_BYTES_RE.search(metadata) is not None,
+    }
+
+
+def _uses_no_sparse_prime_tower(path, cancel_event=None):
+    return _read_prime_tower_footer(path, cancel_event)["no_sparse"]
+
+
 def parse_prime_tower(path, padding=0.5, cancel_event=None):
     """Return a rectangular polygon around all prime-tower motion blocks.
 
@@ -87,6 +127,13 @@ def parse_prime_tower(path, padding=0.5, cancel_event=None):
     metadata so rotation, resizing, sparse layers, and late-starting towers
     are handled without slicer-specific geometry calculations.
     """
+    footer = _read_prime_tower_footer(path, cancel_event)
+    # Creality Print writes enable_prime_tower as an effective per-job value:
+    # it is zero for a single-color job even when the saved profile retains
+    # no-sparse=1.  Check this small footer first so an unsafe large file
+    # cannot time out while its first tower marker is hundreds of MB away.
+    if footer["enabled"] and footer["no_sparse"]:
+        raise _UnsupportedPrimeTower(_NO_SPARSE_BLOCK_REASON)
     if not _file_contains_prime_tower(path, cancel_event):
         return {
             "detected": False,
@@ -94,6 +141,10 @@ def parse_prime_tower(path, padding=0.5, cancel_event=None):
             "bounds": [],
             "blocks": 0,
         }
+    # The real toolpath marker remains the authority and fallback for files
+    # from slicer versions that omit or misreport enable_prime_tower.
+    if footer["no_sparse"]:
+        raise _UnsupportedPrimeTower(_NO_SPARSE_BLOCK_REASON)
 
     absolute_xy = True
     absolute_e = True
@@ -217,7 +268,8 @@ class PrimeTower:
             desc="Wait cooperatively for prime-tower footprint discovery")
 
     @staticmethod
-    def _empty_status(source=None, error=None, ready=True):
+    def _empty_status(source=None, error=None, ready=True,
+                      blocked=False, block_reason=None):
         return {
             "detected": False,
             "polygon": [],
@@ -226,6 +278,8 @@ class PrimeTower:
             "source": source,
             "error": error,
             "ready": ready,
+            "blocked": blocked,
+            "block_reason": block_reason,
         }
 
     def _selected_path(self, eventtime):
@@ -250,6 +304,13 @@ class PrimeTower:
         self._active_job = None
         if job.cancel_event.is_set():
             return
+        if job.block_reason is not None:
+            logging.error(
+                "prime_tower: blocked unsafe file %s: %s",
+                job.path, job.block_reason)
+            self._status = self._empty_status(
+                job.path, blocked=True, block_reason=job.block_reason)
+            return
         if job.error is not None:
             logging.error(
                 "prime_tower: scan failed for %s: %s", job.path, job.error)
@@ -264,6 +325,8 @@ class PrimeTower:
         status["source"] = job.path
         status["error"] = None
         status["ready"] = True
+        status["blocked"] = False
+        status["block_reason"] = None
         self._status = status
         elapsed = max(0.0, eventtime - job.started_at)
         file_size = job.cache_key[1]
@@ -287,6 +350,8 @@ class PrimeTower:
                 job.path, self.padding, job.cancel_event)
         except _ScanCancelled:
             cancelled = True
+        except _UnsupportedPrimeTower as err:
+            job.block_reason = str(err)
         except Exception as err:
             job.error = str(err)
         finally:
@@ -386,6 +451,8 @@ class PrimeTower:
 
     def cmd_PRIME_TOWER_WAIT(self, gcmd):
         status = self.wait_for_scan(self.reactor.monotonic())
+        if status.get("blocked"):
+            raise gcmd.error(status["block_reason"])
         if status.get("error"):
             gcmd.respond_info(
                 "prime_tower: footprint scan failed; continuing without "

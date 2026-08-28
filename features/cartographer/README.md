@@ -26,8 +26,17 @@ does not label its prime tower as an exclude object, so its actual
 `;TYPE:Prime tower` extrusion paths are read from the selected G-code file.
 When normal object polygons are available, the detected tower footprint is
 included automatically in the Cartographer adaptive mesh. Rotated, resized,
-sparse, and late-starting towers use their real sliced motion rather than
-slicer metadata. Prints without a tower retain the existing behavior.
+and normally layered towers use their real sliced motion rather than slicer
+metadata. Prints without a tower retain the existing behavior.
+
+Creality Print's **Prime tower -> No sparse layers (beta)** option is not
+supported on the K2 Plus. A delayed tower can command the bed back to
+first-layer height after the model is already tall, creating a collision risk.
+If an actual prime-tower toolpath and that setting are both present, adaptive
+mesh preflight rejects the file and directs the user to disable the option and
+reslice. The managed `START_PRINT` macro performs the same check before any
+printer preparation moves. A profile that retains the setting does not block
+a file with no prime tower.
 
 The installer also adds a status-only compatibility layer for the stock K2
 touchscreen. Creality's live Z-offset page reads the nonstandard

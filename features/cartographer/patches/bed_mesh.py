@@ -448,13 +448,7 @@ class BedMeshCalibrate:
     def set_adaptive_mesh(self, gcmd):
         if not gcmd.get_int('ADAPTIVE', 0):
             return False
-        exclude_objects = self.printer.lookup_object("exclude_object", None)
-        if exclude_objects is None:
-            gcmd.respond_info("Exclude objects not enabled. Using full mesh...")
-            return False
-        objects = list(exclude_objects.get_status().get("objects", []))
-        if not objects:
-            return False
+        tower_status = None
         prime_tower = self.printer.lookup_object("prime_tower", None)
         if prime_tower is not None:
             eventtime = self.printer.get_reactor().monotonic()
@@ -463,6 +457,16 @@ class BedMeshCalibrate:
                 tower_status = wait_for_scan(eventtime)
             else:
                 tower_status = prime_tower.get_status(eventtime)
+            if tower_status.get("blocked"):
+                raise gcmd.error(tower_status["block_reason"])
+        exclude_objects = self.printer.lookup_object("exclude_object", None)
+        if exclude_objects is None:
+            gcmd.respond_info("Exclude objects not enabled. Using full mesh...")
+            return False
+        objects = list(exclude_objects.get_status().get("objects", []))
+        if not objects:
+            return False
+        if tower_status is not None:
             if tower_status.get("detected"):
                 objects.append({
                     "name": "__prime_tower_footprint__",

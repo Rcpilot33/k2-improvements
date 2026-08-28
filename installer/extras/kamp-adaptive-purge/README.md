@@ -65,6 +65,16 @@ upstream macro:
    alone does not substitute for missing object labels; the normal
    missing-geometry skip or stock-purge fallback still applies.
 
+Creality Print's **Prime tower -> No sparse layers (beta)** option is not
+supported on the K2 Plus. It can delay the tower until a color change, then
+command the bed back to first-layer height while a tall model is already on
+it, potentially driving the model into the toolhead or X rail. When an actual
+prime-tower toolpath and that setting are both present, the printer-side
+`START_PRINT` preflight rejects the file before printer preparation with
+instructions to disable the option and reslice. Merely retaining the setting
+in a profile does not block a file that contains no prime tower. KAMP also
+checks again before purge as defense in depth.
+
 The same printer-side footprint is consumed by Cartographer adaptive meshing
 when Cartographer is installed. No slicer variable or extra setup choice is
 required beyond the normal object polygons already required by KAMP.

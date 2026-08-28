@@ -9,6 +9,8 @@ from unittest import mock
 
 
 MODULE_PATH = Path(__file__).with_name("prime_tower.py")
+START_PRINT_PATH = MODULE_PATH.parent.parent / "macros" / "start_print" / \
+    "start_print.cfg"
 SPEC = importlib.util.spec_from_file_location("prime_tower", MODULE_PATH)
 PRIME_TOWER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PRIME_TOWER)
@@ -25,6 +27,47 @@ class PrimeTowerParserTests(unittest.TestCase):
         result = self.parse("G90\nG1 X10 Y20\n;TYPE:Outer wall\n")
         self.assertFalse(result["detected"])
         self.assertEqual(result["polygon"], [])
+
+    def test_no_sparse_setting_without_actual_tower_is_not_blocked(self):
+        result = self.parse(
+            "G90\n;TYPE:Outer wall\nG1 X10 Y20 E1\n"
+            "; enable_prime_tower = 0\n"
+            "; wipe_tower_no_sparse_layers = 1\n")
+        self.assertFalse(result["detected"])
+
+    def test_footer_blocks_before_searching_for_late_marker(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir, "huge-delayed-tower.gcode")
+            path.write_text(
+                "; enable_prime_tower = 1\n"
+                "; wipe_tower_no_sparse_layers = 1\n",
+                encoding="utf-8")
+            with mock.patch.object(
+                    PRIME_TOWER, "_file_contains_prime_tower",
+                    side_effect=AssertionError("marker scan must not run")):
+                with self.assertRaises(PRIME_TOWER._UnsupportedPrimeTower):
+                    PRIME_TOWER.parse_prime_tower(str(path))
+
+    def test_no_sparse_setting_with_actual_tower_is_blocked(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir, "delayed-tower.gcode")
+            path.write_bytes(
+                b"G90\r\nM83\r\n; TYPE: Prime tower\r\n"
+                b"G1 X10 Y20 E1\r\n; WIPE_TOWER_END\r\n"
+                b";   wipe_tower_no_sparse_layers = TRUE   \r\n")
+            with self.assertRaises(
+                    PRIME_TOWER._UnsupportedPrimeTower) as raised:
+                PRIME_TOWER.parse_prime_tower(str(path))
+        self.assertIn("No sparse layers", str(raised.exception))
+
+    def test_normal_prime_tower_setting_still_parses(self):
+        result = self.parse(
+            "G90\nM83\nG1 X10 Y20\n;TYPE:Prime tower\n"
+            "G1 X20 Y30 E1\n; WIPE_TOWER_END\n"
+            "; enable_prime_tower = 1\n"
+            "; wipe_tower_no_sparse_layers = 0\n")
+        self.assertTrue(result["detected"])
+        self.assertEqual(result["bounds"], [9.5, 19.5, 20.5, 30.5])
 
     def test_no_tower_skips_detailed_text_scan(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -180,6 +223,17 @@ class _FakeGCode:
         self.commands[name] = callback
 
 
+class _FakeCommand:
+    def __init__(self):
+        self.messages = []
+
+    def error(self, message):
+        return RuntimeError(message)
+
+    def respond_info(self, message):
+        self.messages.append(message)
+
+
 class _FakePrinter:
     def __init__(self, path, reactor=None):
         self.reactor = reactor or _FakeReactor()
@@ -236,6 +290,36 @@ class _FailingThread(_DeferredThread):
 
 
 class PrimeTowerStatusTests(unittest.TestCase):
+    def test_start_print_preflight_precedes_printer_preparation(self):
+        config = START_PRINT_PATH.read_text(encoding="utf-8")
+        start_print = config.split("[gcode_macro START_PRINT]", 1)[1]
+        start_print = start_print.split("[gcode_macro", 1)[0]
+        self.assertLess(
+            start_print.index("PRIME_TOWER_WAIT"),
+            start_print.index("BOX_START_PRINT"))
+
+    def test_unsupported_tower_is_ready_and_hard_blocked(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir, "delayed-tower.gcode")
+            path.write_text(
+                "G90\nM83\n;TYPE:Prime tower\nG1 X20 Y30 E1\n"
+                "; WIPE_TOWER_END\n"
+                "; wipe_tower_no_sparse_layers = 1\n",
+                encoding="utf-8")
+            scanner = PRIME_TOWER.PrimeTower(_FakeConfig(str(path)))
+            result = scanner.wait_for_scan(1.0)
+
+            self.assertTrue(result["ready"])
+            self.assertTrue(result["blocked"])
+            self.assertFalse(result["detected"])
+            self.assertIsNone(result["error"])
+            self.assertIn("No sparse layers", result["block_reason"])
+
+            with self.assertRaises(RuntimeError) as raised:
+                scanner.cmd_PRIME_TOWER_WAIT(_FakeCommand())
+
+        self.assertIn("No sparse layers", str(raised.exception))
+
     def test_status_scan_runs_in_worker_and_cooperative_wait_finishes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir, "tower.gcode")
