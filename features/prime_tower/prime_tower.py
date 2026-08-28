@@ -27,6 +27,28 @@ _TOWER_MARKER_BYTES_RE = re.compile(
 )
 _MARKER_SCAN_CHUNK = 1024 * 1024
 _MARKER_SCAN_OVERLAP = 512
+_DETAILED_CANCEL_INTERVAL = 4096
+
+
+class _ScanCancelled(Exception):
+    pass
+
+
+class _ScanJob:
+    def __init__(self, cache_key, path, started_at, timeout):
+        self.cache_key = cache_key
+        self.path = path
+        self.started_at = started_at
+        self.deadline = started_at + timeout
+        self.cancel_event = threading.Event()
+        self.done_event = threading.Event()
+        self.status = None
+        self.error = None
+
+
+def _check_cancel(cancel_event):
+    if cancel_event is not None and cancel_event.is_set():
+        raise _ScanCancelled()
 
 
 def _finite_point(point):
@@ -34,7 +56,7 @@ def _finite_point(point):
         and math.isfinite(point[0]) and math.isfinite(point[1])
 
 
-def _file_contains_prime_tower(path):
+def _file_contains_prime_tower(path, cancel_event=None):
     """Quickly reject files without a prime-tower type marker.
 
     This scan operates on large byte chunks so a normal single-color G-code
@@ -46,6 +68,7 @@ def _file_contains_prime_tower(path):
     overlap = b""
     with open(path, "rb") as handle:
         while True:
+            _check_cancel(cancel_event)
             chunk = handle.read(_MARKER_SCAN_CHUNK)
             if not chunk:
                 return False
@@ -55,7 +78,7 @@ def _file_contains_prime_tower(path):
             overlap = data[-_MARKER_SCAN_OVERLAP:]
 
 
-def parse_prime_tower(path, padding=0.5):
+def parse_prime_tower(path, padding=0.5, cancel_event=None):
     """Return a rectangular polygon around all prime-tower motion blocks.
 
     The parser follows modal absolute/relative XY positioning and records the
@@ -64,7 +87,7 @@ def parse_prime_tower(path, padding=0.5):
     metadata so rotation, resizing, sparse layers, and late-starting towers
     are handled without slicer-specific geometry calculations.
     """
-    if not _file_contains_prime_tower(path):
+    if not _file_contains_prime_tower(path, cancel_event):
         return {
             "detected": False,
             "polygon": [],
@@ -82,7 +105,9 @@ def parse_prime_tower(path, padding=0.5):
     points = []
 
     with open(path, "r", encoding="utf-8", errors="replace") as handle:
-        for raw_line in handle:
+        for line_number, raw_line in enumerate(handle):
+            if line_number % _DETAILED_CANCEL_INTERVAL == 0:
+                _check_cancel(cancel_event)
             type_match = _TYPE_RE.match(raw_line)
             if type_match is not None:
                 in_tower = type_match.group(1).strip().lower() == "prime tower"
@@ -182,7 +207,10 @@ class PrimeTower:
         self.reactor = self.printer.get_reactor()
         self.gcode = self.printer.lookup_object("gcode")
         self.padding = config.getfloat("padding", 0.5, minval=0.0)
+        self.scan_timeout = config.getfloat(
+            "scan_timeout", 120.0, minval=1.0)
         self._cache_key = None
+        self._active_job = None
         self._status = self._empty_status()
         self.gcode.register_command(
             "PRIME_TOWER_WAIT", self.cmd_PRIME_TOWER_WAIT,
@@ -210,76 +238,149 @@ class PrimeTower:
             logging.exception("prime_tower: unable to query virtual_sdcard")
             return None
 
-    def _finish_scan(self, eventtime, cache_key, path, status, error):
-        if cache_key != self._cache_key:
+    def _cancel_active_job(self):
+        job = self._active_job
+        if job is not None:
+            job.cancel_event.set()
+            self._active_job = None
+
+    def _finish_scan(self, eventtime, job):
+        if job is not self._active_job or not job.done_event.is_set():
             return
-        if error is not None:
-            logging.error("prime_tower: scan failed for %s: %s", path, error)
-            self._status = self._empty_status(path, error)
+        self._active_job = None
+        if job.cancel_event.is_set():
             return
-        status["source"] = path
+        if job.error is not None:
+            logging.error(
+                "prime_tower: scan failed for %s: %s", job.path, job.error)
+            self._status = self._empty_status(job.path, job.error)
+            return
+        status = job.status
+        if status is None:
+            error = "scan worker completed without a result"
+            logging.error("prime_tower: %s for %s", error, job.path)
+            self._status = self._empty_status(job.path, error)
+            return
+        status["source"] = job.path
         status["error"] = None
         status["ready"] = True
         self._status = status
+        elapsed = max(0.0, eventtime - job.started_at)
+        file_size = job.cache_key[1]
         if status["detected"]:
             logging.info(
                 "prime_tower: detected %d blocks at "
-                "X[%.3f, %.3f] Y[%.3f, %.3f] in %s",
+                "X[%.3f, %.3f] Y[%.3f, %.3f] in %s "
+                "(%s bytes, %.3fs)",
                 status["blocks"], status["bounds"][0],
                 status["bounds"][2], status["bounds"][1],
-                status["bounds"][3], path)
+                status["bounds"][3], job.path, file_size, elapsed)
+        else:
+            logging.info(
+                "prime_tower: no tower detected in %s (%s bytes, %.3fs)",
+                job.path, file_size, elapsed)
 
-    def _scan_worker(self, cache_key, path):
-        status = None
-        error = None
+    def _scan_worker(self, job):
+        cancelled = False
         try:
-            status = parse_prime_tower(path, self.padding)
+            job.status = parse_prime_tower(
+                job.path, self.padding, job.cancel_event)
+        except _ScanCancelled:
+            cancelled = True
         except Exception as err:
-            error = str(err)
+            job.error = str(err)
+        finally:
+            job.done_event.set()
+        if cancelled or job.cancel_event.is_set():
+            return
         try:
             self.reactor.register_async_callback(
-                lambda eventtime: self._finish_scan(
-                    eventtime, cache_key, path, status, error))
+                lambda eventtime: self._finish_scan(eventtime, job))
         except Exception:
             logging.exception(
-                "prime_tower: unable to publish scan result for %s", path)
+                "prime_tower: unable to publish scan result for %s; "
+                "the reactor poll will recover it", job.path)
 
-    def _start_scan(self, cache_key, path):
+    def _start_scan(self, cache_key, path, eventtime):
+        self._cancel_active_job()
         self._cache_key = cache_key
+        job = _ScanJob(cache_key, path, eventtime, self.scan_timeout)
+        self._active_job = job
         self._status = self._empty_status(path, ready=False)
         worker = threading.Thread(
             target=self._scan_worker,
-            args=(cache_key, path),
+            args=(job,),
             name="prime-tower-scan")
         worker.daemon = True
-        worker.start()
+        try:
+            worker.start()
+        except Exception as err:
+            error = "unable to start scan worker: %s" % (err,)
+            logging.exception("prime_tower: %s for %s", error, path)
+            job.cancel_event.set()
+            self._active_job = None
+            self._status = self._empty_status(path, error)
 
     def get_status(self, eventtime):
         path = self._selected_path(eventtime)
         if not path:
+            self._cancel_active_job()
             self._cache_key = None
             self._status = self._empty_status()
             return dict(self._status)
         try:
             stat_result = os.stat(path)
-            cache_key = (path, stat_result.st_size, stat_result.st_mtime)
+            modified = getattr(stat_result, "st_mtime_ns", None)
+            if modified is None:
+                modified = int(stat_result.st_mtime * 1000000000)
+            cache_key = (path, stat_result.st_size, modified)
         except OSError as err:
             cache_key = (path, None, None)
-            if cache_key != self._cache_key:
+            if cache_key != self._cache_key or self._active_job is not None:
                 logging.warning("prime_tower: cannot inspect %s: %s", path, err)
+                self._cancel_active_job()
                 self._cache_key = cache_key
                 self._status = self._empty_status(path, str(err))
             return dict(self._status)
 
         if cache_key != self._cache_key:
-            self._start_scan(cache_key, path)
+            self._start_scan(cache_key, path, eventtime)
+        elif self._active_job is not None:
+            # This polling path also publishes a completed worker result if
+            # register_async_callback() was unavailable during shutdown or
+            # resource pressure.
+            self._finish_scan(eventtime, self._active_job)
         return dict(self._status)
 
     def wait_for_scan(self, eventtime):
         """Wait for the selected-file scan while continuing reactor service."""
         status = self.get_status(eventtime)
         while not status.get("ready", True):
-            eventtime = self.reactor.pause(eventtime + 0.050)
+            job = self._active_job
+            if job is None:
+                return status
+            # Prefer a result that completed at the deadline over a timeout.
+            # This also makes callback-publication failure recover without
+            # waiting for the next 50 ms reactor pause.
+            if job.done_event.is_set():
+                self._finish_scan(eventtime, job)
+                return dict(self._status)
+            if eventtime >= job.deadline:
+                elapsed = max(0.0, eventtime - job.started_at)
+                timeout = job.deadline - job.started_at
+                error = "scan timed out after %.1fs" % (timeout,)
+                logging.error(
+                    "prime_tower: %s for %s (%s bytes, %.3fs elapsed)",
+                    error, job.path, job.cache_key[1], elapsed)
+                # Cancel the parser and detach this job. A late callback is
+                # rejected by object identity, while the same selected file
+                # retains this fail-open result instead of relaunching work.
+                job.cancel_event.set()
+                self._active_job = None
+                self._status = self._empty_status(job.path, error)
+                return dict(self._status)
+            waketime = min(eventtime + 0.050, job.deadline)
+            eventtime = self.reactor.pause(waketime)
             status = self.get_status(eventtime)
         return status
 
