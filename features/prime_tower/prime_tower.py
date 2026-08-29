@@ -391,7 +391,7 @@ class PrimeTower:
                 "prime_tower: unable to publish scan result for %s; "
                 "the reactor poll will recover it", job.path)
 
-    def _hold_scan_temperatures(self, path):
+    def _report_scan_status(self):
         message = (
             "Prime-tower/KAMP safety: scanning selected G-code for "
             "prime-tower geometry...")
@@ -399,6 +399,8 @@ class PrimeTower:
             self.gcode.respond_info(message)
         except Exception:
             logging.exception("prime_tower: unable to report scan status")
+
+    def _hold_scan_temperatures(self, path):
         try:
             temperatures = _read_start_print_temperatures(path)
         except Exception:
@@ -434,7 +436,7 @@ class PrimeTower:
         job = _ScanJob(cache_key, path, eventtime, self.scan_timeout)
         self._active_job = job
         self._status = self._empty_status(path, ready=False)
-        self._hold_scan_temperatures(path)
+        self._report_scan_status()
         worker = threading.Thread(
             target=self._scan_worker,
             args=(job,),
@@ -513,7 +515,17 @@ class PrimeTower:
         return status
 
     def cmd_PRIME_TOWER_WAIT(self, gcmd):
-        status = self.wait_for_scan(self.reactor.monotonic())
+        eventtime = self.reactor.monotonic()
+        status = self.get_status(eventtime)
+        if not status.get("ready", True):
+            # Creality Print begins the virtual-SD stream after file selection.
+            # Its preamble resets the heater targets before START_PRINT invokes
+            # this command, so apply the hold here, after those resets, rather
+            # than when the background scan first starts.
+            path = status.get("source")
+            if path:
+                self._hold_scan_temperatures(path)
+            status = self.wait_for_scan(eventtime)
         if status.get("blocked"):
             try:
                 self.gcode.run_script_from_command("TURN_OFF_HEATERS")

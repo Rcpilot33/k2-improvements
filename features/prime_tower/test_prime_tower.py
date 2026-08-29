@@ -330,7 +330,7 @@ class PrimeTowerStatusTests(unittest.TestCase):
         self.assertIn("No sparse layers", str(raised.exception))
         self.assertEqual(scanner.gcode.scripts[-1], "TURN_OFF_HEATERS")
 
-    def test_scan_reports_status_and_holds_sliced_preheat_targets(self):
+    def test_scan_reports_status_before_virtual_sd_stream_starts(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir, "tower.gcode")
             path.write_text(
@@ -343,6 +343,33 @@ class PrimeTowerStatusTests(unittest.TestCase):
             scanner.wait_for_scan(1.0)
 
         self.assertIn("scanning selected G-code", scanner.gcode.messages[0])
+        self.assertEqual(scanner.gcode.scripts, [])
+
+    def test_wait_reapplies_sliced_preheat_after_preamble_resets_targets(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir, "tower.gcode")
+            path.write_text(
+                "; generated file\n"
+                "START_PRINT EXTRUDER_TEMP=245 BED_TEMP=70 "
+                "CHAMBER_TEMP=45 MATERIAL=PETG\n"
+                "G90\n;TYPE:Prime tower\nG1 X20 Y30 E1\n",
+                encoding="utf-8")
+            scanner = PRIME_TOWER.PrimeTower(_FakeConfig(str(path)))
+            pending = {
+                "ready": False,
+                "source": str(path),
+            }
+            complete = {
+                "ready": True,
+                "blocked": False,
+                "error": None,
+            }
+            with mock.patch.object(
+                    scanner, "get_status", return_value=pending), \
+                    mock.patch.object(
+                        scanner, "wait_for_scan", return_value=complete):
+                scanner.cmd_PRIME_TOWER_WAIT(_FakeCommand())
+
         self.assertEqual(
             scanner.gcode.scripts[0],
             "M104 S140\nM140 S70.000\nM141 S45.000")
