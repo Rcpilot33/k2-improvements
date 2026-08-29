@@ -37,6 +37,12 @@ _MARKER_SCAN_CHUNK = 1024 * 1024
 _MARKER_SCAN_OVERLAP = 512
 _METADATA_TAIL_SIZE = 1024 * 1024
 _DETAILED_CANCEL_INTERVAL = 4096
+_START_PRINT_PREFIX_SIZE = 1024 * 1024
+_START_PRINT_LINE_RE = re.compile(
+    r"(?im)^[ \t]*START_PRINT\b([^\r\n;]*)")
+_START_PRINT_PARAM_RE = re.compile(
+    r"(?:^|\s)(BED_TEMP|CHAMBER_TEMP)\s*=\s*(%s)" % _NUMBER,
+    re.IGNORECASE)
 
 _NO_SPARSE_BLOCK_REASON = (
     "Prime-tower safety: Creality Print 'No sparse layers (beta)' is "
@@ -116,6 +122,25 @@ def _read_prime_tower_footer(path, cancel_event=None):
 
 def _uses_no_sparse_prime_tower(path, cancel_event=None):
     return _read_prime_tower_footer(path, cancel_event)["no_sparse"]
+
+
+def _read_start_print_temperatures(path):
+    """Read the sliced bed/chamber targets without scanning the whole file."""
+    with open(path, "rb") as handle:
+        prefix = handle.read(_START_PRINT_PREFIX_SIZE)
+    text = prefix.decode("utf-8", errors="replace")
+    line_match = _START_PRINT_LINE_RE.search(text)
+    if line_match is None:
+        return None
+    temperatures = {}
+    for name, raw_value in _START_PRINT_PARAM_RE.findall(
+            line_match.group(1)):
+        value = float(raw_value)
+        if math.isfinite(value) and value >= 0.0:
+            temperatures[name.upper()] = value
+    if "BED_TEMP" not in temperatures:
+        return None
+    return temperatures
 
 
 def parse_prime_tower(path, padding=0.5, cancel_event=None):
@@ -366,12 +391,50 @@ class PrimeTower:
                 "prime_tower: unable to publish scan result for %s; "
                 "the reactor poll will recover it", job.path)
 
+    def _hold_scan_temperatures(self, path):
+        message = (
+            "Prime-tower/KAMP safety: scanning selected G-code for "
+            "prime-tower geometry...")
+        try:
+            self.gcode.respond_info(message)
+        except Exception:
+            logging.exception("prime_tower: unable to report scan status")
+        try:
+            temperatures = _read_start_print_temperatures(path)
+        except Exception:
+            logging.exception(
+                "prime_tower: unable to read START_PRINT temperatures from %s",
+                path)
+            return
+        if temperatures is None:
+            logging.warning(
+                "prime_tower: START_PRINT bed target was not found in the "
+                "first %d bytes of %s; leaving heaters unchanged",
+                _START_PRINT_PREFIX_SIZE, path)
+            return
+        commands = [
+            "M104 S140",
+            "M140 S%.3f" % (temperatures["BED_TEMP"],),
+        ]
+        chamber_temp = temperatures.get("CHAMBER_TEMP", 0.0)
+        if chamber_temp > 0.0:
+            commands.append("M141 S%.3f" % (chamber_temp,))
+        try:
+            self.gcode.run_script_from_command("\n".join(commands))
+        except Exception:
+            # Temperature holding is a convenience during a potentially long
+            # scan. It must never weaken the fail-open parser behavior.
+            logging.exception(
+                "prime_tower: unable to hold preheat temperatures while "
+                "scanning %s", path)
+
     def _start_scan(self, cache_key, path, eventtime):
         self._cancel_active_job()
         self._cache_key = cache_key
         job = _ScanJob(cache_key, path, eventtime, self.scan_timeout)
         self._active_job = job
         self._status = self._empty_status(path, ready=False)
+        self._hold_scan_temperatures(path)
         worker = threading.Thread(
             target=self._scan_worker,
             args=(job,),
@@ -452,6 +515,14 @@ class PrimeTower:
     def cmd_PRIME_TOWER_WAIT(self, gcmd):
         status = self.wait_for_scan(self.reactor.monotonic())
         if status.get("blocked"):
+            try:
+                self.gcode.run_script_from_command("TURN_OFF_HEATERS")
+            except Exception:
+                # Preserve the original hard-rejection reason even if the
+                # printer's heater shutdown command itself reports a fault.
+                logging.exception(
+                    "prime_tower: unable to turn heaters off after rejecting "
+                    "unsafe G-code")
             raise gcmd.error(status["block_reason"])
         if status.get("error"):
             gcmd.respond_info(

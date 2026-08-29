@@ -75,6 +75,12 @@ instructions to disable the option and reslice. Merely retaining the setting
 in a profile does not block a file that contains no prime tower. KAMP also
 checks again before purge as defense in depth.
 
+The console reports when the selected G-code is being scanned. While that
+scan runs, the printer holds the nozzle at 140 C and the bed (and chamber,
+when requested) at the sliced `START_PRINT` preheat targets. A safety
+rejection turns the heaters off and retains Klipper's failed-print state so
+Creality Print and configured notifications clearly report the failure.
+
 The same printer-side footprint is consumed by Cartographer adaptive meshing
 when Cartographer is installed. No slicer variable or extra setup choice is
 required beyond the normal object polygons already required by KAMP.

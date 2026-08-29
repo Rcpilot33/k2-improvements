@@ -218,9 +218,17 @@ class _FakeVirtualSDCard:
 class _FakeGCode:
     def __init__(self):
         self.commands = {}
+        self.messages = []
+        self.scripts = []
 
     def register_command(self, name, callback, desc=None):
         self.commands[name] = callback
+
+    def respond_info(self, message):
+        self.messages.append(message)
+
+    def run_script_from_command(self, script):
+        self.scripts.append(script)
 
 
 class _FakeCommand:
@@ -302,6 +310,7 @@ class PrimeTowerStatusTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir, "delayed-tower.gcode")
             path.write_text(
+                "START_PRINT BED_TEMP=70 CHAMBER_TEMP=0\n"
                 "G90\nM83\n;TYPE:Prime tower\nG1 X20 Y30 E1\n"
                 "; WIPE_TOWER_END\n"
                 "; wipe_tower_no_sparse_layers = 1\n",
@@ -319,6 +328,48 @@ class PrimeTowerStatusTests(unittest.TestCase):
                 scanner.cmd_PRIME_TOWER_WAIT(_FakeCommand())
 
         self.assertIn("No sparse layers", str(raised.exception))
+        self.assertEqual(scanner.gcode.scripts[-1], "TURN_OFF_HEATERS")
+
+    def test_scan_reports_status_and_holds_sliced_preheat_targets(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir, "tower.gcode")
+            path.write_text(
+                "; generated file\n"
+                "START_PRINT EXTRUDER_TEMP=245 BED_TEMP=70 "
+                "CHAMBER_TEMP=45 MATERIAL=PETG\n"
+                "G90\n;TYPE:Prime tower\nG1 X20 Y30 E1\n",
+                encoding="utf-8")
+            scanner = PRIME_TOWER.PrimeTower(_FakeConfig(str(path)))
+            scanner.wait_for_scan(1.0)
+
+        self.assertIn("scanning selected G-code", scanner.gcode.messages[0])
+        self.assertEqual(
+            scanner.gcode.scripts[0],
+            "M104 S140\nM140 S70.000\nM141 S45.000")
+
+    def test_scan_without_start_print_target_leaves_heaters_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir, "tower.gcode")
+            path.write_text(
+                "G90\n;TYPE:Prime tower\nG1 X20 Y30 E1\n",
+                encoding="utf-8")
+            with mock.patch.object(PRIME_TOWER.logging, "warning"):
+                scanner = PRIME_TOWER.PrimeTower(_FakeConfig(str(path)))
+                scanner.wait_for_scan(1.0)
+
+        self.assertEqual(scanner.gcode.scripts, [])
+
+    def test_successful_scan_does_not_turn_heaters_off(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir, "tower.gcode")
+            path.write_text(
+                "START_PRINT BED_TEMP=70 CHAMBER_TEMP=0\n"
+                "G90\n;TYPE:Prime tower\nG1 X20 Y30 E1\n",
+                encoding="utf-8")
+            scanner = PRIME_TOWER.PrimeTower(_FakeConfig(str(path)))
+            scanner.wait_for_scan(1.0)
+
+        self.assertNotIn("TURN_OFF_HEATERS", scanner.gcode.scripts)
 
     def test_status_scan_runs_in_worker_and_cooperative_wait_finishes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
