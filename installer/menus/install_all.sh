@@ -131,10 +131,14 @@ menu_install_all() {
         fi
     fi
 
-    printf '\n--- final firmware restart ---\n'
-    if ! K2_DEFER_FIRMWARE_RESTART=0 \
-        sh "$INSTALLER_DIR/scripts/firmware_restart.sh"; then
-        warn "final firmware restart failed"
+    printf '\n--- final protected restart ---\n'
+    if [ -f /tmp/k2-klippy-code-restart-required ]; then
+        final_restart="$INSTALLER_DIR/scripts/klippy_code_restart.sh"
+    else
+        final_restart="$INSTALLER_DIR/scripts/firmware_restart.sh"
+    fi
+    if ! K2_DEFER_FIRMWARE_RESTART=0 sh "$final_restart"; then
+        warn "final protected restart failed"
         failed=$((failed+1))
     fi
 
@@ -144,7 +148,7 @@ menu_install_all() {
     printf '%s\n\n' '----------------------------------------------------------------'
 
     printf '\nFinal manual steps:\n'
-    printf '  1. Confirm the final firmware restart completed successfully. If it\n'
+    printf '  1. Confirm the final protected restart completed successfully. If it\n'
     printf '     reported an error, power-cycle before the next G28.\n'
     printf '  2. Optional QoL: surface-selection-wrapper and axis_twist_compensation\n'
     printf '     are available from Optional extras.\n'

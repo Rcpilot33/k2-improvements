@@ -7,7 +7,7 @@ SCRIPT_DIR=$(readlink -f $(dirname ${0}))
 install_feature() {
     FEATURE=${1}
     if [ ! -f /tmp/${FEATURE} ]; then
-        ${SCRIPT_DIR}/features/${FEATURE}/install.sh
+        K2_DEFER_FIRMWARE_RESTART=1 ${SCRIPT_DIR}/features/${FEATURE}/install.sh
         touch /tmp/${FEATURE}
     fi
 }
@@ -21,3 +21,9 @@ install_feature cartographer
 install_feature abort_homing
 install_feature save-config-restart
 install_feature macros
+
+if [ -f /tmp/k2-klippy-code-restart-required ]; then
+    K2_DEFER_FIRMWARE_RESTART=0 sh ${SCRIPT_DIR}/scripts/klippy_code_restart.sh
+else
+    K2_DEFER_FIRMWARE_RESTART=0 sh ${SCRIPT_DIR}/scripts/firmware_restart.sh
+fi

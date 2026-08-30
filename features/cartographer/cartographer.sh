@@ -56,7 +56,7 @@ EOF
             -e 's/^#(.*carto.*)/\1/' \
             ~/printer_data/config/custom/main.cfg
 
-        sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
+        sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"
         echo ""
         echo "*** ENSURE Y SPACERS ARE INSTALLED ***"
         echo ""
@@ -85,7 +85,7 @@ EOF
             -e 's/^([^#].*carto.*)/#\1/' \
             ~/printer_data/config/custom/main.cfg
 
-        sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
+        sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"
         echo ""
         echo "*** ENSURE Y SPACERS ARE NOT INSTALLED ***"
         echo ""

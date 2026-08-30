@@ -83,8 +83,8 @@ Use **Install or change setup -> Install Cartographer setup** from the menu.
 After installation:
 
 1. Select the mount and offset profile that matches the installed hardware.
-2. Confirm the installer restart completed successfully; otherwise power-cycle
-   before homing.
+2. Confirm the protected Klippy-code reload and firmware-reset sequence
+   completed successfully; otherwise power-cycle before homing.
 3. Follow the [Cartographer setup guide](./SETUP.md).
 4. Flash probe firmware only if needed; firmware flashing is a separate menu
    action.

@@ -128,4 +128,4 @@ else
     echo "W: moonraker not found, skipping update manager registration"
 fi
 
-sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
+sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"

@@ -5,8 +5,9 @@
 # copy into custom/, drops K2 Plus-tailored settings + an [exclude_object]
 # block, and ensures all three are included from custom/main.cfg.
 #
-# Does NOT restart Klipper — the new macros are available on next config
-# reload. Print user-facing instructions at the end.
+# Does NOT restart Klipper because this installer may be run during a print.
+# prime_tower.py records a pending code reload; print the safe idle-printer
+# activation command at the end.
 
 set -e
 
@@ -172,8 +173,10 @@ echo " skips by default. The preserved stock-purge fallback setting can"
 echo " opt into the original fixed path for this missing-data case only."
 echo ""
 echo "------------------------------------------------------------------"
-echo " 1. Run FIRMWARE_RESTART when no print is active and wait for the complete K2 startup sequence."
-echo "    The new [exclude_object] block and LINE_PURGE macro will load."
+echo " 1. When no print is active, run:"
+echo "      sh ~/k2-improvements/scripts/klippy_code_restart.sh"
+echo "    Wait for the complete Klippy code reload and K2 startup sequence."
+echo "    The new prime-tower scanner, [exclude_object], and LINE_PURGE will load."
 echo ""
 echo "------------------------------------------------------------------"
 echo " 2. Enable the slicer option that emits object polygons."

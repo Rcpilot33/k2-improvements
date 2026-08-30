@@ -30,8 +30,9 @@ matrix. Use one of the versions listed in [VALIDATION.md](./VALIDATION.md).
 
 On affected K2 Plus stock-probe and Cartographer installations, Klipper's
 ordinary host-only restart can leave the motor controllers in their previous
-runtime state. `FIRMWARE_RESTART` resets Klippy and the connected MCUs and
-restores correct homing.
+runtime state. `FIRMWARE_RESTART` reloads configuration, resets the connected
+MCUs, and restores correct homing, but does not reload Python modules already
+cached by the Klippy host process.
 
 The shared SAVE_CONFIG protection therefore makes `SAVE_CONFIG` request a
 firmware-level restart directly after writing the configuration. This preserves
@@ -40,6 +41,11 @@ The shared restart helper also waits for the K2 motor-controller startup to
 finish after Moonraker first reports Klipper ready. This has been validated on
 both the stock PR Touch and Cartographer paths. If the helper reports a failure,
 fully power-cycle the printer before attempting to home.
+
+Installers that replace Klippy Python modules use a separate protected helper:
+it starts a fresh Klippy process, requests the required firmware reset, retries
+once for the K2's observed `key301` startup state, and then performs the same
+stabilization check. Never home between those stages.
 
 ## When I print from the side spool, the printer still acts like I am using the CFS
 

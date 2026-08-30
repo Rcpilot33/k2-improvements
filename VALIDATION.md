@@ -64,8 +64,9 @@ For the no-Cartographer path, a saved `default` mesh must match the active
 |---|:---:|
 | Protected `SAVE_CONFIG` on stock PR Touch followed by `G28` (>10 consecutive cycles) | PASS |
 | Protected `SAVE_CONFIG` on Cartographer followed by `G28` | PASS |
-| Installer `FIRMWARE_RESTART` followed by K2 initialization wait and `G28` | PASS |
-| `screws_tilt_adjust` and `abort_homing` repair installs using the shared restart helper | PASS |
+| Configuration-only installer `FIRMWARE_RESTART`, K2 initialization wait, and `G28` | PASS |
+| Klippy-code installer host restart plus firmware-restart recovery | PENDING REVALIDATION |
+| `screws_tilt_adjust` and `abort_homing` repair installs using the code-reload helper | PENDING REVALIDATION |
 
 The repeated stock-probe test used a temporary `3,3` mesh to shorten each
 cycle; the configured mesh was restored to `19,19` after testing. Moonraker can

@@ -191,9 +191,16 @@ adaptive purge instead of commanding an out-of-bounds move.
 ## Activation
 
 The installer does not restart Klipper so it cannot interrupt an active print.
-When no print is active, run `FIRMWARE_RESTART` and wait for the complete K2
-startup sequence before the next `G28`. If the restart fails, power-cycle the
-printer before homing.
+It installs or updates the `prime_tower.py` Klippy module, which requires a
+fresh host process rather than a configuration reload alone. When no print is
+active, run:
+
+```sh
+sh ~/k2-improvements/scripts/klippy_code_restart.sh
+```
+
+Wait for the complete code reload and K2 startup sequence before the next
+`G28`. If the protected sequence fails, power-cycle the printer before homing.
 
 ## Credit
 

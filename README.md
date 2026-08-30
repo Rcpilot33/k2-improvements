@@ -32,10 +32,11 @@ The menu provides separate, resumable paths for:
 
 > [!CAUTION]
 > Do not use Klipper's host-only `RESTART` command or
-> `/etc/init.d/klipper restart` before homing. The installers, protected
-> `SAVE_CONFIG`, and documented restart paths use `FIRMWARE_RESTART`, wait for
-> the K2 motor controllers to initialize, and then return control. If that
-> sequence reports an error, power-cycle the printer before running `G28`.
+> `/etc/init.d/klipper restart` by itself before homing. Configuration-only
+> changes and protected `SAVE_CONFIG` use `FIRMWARE_RESTART`. Installers that
+> replace loaded Klippy Python modules use a guarded host restart followed by
+> firmware-reset recovery and the K2 initialization wait. If a protected
+> sequence reports an error, power-cycle before running `G28`.
 
 These improvements are not compatible with Creality's automatic calibration
 workflow. Use the provided manual calibration, bed-mesh, and tuning workflows

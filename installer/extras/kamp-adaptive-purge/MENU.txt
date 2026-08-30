@@ -21,6 +21,7 @@ Creality Print templates:
 Orca template:
   slicer-templates/orca-machine-start.gcode
 
-The installer does not restart Klipper. When no print is active, run
-FIRMWARE_RESTART and wait for the complete K2 startup sequence. Power-cycle
-before the next G28 only if that restart reports an error.
+The installer does not interrupt an active print. When no print is active, run:
+  sh ~/k2-improvements/scripts/klippy_code_restart.sh
+Wait for the complete code reload and K2 startup sequence. Power-cycle before
+the next G28 only if that protected sequence reports an error.

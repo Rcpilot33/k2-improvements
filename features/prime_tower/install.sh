@@ -17,3 +17,9 @@ python3 "${SCRIPT_DIR}/../../scripts/ensure_included.py" \
     "${HOME}/printer_data/config/custom/main.cfg" prime_tower.cfg
 
 echo "I: installed automatic prime-tower footprint detection"
+
+# Do not interrupt a print here. Record that a fresh Klippy process is needed;
+# the calling full installer will perform it, while standalone KAMP prints the
+# explicit idle-printer activation command for the user.
+K2_DEFER_FIRMWARE_RESTART=1 \
+    sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"

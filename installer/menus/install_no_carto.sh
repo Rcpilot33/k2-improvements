@@ -94,10 +94,14 @@ menu_install_no_carto() {
         info "Entware unslung boot hook installed (S99unslung)"
     fi
 
-    printf '\n--- final firmware restart ---\n'
-    if ! K2_DEFER_FIRMWARE_RESTART=0 \
-        sh "$INSTALLER_DIR/scripts/firmware_restart.sh"; then
-        warn "final firmware restart failed"
+    printf '\n--- final protected restart ---\n'
+    if [ -f /tmp/k2-klippy-code-restart-required ]; then
+        final_restart="$INSTALLER_DIR/scripts/klippy_code_restart.sh"
+    else
+        final_restart="$INSTALLER_DIR/scripts/firmware_restart.sh"
+    fi
+    if ! K2_DEFER_FIRMWARE_RESTART=0 sh "$final_restart"; then
+        warn "final protected restart failed"
         failed=$((failed+1))
     fi
 
