@@ -3,8 +3,19 @@
 
 is_entware()       { [ -x /opt/bin/opkg ]; }
 is_better_root()   { grep -q '^root:.*:/mnt/UDISK/root:' /etc/passwd 2>/dev/null; }
-is_cartographer()  { [ -f "$PRINTER_CFG_DIR/custom/cartographer.cfg" ] || \
-                     grep -q '^\[cartographer\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null; }
+is_cartographer() {
+    local klipper_dir="${KLIPPER_DIR:-/usr/share/klipper}"
+    local config_present=1
+
+    if [ -f "$PRINTER_CFG_DIR/custom/cartographer.cfg" ] || \
+       grep -q '^\[cartographer\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null; then
+        config_present=0
+    fi
+
+    [ "$config_present" -eq 0 ] &&
+    [ -e "$klipper_dir/klippy/extras/cartographer.py" ] &&
+    grep -q '^class TriggerDispatch' "$klipper_dir/klippy/mcu.py" 2>/dev/null
+}
 is_moonraker()     { [ -d /mnt/UDISK/printer_data/moonraker ] || [ -f /mnt/UDISK/printer_data/config/moonraker.conf ]; }
 is_fluidd()        { grep -lq 'crealityk2' /usr/share/fluidd/assets/*.js 2>/dev/null; }
 is_macros() {
