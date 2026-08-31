@@ -24,13 +24,12 @@ if ! /etc/init.d/klipper restart; then
     exit 1
 fi
 
-# The K2 service restart also begins controller initialization. The first
-# firmware reset can still encounter key301; firmware_restart.sh retries once
-# after its readiness timeout, matching the recovery validated on hardware.
-echo "I: waiting 10 seconds before the protected K2 firmware reset"
-sleep 10
-
+# The K2 service restart also begins a comparatively slow configuration load
+# and controller connection.  Let firmware_restart.sh observe Klippy leaving
+# its startup state before issuing the first reset; interrupting startup while
+# the primary MCU is only beginning to connect can produce key301.
 if ! K2_DEFER_FIRMWARE_RESTART=0 K2_FIRMWARE_RESTART_ATTEMPTS=2 \
+    K2_WAIT_FOR_KLIPPY_STARTUP=1 \
     sh "$SCRIPT_DIR/firmware_restart.sh"; then
     echo "E: Klippy code reload recovery failed" >&2
     echo "E: power-cycle the printer before any homing test" >&2

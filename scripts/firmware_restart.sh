@@ -14,6 +14,7 @@ fi
 
 API_URL="${MOONRAKER_URL:-http://127.0.0.1:7125}"
 ATTEMPTS="${K2_FIRMWARE_RESTART_ATTEMPTS:-1}"
+WAIT_FOR_STARTUP="${K2_WAIT_FOR_KLIPPY_STARTUP:-0}"
 
 case "$ATTEMPTS" in
     ''|*[!0-9]*|0)
@@ -30,6 +31,35 @@ else
     echo "E: curl is required to request FIRMWARE_RESTART through Moonraker" >&2
     echo "E: changes were installed, but a full printer power cycle is required" >&2
     exit 1
+fi
+
+# A fresh Klippy host process may need substantially longer than the service
+# command itself to parse the K2 configuration and begin connecting its MCUs.
+# Do not interrupt that startup with FIRMWARE_RESTART.  In particular, the
+# Cartographer configuration adds enough startup work that a fixed ten-second
+# delay can land exactly as the primary MCU begins its serial connection.
+if [ "$WAIT_FOR_STARTUP" = "1" ]; then
+    echo "I: waiting for the fresh Klippy host process to finish startup"
+    # Allow Moonraker to observe the service replacement before accepting a
+    # state value; otherwise its first response may still describe the old
+    # Klippy process.
+    sleep 3
+    COUNT=0
+    while [ "$COUNT" -lt 60 ]; do
+        INFO=$("$CURL" -fsS --max-time 2 "$API_URL/printer/info" 2>/dev/null || true)
+        if printf '%s' "$INFO" | \
+            grep -qE '"state"[[:space:]]*:[[:space:]]*"(ready|error|shutdown)"'; then
+            break
+        fi
+        COUNT=$((COUNT + 1))
+        sleep 1
+    done
+
+    if [ "$COUNT" -ge 60 ]; then
+        echo "W: fresh Klippy host startup did not settle within 60 seconds" >&2
+    else
+        echo "I: fresh Klippy host startup has settled; continuing with the protected K2 firmware reset"
+    fi
 fi
 
 ATTEMPT=1
