@@ -21,7 +21,7 @@ SETTINGS = (
     ),
     ("variable_purge_height", "Purge height (mm)", "float", lambda value: value > 0),
     ("variable_tip_distance", "Filament tip distance (mm)", "float", lambda value: value >= 0),
-    ("variable_purge_margin", "Distance from print boundary (mm)", "float", lambda value: value >= 0),
+    ("variable_purge_margin", "Distance from print boundary (mm)", "float", lambda value: value > 0),
     ("variable_purge_amount", "Filament to purge (mm)", "float", lambda value: value > 0),
     ("variable_flow_rate", "Purge flow rate (mm^3/s)", "float", lambda value: value > 0),
 )

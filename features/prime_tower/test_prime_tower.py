@@ -306,6 +306,17 @@ class PrimeTowerStatusTests(unittest.TestCase):
             start_print.index("PRIME_TOWER_WAIT"),
             start_print.index("BOX_START_PRINT"))
 
+    def test_start_print_expands_carto_mesh_for_kamp_purge_margin(self):
+        config = START_PRINT_PATH.read_text(encoding="utf-8")
+        start_print = config.split("[gcode_macro START_PRINT]", 1)[1]
+        start_print = start_print.split("[gcode_macro", 1)[0]
+
+        self.assertIn("KAMP_PURGE_MARGIN + KAMP_BOUNDARY_INSET", start_print)
+        self.assertIn(
+            "ADAPTIVE=1 ADAPTIVE_MARGIN={CARTO_ADAPTIVE_MARGIN}",
+            start_print,
+        )
+
     def test_unsupported_tower_is_ready_and_hard_blocked(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir, "delayed-tower.gcode")

@@ -92,7 +92,7 @@ BOUNDARY_EXECUTION = r'''    # Calculate purge speed
 
     {% set settings_valid = purge_height > 0
         and tip_distance >= 0
-        and purge_margin >= 0
+        and purge_margin > 0
         and purge_amount > 0
         and flow_rate > 0
         and (purge_height * 2.0) <= (printer.toolhead.axis_maximum.z | float) %}

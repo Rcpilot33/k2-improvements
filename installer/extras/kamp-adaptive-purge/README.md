@@ -179,7 +179,7 @@ selections are stored in `custom/overrides.cfg` so they survive reinstalls.
 | `variable_stock_purge_fallback` | `0` | Use stock-style purge only when object geometry is missing |
 | `variable_purge_height` | `0.4` | Purge Z height |
 | `variable_tip_distance` | `0` | Filament-tip distance before purging |
-| `variable_purge_margin` | `10` | Distance from the print boundary |
+| `variable_purge_margin` | `10` | Positive distance from the print boundary |
 | `variable_purge_amount` | `25` | Filament length purged |
 | `variable_flow_rate` | `12` | Purge flow in mm3/s |
 
@@ -187,6 +187,12 @@ The boundary guard includes the complete purge and string-break path when
 choosing a location. A full-bed print, an excessively large purge amount, or a
 large margin can leave no valid corridor; in that case it warns and skips the
 adaptive purge instead of commanding an out-of-bounds move.
+
+With Cartographer, `START_PRINT` automatically expands the adaptive mesh to at
+least `variable_purge_margin + 0.5mm`. The extra 0.5mm matches the purge
+boundary inset, so changing the purge margin does not silently place the line
+just outside the active mesh. Physical mesh and machine limits still take
+precedence near the edges of the bed.
 
 ## Activation
 

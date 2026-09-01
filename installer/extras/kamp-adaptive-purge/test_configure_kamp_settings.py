@@ -116,6 +116,8 @@ class ConfigureKampSettingsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             settings.normalized("variable_purge_height", "0")
         with self.assertRaises(ValueError):
+            settings.normalized("variable_purge_margin", "0")
+        with self.assertRaises(ValueError):
             settings.normalized("variable_purge_margin", "-1")
         with self.assertRaises(ValueError):
             settings.normalized("variable_flow_rate", "inf")

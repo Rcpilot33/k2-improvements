@@ -46,6 +46,7 @@ class LinePurgePatchTests(unittest.TestCase):
         self.assertIn("printer.bed_mesh.mesh_min[0]", result)
         self.assertIn("printer.bed_mesh.mesh_max[1]", result)
         self.assertIn("boundary_inset = 0.5", result)
+        self.assertIn("purge_margin > 0", result)
         self.assertIn("printer.prime_tower.polygon", result)
         self.assertIn("object_points + tower_points", result)
         self.assertIn("object_points | length > 0", result)
