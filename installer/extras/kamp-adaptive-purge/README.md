@@ -11,9 +11,10 @@ an uncorrected part of the bed.
 
 KAMP needs all three of the following:
 
-1. Slicer-generated `EXCLUDE_OBJECT_DEFINE` polygons. Depending on the slicer,
-   these come from **Label objects**, **Exclude objects**, or
-   **Use exclude_object**.
+1. Slicer-generated `EXCLUDE_OBJECT_DEFINE` polygons. In Creality Print 7.x,
+   enable **Exclude objects**; **Label objects** alone does not emit the
+   required polygons. OrcaSlicer exposes this as **Label objects** or
+   **Use exclude_object**, depending on the version.
 2. `LINE_PURGE` in the machine-start G-code instead of the fixed purge moves.
 3. A blocking `M109` before `LINE_PURGE` so the nozzle reaches printing
    temperature first.
@@ -62,7 +63,7 @@ upstream macro:
 4. When Creality Print includes a prime tower, its actual extrusion footprint
    is added to the occupied print boundary before the purge location is
    selected. This keeps KAMP from choosing a line through the tower. A tower
-   alone does not substitute for missing object labels; the normal
+   alone does not substitute for missing object geometry; the normal
    missing-geometry skip or stock-purge fallback still applies.
 
 Creality Print's **Prime tower -> No sparse layers (beta)** option is not
@@ -128,8 +129,10 @@ the user's Orca profile and is not included in that Creality Print validation.
 
 In the slicer:
 
-1. If using a KAMP template, enable **Label objects** or
-   **Use exclude_object**.
+1. If using Creality Print 7.x with a KAMP template, enable **Exclude
+   objects** under Process settings -> Others. Do not rely on **Label
+   objects** alone. In OrcaSlicer, enable **Label objects** or **Use
+   exclude_object**.
 2. Open the printer profile's **Machine start G-code** setting.
 3. Replace the complete block with the appropriate supplied template.
 4. Save the printer profile and slice a test object.
@@ -152,9 +155,9 @@ From a shell, this command can help:
 grep -E "EXCLUDE_OBJECT_DEFINE|M109|LINE_PURGE" sliced.gcode
 ```
 
-If `EXCLUDE_OBJECT_DEFINE` is missing, object labels are not active. If
-`LINE_PURGE` is missing, the wrong printer profile or start-G-code block was
-used.
+If `EXCLUDE_OBJECT_DEFINE` is missing, the slicer's exclude-object output is
+not active. If `LINE_PURGE` is missing, the wrong printer profile or
+start-G-code block was used.
 
 To verify that the installed macro is the K2-compatible patched copy:
 
@@ -196,17 +199,19 @@ precedence near the edges of the bed.
 
 ## Activation
 
-The installer does not restart Klipper so it cannot interrupt an active print.
-It installs or updates the `prime_tower.py` Klippy module, which requires a
-fresh host process rather than a configuration reload alone. When no print is
-active, run:
+The standalone interactive installer shows all post-install instructions and
+then waits at **Press Enter to reload Klippy and perform the protected firmware
+restart and activate KAMP**. Press Enter and wait for the complete code reload
+and K2 startup sequence before the next `G28`. The prompt warns that the
+printer must be idle because the restart stops an active print. A
+non-interactive standalone install performs the same restart automatically.
+Full setup workflows defer this operation and perform one protected restart
+after all selected components are installed.
 
-```sh
-sh ~/k2-improvements/scripts/klippy_code_restart.sh
-```
-
-Wait for the complete code reload and K2 startup sequence before the next
-`G28`. If the protected sequence fails, power-cycle the printer before homing.
+Review/change settings performs the protected firmware restart after its own
+Enter prompt; it does not reload the Klippy host because no Python module is
+changed. If a protected restart reports an error, power-cycle the printer
+before homing.
 
 ## Credit
 

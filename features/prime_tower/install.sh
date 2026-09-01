@@ -18,8 +18,8 @@ python3 "${SCRIPT_DIR}/../../scripts/ensure_included.py" \
 
 echo "I: installed automatic prime-tower footprint detection"
 
-# Do not interrupt a print here. Record that a fresh Klippy process is needed;
-# the calling full installer will perform it, while standalone KAMP prints the
-# explicit idle-printer activation command for the user.
+# Record that a fresh Klippy process is needed without restarting in the middle
+# of a multi-component operation. The calling Cartographer, KAMP, or full setup
+# workflow performs the required protected restart at its own completion.
 K2_DEFER_FIRMWARE_RESTART=1 \
     sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"

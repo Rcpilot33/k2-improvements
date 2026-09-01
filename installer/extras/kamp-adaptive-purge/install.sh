@@ -5,9 +5,10 @@
 # copy into custom/, drops K2 Plus-tailored settings + an [exclude_object]
 # block, and ensures all three are included from custom/main.cfg.
 #
-# Does NOT restart Klipper because this installer may be run during a print.
-# prime_tower.py records a pending code reload; print the safe idle-printer
-# activation command at the end.
+# A standalone interactive install shows its complete instructions, then waits
+# for Enter before performing the required protected restart. Full setup
+# workflows set K2_DEFER_FIRMWARE_RESTART=1 and perform one final restart after
+# every selected component has been installed.
 
 set -e
 
@@ -22,12 +23,30 @@ configure_kamp_settings() {
         "${OVERRIDES_CFG}"
 }
 
+activate_kamp() {
+    restart_script="$1"
+    restart_description="$2"
+
+    if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" != "1" ] && [ -t 0 ]; then
+        echo ""
+        echo "------------------------------------------------------------------"
+        echo " WARNING: the restart will stop an active print. Confirm the printer is idle."
+        printf " Press Enter to %s and activate KAMP..." "$restart_description"
+        read -r _kamp_restart_confirm
+    fi
+
+    sh "$restart_script"
+}
+
 if [ "${1:-}" = "--configure-only" ]; then
     if [ ! -f ~/printer_data/config/custom/kamp_settings.cfg ]; then
         echo "E: KAMP is not installed; run the complete installer first"
         exit 1
     fi
     configure_kamp_settings
+    activate_kamp \
+        "${SCRIPT_DIR}/../../../scripts/firmware_restart.sh" \
+        "perform the protected firmware restart"
     exit 0
 fi
 
@@ -173,21 +192,21 @@ echo " skips by default. The preserved stock-purge fallback setting can"
 echo " opt into the original fixed path for this missing-data case only."
 echo ""
 echo "------------------------------------------------------------------"
-echo " 1. When no print is active, run:"
-echo "      sh ~/k2-improvements/scripts/klippy_code_restart.sh"
-echo "    Wait for the complete Klippy code reload and K2 startup sequence."
-echo "    The new prime-tower scanner, [exclude_object], and LINE_PURGE will load."
+echo " 1. The installer will prompt for the required protected restart after"
+echo "    these instructions. Wait for the complete Klippy code reload and K2"
+echo "    startup sequence. The new prime-tower scanner, [exclude_object], and"
+echo "    LINE_PURGE will then be active."
 echo ""
 echo "------------------------------------------------------------------"
 echo " 2. Enable the slicer option that emits object polygons."
 echo ""
-echo "    KAMP reads EXCLUDE_OBJECT_DEFINE polygons. Depending on the"
-echo "    slicer, use 'Label objects', 'Exclude objects', or"
-echo "    'Use exclude_object'. Without polygons, LINE_PURGE is skipped."
+echo "    KAMP reads EXCLUDE_OBJECT_DEFINE polygons. Without those polygons,"
+echo "    LINE_PURGE is skipped."
 echo ""
 echo "    Creality Print 7.x: Process settings (left panel) -> use the"
-echo "                        search box, type 'label' -> enable"
-echo "                        'Label objects' (Others tab in 7.x)."
+echo "                        search box, type 'exclude' -> enable"
+echo "                        'Exclude objects' (Others tab in 7.x)."
+echo "                        'Label objects' alone is not sufficient."
 echo ""
 echo "    Orca / OrcaSlicer:  Process tab -> Quality -> Advanced ->"
 echo "                        enable 'Label objects' (or 'Use exclude_object')."
@@ -222,7 +241,7 @@ echo "    You should see:"
 echo "      - EXCLUDE_OBJECT_DEFINE NAME=... POLYGON=...  (one per object)"
 echo "      - LINE_PURGE  (in the start-print block)"
 echo ""
-echo "    If EXCLUDE_OBJECT_DEFINE is missing -> object labeling/exclusion is OFF."
+echo "    If EXCLUDE_OBJECT_DEFINE is missing -> exclude-object output is OFF."
 echo "    If LINE_PURGE is missing -> machine start gcode change didn't save."
 echo ""
 echo "------------------------------------------------------------------"
@@ -237,3 +256,7 @@ echo ""
 echo "------------------------------------------------------------------"
 echo " See installer/extras/kamp-adaptive-purge/README.md for the full guide."
 echo ""
+
+activate_kamp \
+    "${SCRIPT_DIR}/../../../scripts/klippy_code_restart.sh" \
+    "reload Klippy and perform the protected firmware restart"
