@@ -12,12 +12,18 @@ detect_installer_branch() {
 main_menu() {
     while :; do
         clear
-        local fw chw cfw setup branch
+        local fw chw cfw setup branch pending_updates update_state
         fw="$(detect_printer_fw)"
         chw="$(detect_carto_hw)"
         cfw="$(detect_carto_fw)"
         setup="$(detect_install_profile)"
         branch="$(detect_installer_branch)"
+        pending_updates="$(migration_pending_component_count)"
+        if [ "$pending_updates" -gt 0 ]; then
+            update_state="$(c_yellow "$pending_updates ACTION(S) PENDING")"
+        else
+            update_state="$(c_dim 'NO ACTIONS PENDING')"
+        fi
 
         ui_rule
         printf ' %s\n' "$(c_cyan 'K2 PLUS COMPATIBILITY INSTALLER')"
@@ -40,7 +46,7 @@ main_menu() {
         ui_menu_item 3 'Cartographer tools'
         ui_menu_item 4 'Optional extras'
         ui_menu_item 5 'Maintenance and recovery'
-        ui_menu_item 6 'Update installer'
+        ui_menu_item 6 'Update installer / apply updates' "$update_state"
         printf '\n  0. Exit\n\nSelect [0-6]: '
         read -r c
         case "$c" in

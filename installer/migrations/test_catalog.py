@@ -8,6 +8,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 CATALOG = HERE / "catalog.sh"
 UPDATE_MENU = HERE.parent / "menus" / "update.sh"
+MAIN_MENU = HERE.parent / "menus" / "main.sh"
 
 KNOWN_COMPONENTS = {
     "cartographer",
@@ -109,6 +110,13 @@ class MigrationCatalogTests(unittest.TestCase):
         menu = UPDATE_MENU.read_text(encoding="utf-8")
         for component in KNOWN_COMPONENTS:
             self.assertIn(component, menu)
+
+    def test_main_menu_surfaces_pending_update_actions(self):
+        menu = MAIN_MENU.read_text(encoding="utf-8")
+        self.assertIn("migration_pending_component_count", menu)
+        self.assertIn("ACTION(S) PENDING", menu)
+        self.assertIn("NO ACTIONS PENDING", menu)
+        self.assertIn("Update installer / apply updates", menu)
 
 
 if __name__ == "__main__":
