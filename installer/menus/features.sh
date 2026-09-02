@@ -81,6 +81,9 @@ install_feature() {
     info "running $name (HOME=$pwd_home)"
     if HOME="$pwd_home" sh "$script"; then
         info "$name install completed"
+        if command -v migration_mark_component_current >/dev/null 2>&1; then
+            migration_mark_component_current "$name"
+        fi
     else
         warn "$name install.sh exited non-zero"
     fi

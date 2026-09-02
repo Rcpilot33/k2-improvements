@@ -200,25 +200,33 @@ menu_maintenance() {
         ui_heading 'MAINTENANCE AND RECOVERY'
         printf '\n'
         ui_menu_item 1 'Core component installer' "$(c_cyan 'OPEN MENU')"
+        pending_updates=$(migration_pending_component_count)
+        if [ "$pending_updates" -gt 0 ]; then
+            update_state=$(c_yellow "$pending_updates ACTION(S) PENDING")
+        else
+            update_state=$(c_green 'CURRENT')
+        fi
+        ui_menu_item 2 'Review installer update actions' "$update_state"
         if is_cartographer; then
-            ui_menu_item 2 'PR Touch SAVE_CONFIG cleanup' "$(if is_prtouch_clean; then state_complete; else state_available; fi)"
+            ui_menu_item 3 'PR Touch SAVE_CONFIG cleanup' "$(if is_prtouch_clean; then state_complete; else state_available; fi)"
+            ui_menu_item 4 'Factory reset and cleanup tools' "$(state_destructive)"
+            printf '\n  0. Back\n\nSelect [0-4]: '
+        else
             ui_menu_item 3 'Factory reset and cleanup tools' "$(state_destructive)"
             printf '\n  0. Back\n\nSelect [0-3]: '
-        else
-            ui_menu_item 2 'Factory reset and cleanup tools' "$(state_destructive)"
-            printf '\n  0. Back\n\nSelect [0-2]: '
         fi
         read -r c
         case "$c" in
             1) menu_features ;;
-            2)
+            2) menu_update_results ;;
+            3)
                 if is_cartographer; then
                     run_extra_name prtouch-cleanup
                 else
                     menu_factory_reset
                 fi
                 ;;
-            3)
+            4)
                 if is_cartographer; then
                     menu_factory_reset
                 fi

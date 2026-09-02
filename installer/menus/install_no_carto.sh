@@ -98,6 +98,9 @@ menu_install_no_carto() {
     printf '%s\n\n' '----------------------------------------------------------------'
     printf 'Detected setup: %s\n\n' "$(detect_install_profile)"
     if [ "$failed" -eq 0 ]; then
+        if command -v migration_mark_all_installed_current >/dev/null 2>&1; then
+            migration_mark_all_installed_current
+        fi
         printf '%s\n' "$(c_green 'All requested components completed without a restart error.')"
         printf 'Continue with manual calibration.\n\n'
     else

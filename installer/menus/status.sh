@@ -70,6 +70,13 @@ show_status() {
             printf '  %-43s %s\n' 'prtouch_v3 SAVE_CONFIG clean' "$(state_available)"
         fi
     fi
+    printf '\n Installer updates\n'
+    pending_updates=$(migration_pending_component_count)
+    if [ "$pending_updates" -gt 0 ]; then
+        printf '  %-43s %s\n' "$pending_updates component action(s) pending" "$(c_yellow 'ACTION NEEDED')"
+    else
+        printf '  %-43s %s\n' 'Installed components' "$(c_green 'CURRENT')"
+    fi
     printf '\n'
     press_enter
 }

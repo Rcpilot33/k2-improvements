@@ -133,6 +133,10 @@ menu_install_all() {
         fi
     fi
 
+    if [ "$failed" -eq 0 ] && command -v migration_mark_all_installed_current >/dev/null 2>&1; then
+        migration_mark_all_installed_current
+    fi
+
     printf '\nFinal manual steps:\n'
     printf '  1. Confirm every firmware restart completed successfully. If any\n'
     printf '     restart reported an error, power-cycle before the next G28.\n'

@@ -125,11 +125,18 @@ the [complete installation guide](./INSTALL.md).
 | Add Cartographer later | **Install or change setup → Convert stock setup to Cartographer** |
 | Add one optional feature | **Optional extras** |
 | Repair one core component | **Maintenance and recovery → Core component installer** |
+| Update installed components after an installer update | **Update installer → Update and review required actions** |
 
 The menu detects installed components, skips completed work, and reports what
 was installed, skipped, or failed. The stock-probe installer will stop if it
 detects Cartographer; it does not automatically convert a Cartographer printer
 back to stock PR Touch.
+
+Installer updates are tracked separately from installed printer components.
+After pulling newer installer files, the menu recommends only migrations that
+apply to features detected on that printer. Successful repairs are recorded so
+the same migration is not repeatedly offered. A factory reset clears this
+update-tracker state.
 
 ## Before the first print
 

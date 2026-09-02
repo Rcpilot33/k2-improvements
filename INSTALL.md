@@ -170,7 +170,7 @@ Cartographer is detected.
 | 3 | Open Cartographer firmware, recovery, mount-offset, and calibration tools. |
 | 4 | Install optional hardware, print-workflow, and security extras. |
 | 5 | Open component repair, PR Touch cleanup, and factory-reset tools. |
-| 6 | Update the installer with a fast-forward-only pull and reload the menu. |
+| 6 | Update installer files, review applicable component migrations, and apply selected repairs. |
 | 0 | Exit. |
 
 States are displayed as words so they remain meaningful without terminal
@@ -301,7 +301,27 @@ key in a second terminal before disabling password login.
 
 ## Updating
 
-Use **6. Update installer**, rerun either bootstrap command, or run:
+Use **6. Update installer → Update and review required actions**. The updater
+records the old and new revisions, detects which affected components are
+installed, and opens a results screen. From there you can apply one repair,
+apply all recommendations, read the reasons, or finish later. The same pending
+list is available under **Maintenance and recovery → Review installer update
+actions**.
+
+The first tracker-aware update conservatively evaluates all earlier migration
+entries because installations made by older releases have no completion
+history. Recommendations for optional extras that are not installed are
+filtered out. A successfully verified repair is recorded and will not be
+offered again when the same migration later appears on another branch.
+
+The KAMP migration preserves settings edited directly in the older
+`custom/kamp_settings.cfg` by copying values into `custom/overrides.cfg` before
+the maintained defaults are refreshed. Existing values in `overrides.cfg`
+take precedence. Only settings exposed by the maintained KAMP settings workflow
+are imported; upstream mesh, dockable-probe, and Smart Park defaults remain in
+the maintained defaults file instead of becoming permanent user overrides.
+
+You may also rerun either bootstrap command, or update the checkout manually:
 
 ```sh
 cd /mnt/UDISK/root/k2-improvements
@@ -317,6 +337,9 @@ Feature installers can create backup files beside managed configuration files.
 These backups are not intended to remain inside the Git repository. The
 current surface-selection installer stores its backups outside the repository
 so they do not block later updates.
+
+Factory-reset workflows clear the updater completion records so a replacement
+installation does not inherit the previous installation's migration state.
 
 ## Factory reset and cleanup
 

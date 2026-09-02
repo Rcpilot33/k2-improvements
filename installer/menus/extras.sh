@@ -136,6 +136,9 @@ run_carto_plate_workflow() {
     fi
 
     if [ "$failed" -eq 0 ] && is_carto_plate_workflow; then
+        if command -v migration_mark_component_current >/dev/null 2>&1; then
+            migration_mark_component_current cartographer-plate-workflow
+        fi
         printf '\n%s\n' "$(c_green 'Cartographer plate workflow installed successfully.')"
         printf 'When no print is active, run FIRMWARE_RESTART and wait for the complete\n'
         printf 'K2 startup sequence. Power-cycle before homing only if it reports an error.\n'
@@ -276,6 +279,9 @@ install_extra() {
     info "running $script (HOME=$pwd_home)"
     if HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script"; then
         info "$name install completed"
+        if command -v migration_mark_component_current >/dev/null 2>&1; then
+            migration_mark_component_current "$name"
+        fi
     else
         warn "$name install.sh exited non-zero"
     fi
