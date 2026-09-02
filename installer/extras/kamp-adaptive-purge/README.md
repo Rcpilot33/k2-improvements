@@ -45,7 +45,7 @@ them later without reinstalling KAMP.
 It intentionally does not install KAMP Smart Park or Adaptive Meshing. The
 project's `START_PRINT` and Cartographer flow already provide those functions.
 
-The installed `Line_Purge.cfg` makes three compatibility corrections to the
+The installed `Line_Purge.cfg` makes four compatibility corrections to the
 upstream macro:
 
 1. `G10` and `G11` are quoted when stored as Jinja strings for firmware
@@ -82,9 +82,20 @@ when requested) at the sliced `START_PRINT` preheat targets. A safety
 rejection turns the heaters off and retains Klipper's failed-print state so
 Creality Print and configured notifications clearly report the failure.
 
+The scan runs in a background worker and `START_PRINT` waits cooperatively for
+it. Its timeout scales with file size, and selecting a different file cancels
+obsolete work. After a cancellation, Creality's virtual-SD clear and reselection
+causes the resent job to be scanned again. Large files can add a visible
+preflight delay; `klippy.log` records the detected block count, bounds, file
+size, and elapsed time.
+See the shared [prime-tower scanner guide](../../../features/prime_tower/README.md)
+for its failure and timeout behavior.
+
 The same printer-side footprint is consumed by Cartographer adaptive meshing
 when Cartographer is installed. No slicer variable or extra setup choice is
-required beyond the normal object polygons already required by KAMP.
+required beyond the normal object polygons already required by KAMP. The
+managed `START_PRINT` also enlarges the adaptive margin to contain the chosen
+purge margin, the 0.5 mm boundary inset, and a small rounding-safe slack.
 
 ## Optional stock-purge fallback
 

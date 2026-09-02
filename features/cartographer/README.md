@@ -29,6 +29,15 @@ included automatically in the Cartographer adaptive mesh. Rotated, resized,
 and normally layered towers use their real sliced motion rather than slicer
 metadata. Prints without a tower retain the existing behavior.
 
+The scan runs in a background worker, is cooperatively cancelable, and uses a
+timeout that scales with file size. `START_PRINT` waits for the result before
+printer preparation, so large files may show a deliberate preflight delay in
+the console. Selecting a different file cancels obsolete work and starts a new
+scan. The final detected block count, bounds, file size, and elapsed time are
+recorded in `klippy.log`.
+Implementation details and timeout behavior are documented in the shared
+[prime-tower scanner guide](../prime_tower/README.md).
+
 Creality Print's **Prime tower -> No sparse layers (beta)** option is not
 supported on the K2 Plus. A delayed tower can command the bed back to
 first-layer height after the model is already tall, creating a collision risk.
@@ -52,8 +61,9 @@ After installation, `K2_CARTOGRAPHER_TOUCHSCREEN_STATUS` reports both the live
 touchscreen.
 
 Choose the correct physical mount preset before the first homing move after
-installation. The installer performs a firmware restart and waits for K2 motor
-initialization before returning.
+installation. The guided Cartographer path offers the mount-offset picker
+before its final protected Klippy-code reload, firmware-reset recovery, and K2
+motor-initialization wait.
 
 The Cartographer installation also supplies Creality's inter-print
 `SAFE_MOVE_Z` compatibility command. It permits only negative Z travel that

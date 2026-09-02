@@ -7,11 +7,21 @@ Before using KAMP:
      OrcaSlicer: "Label objects" or "Use exclude_object".
   2. Use the bundled machine-start G-code template for your slicer.
   3. Confirm the template contains M109 before LINE_PURGE.
+  4. Leave Creality Print "Print Calibration" disabled; its separate
+     automatic mesh/bed-stabilization workflow is not compatible.
+
+Creality Print "Prime tower -> No sparse layers (beta)" is unsafe on the
+K2 Plus when a real tower is present. The printer-side preflight rejects that
+combination and instructs you to disable the option and reslice.
 
 The K2 boundary guard keeps the purge and its string-break move inside the
 active mesh/machine area. If no safe corridor exists, it warns and skips.
 An optional preserved 0/1 setting can enable the stock-style purge only when
 the slicer supplies no object geometry; every fallback use prints a warning.
+
+The selected G-code is scanned for actual prime-tower extrusion paths before
+START_PRINT preparation. Large files can show a visible preflight delay; the
+size-scaled, cancelable scan reports its final details in klippy.log.
 
 Creality Print templates:
   slicer-templates/creality-start-material-only.gcode

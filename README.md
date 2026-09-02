@@ -38,9 +38,12 @@ The menu provides separate, resumable paths for:
 > firmware-reset recovery and the K2 initialization wait. If a protected
 > sequence reports an error, power-cycle before running `G28`.
 
-These improvements are not compatible with Creality's automatic calibration
-workflow. Use the provided manual calibration, bed-mesh, and tuning workflows
-after installation.
+These improvements are not compatible with Creality Print's **Print
+Calibration** option or Creality's automatic print-calibration workflow.
+Leave that option disabled when sending a print, then use the provided manual
+calibration, bed-mesh, and tuning workflows after installation. Enabling it can
+insert a separate Creality-controlled bed-stabilization delay before
+`START_PRINT`; see the [FAQ](./FAQ.md#can-i-still-use-the-automatic-calibration-features).
 
 ## Validated firmware
 
@@ -126,6 +129,8 @@ the [complete installation guide](./INSTALL.md).
 | Add Cartographer later | **Install or change setup → Convert stock setup to Cartographer** |
 | Add one optional feature | **Optional extras** |
 | Repair one core component | **Maintenance and recovery → Core component installer** |
+| Reload changed configuration or macros | **Maintenance and recovery → Protected configuration / macro restart** |
+| Reload already-installed Klippy Python code | **Maintenance and recovery → Protected Klippy code reload** |
 
 The menu detects installed components, skips completed work, and reports what
 was installed, skipped, or failed. The stock-probe installer will stop if it

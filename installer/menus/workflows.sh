@@ -194,31 +194,99 @@ EOF
     press_enter
 }
 
+run_protected_firmware_restart() {
+    clear
+    ui_heading 'PROTECTED CONFIGURATION / MACRO RESTART'
+    cat <<'EOF'
+
+This reloads Klipper configuration and macros, resets the connected MCUs, and
+waits for the K2 motor-controller initialization interval to finish.
+
+Use this after updating an already-installed symlinked .cfg file or making a
+configuration-only change. It does not reload imported Klippy Python modules.
+
+The restart stops an active print. Confirm the printer is idle before
+continuing.
+
+EOF
+    if ! confirm 'Run the protected firmware restart now?'; then
+        printf '\nCancelled; no restart was requested.\n'
+        press_enter
+        return
+    fi
+
+    printf '\n'
+    if sh "$INSTALLER_DIR/scripts/firmware_restart.sh"; then
+        printf '\n%s\n' "$(c_green 'Protected firmware restart completed successfully.')"
+    else
+        printf '\n%s\n' "$(c_red 'Protected firmware restart failed.')"
+        printf 'Check Fluidd and fully power-cycle before the next G28.\n'
+    fi
+    press_enter
+}
+
+run_protected_klippy_code_restart() {
+    clear
+    ui_heading 'PROTECTED KLIPPY CODE RELOAD'
+    cat <<'EOF'
+
+This starts a fresh Klippy host process to reload already-installed Python
+modules, then performs firmware-reset recovery and waits for the complete K2
+motor-controller initialization interval.
+
+Use this after updating Python source whose installer symlink is already in
+place. If an update added a new module, include, generated file, or changed
+installation wiring, reinstall that component instead.
+
+The reload stops an active print. Confirm the printer is idle before
+continuing. Never home between the host reload and firmware-reset stages.
+
+EOF
+    if ! confirm 'Run the protected Klippy code reload now?'; then
+        printf '\nCancelled; no restart was requested.\n'
+        press_enter
+        return
+    fi
+
+    printf '\n'
+    if sh "$INSTALLER_DIR/scripts/klippy_code_restart.sh"; then
+        printf '\n%s\n' "$(c_green 'Klippy Python modules and K2 MCU state reloaded successfully.')"
+    else
+        printf '\n%s\n' "$(c_red 'Protected Klippy code reload failed.')"
+        printf 'Check Fluidd and fully power-cycle before the next G28.\n'
+    fi
+    press_enter
+}
+
 menu_maintenance() {
     while :; do
         clear
         ui_heading 'MAINTENANCE AND RECOVERY'
         printf '\n'
         ui_menu_item 1 'Core component installer' "$(c_cyan 'OPEN MENU')"
+        ui_menu_item 2 'Protected configuration / macro restart' "$(c_cyan 'CONFIG ONLY')"
+        ui_menu_item 3 'Protected Klippy code reload' "$(c_yellow 'PYTHON CODE')"
         if is_cartographer; then
-            ui_menu_item 2 'PR Touch SAVE_CONFIG cleanup' "$(if is_prtouch_clean; then state_complete; else state_available; fi)"
-            ui_menu_item 3 'Factory reset and cleanup tools' "$(state_destructive)"
-            printf '\n  0. Back\n\nSelect [0-3]: '
+            ui_menu_item 4 'PR Touch SAVE_CONFIG cleanup' "$(if is_prtouch_clean; then state_complete; else state_available; fi)"
+            ui_menu_item 5 'Factory reset and cleanup tools' "$(state_destructive)"
+            printf '\n  0. Back\n\nSelect [0-5]: '
         else
-            ui_menu_item 2 'Factory reset and cleanup tools' "$(state_destructive)"
-            printf '\n  0. Back\n\nSelect [0-2]: '
+            ui_menu_item 4 'Factory reset and cleanup tools' "$(state_destructive)"
+            printf '\n  0. Back\n\nSelect [0-4]: '
         fi
         read -r c
         case "$c" in
             1) menu_features ;;
-            2)
+            2) run_protected_firmware_restart ;;
+            3) run_protected_klippy_code_restart ;;
+            4)
                 if is_cartographer; then
                     run_extra_name prtouch-cleanup
                 else
                     menu_factory_reset
                 fi
                 ;;
-            3)
+            5)
                 if is_cartographer; then
                     menu_factory_reset
                 fi

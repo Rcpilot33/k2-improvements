@@ -16,5 +16,6 @@ Use **Maintenance and recovery -> Core component installer**, or run:
 sh install.sh
 ```
 
-The installer patches Klipper, performs a firmware restart, and waits for K2
-motor initialization before returning.
+The installer patches a loaded Klippy Python module, then performs the
+protected Klippy host reload, firmware-reset recovery, and K2 motor
+initialization wait before returning.

@@ -18,8 +18,9 @@ Flashing instructions are available [here](./firmware/README.md).
 2. Select the mount profile matching the physical mount. Jamin is
    printer-tested; JimmyV uses the offsets documented with that mount but is
    untested in this project.
-3. Confirm the installer firmware restart completed successfully. If it did
-   not, fully power-cycle the printer before the next `G28`.
+3. Confirm the installer's protected Klippy-code reload, firmware-reset
+   recovery, and K2 initialization wait completed successfully. If it did not,
+   fully power-cycle the printer before the next `G28`.
 4. Home the printer, run `Z_TILT_ADJUST`, then re-home Z before calibration.
 5. Complete Scan calibration, Touch calibration, and `SAVE_CONFIG`.
 6. Wait for the protected `SAVE_CONFIG` firmware restart to finish. Power-cycle

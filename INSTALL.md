@@ -29,9 +29,11 @@ project overview and shortest supported path, begin with the
 > firmware-reset recovery and the K2 initialization wait. If a protected
 > sequence reports an error, power-cycle before running `G28`.
 
-The modifications are not compatible with Creality's automatic calibration
-workflow. Complete the factory setup before installing, then use the provided
-manual calibration, bed-mesh, and tuning workflows.
+The modifications are not compatible with Creality Print's **Print
+Calibration** option or Creality's automatic print-calibration workflow.
+Complete the factory setup before installing, leave **Print Calibration**
+disabled when sending prints, then use the provided manual calibration,
+bed-mesh, and tuning workflows.
 
 Validated Creality firmware versions are `1.1.3.13`, `1.1.5.2`, and `1.1.5.5`.
 See [VALIDATION.md](./VALIDATION.md) for the complete test matrix.
@@ -170,7 +172,7 @@ Cartographer is detected.
 | 2 | Install, repair, or change the printer setup path. |
 | 3 | Open Cartographer firmware, recovery, mount-offset, and calibration tools. |
 | 4 | Install optional hardware, print-workflow, and security extras. |
-| 5 | Open component repair, PR Touch cleanup, and factory-reset tools. |
+| 5 | Open component repair, protected restart, PR Touch cleanup, and factory-reset tools. |
 | 6 | Update the installer with a fast-forward-only pull and reload the menu. |
 | 0 | Exit. |
 
@@ -315,6 +317,37 @@ The update is intentionally fast-forward-only. If local modifications make the
 branch diverge or would be overwritten, the pull stops instead of silently
 discarding them. Inspect `git status --short` and `git diff` before deciding
 whether to preserve or restore those local files.
+
+Updating the repository does not by itself reload already active macros or
+Klippy Python modules. When an update changes installation wiring or a managed
+copy, rerun each affected installer:
+
+- use **Maintenance and recovery -> Core component installer** for a changed
+  core component such as **Macros**, **Cartographer**, `screws_tilt_adjust`, or
+  `abort_homing`;
+- use **Optional extras** to reinstall a changed extra such as KAMP; and
+- wait for the installer-requested protected restart to complete before the
+  next `G28`.
+
+Configuration-only changes use the protected firmware restart. Components
+that replace Klippy Python code perform a protected host reload followed by
+firmware-reset recovery and the K2 initialization wait. A full guided setup
+normally skips components already detected as installed, so use the individual
+component or extra installer when the purpose is to refresh existing files.
+
+When the installed path is already a symlink to the updated repository and no
+new include, generated copy, or installation step was added, reinstalling is
+not necessary. Use one of these actions under **Maintenance and recovery**:
+
+- **Protected configuration / macro restart** reloads `.cfg` files, resets the
+  connected MCUs, and waits for K2 initialization.
+- **Protected Klippy code reload** starts a fresh Klippy process for existing
+  Python-module symlinks, then performs firmware-reset recovery and waits for
+  K2 initialization.
+
+Both actions require explicit confirmation because they stop an active print.
+If a commit added a module, include, generated file, or changed installer
+wiring, rerun the affected component installer instead.
 
 Feature installers can create backup files beside managed configuration files.
 These backups are not intended to remain inside the Git repository. The
