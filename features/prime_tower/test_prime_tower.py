@@ -247,9 +247,16 @@ class _FakePrinter:
         self.reactor = reactor or _FakeReactor()
         self.virtual_sdcard = _FakeVirtualSDCard(path)
         self.gcode = _FakeGCode()
+        self.event_handlers = {}
 
     def get_reactor(self):
         return self.reactor
+
+    def register_event_handler(self, event, callback):
+        self.event_handlers[event] = callback
+
+    def command_error(self, message):
+        return RuntimeError(message)
 
     def lookup_object(self, name, default=None):
         if name == "virtual_sdcard":
@@ -298,6 +305,50 @@ class _FailingThread(_DeferredThread):
 
 
 class PrimeTowerStatusTests(unittest.TestCase):
+    def test_registers_cartographer_mesh_hook_for_connect(self):
+        scanner = PRIME_TOWER.PrimeTower(_FakeConfig("unused.gcode"))
+        self.assertIs(
+            scanner.printer.event_handlers["klippy:connect"].__self__,
+            scanner)
+
+    def test_cartographer_mesh_hook_adds_detected_tower_polygon(self):
+        class FakeKlipperBedMesh:
+            def __init__(self, printer):
+                self.printer = printer
+
+            def get_objects(self):
+                return [[(100.0, 100.0), (110.0, 110.0)]]
+
+        class FakeTower:
+            def wait_for_scan(self, eventtime):
+                return {
+                    "detected": True,
+                    "polygon": [[20.0, 30.0], [40.0, 30.0],
+                                [40.0, 50.0], [20.0, 50.0]],
+                    "bounds": [20.0, 30.0, 40.0, 50.0],
+                    "blocked": False,
+                }
+
+        scanner = PRIME_TOWER.PrimeTower(_FakeConfig("unused.gcode"))
+        scanner.printer.lookup_object = lambda name, default=None: (
+            FakeTower() if name == "prime_tower" else default)
+        fake_module = mock.Mock(KlipperBedMesh=FakeKlipperBedMesh)
+        modules = {
+            "cartographer": mock.Mock(),
+            "cartographer.adapters": mock.Mock(),
+            "cartographer.adapters.klipper": mock.Mock(),
+            "cartographer.adapters.klipper.bed_mesh": fake_module,
+        }
+        with mock.patch.dict("sys.modules", modules):
+            scanner._install_cartographer_mesh_hook()
+
+        polygons = FakeKlipperBedMesh(scanner.printer).get_objects()
+        self.assertEqual(len(polygons), 2)
+        self.assertEqual(
+            polygons[-1],
+            [(20.0, 30.0), (40.0, 30.0),
+             (40.0, 50.0), (20.0, 50.0)])
+
     def test_start_print_preflight_precedes_printer_preparation(self):
         config = START_PRINT_PATH.read_text(encoding="utf-8")
         start_print = config.split("[gcode_macro START_PRINT]", 1)[1]

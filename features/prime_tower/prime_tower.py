@@ -291,6 +291,56 @@ class PrimeTower:
         self.gcode.register_command(
             "PRIME_TOWER_WAIT", self.cmd_PRIME_TOWER_WAIT,
             desc="Wait cooperatively for prime-tower footprint discovery")
+        register_event_handler = getattr(
+            self.printer, "register_event_handler", None)
+        if register_event_handler is not None:
+            register_event_handler(
+                "klippy:connect", self._install_cartographer_mesh_hook)
+
+    def _install_cartographer_mesh_hook(self, *args):
+        """Add the detected tower to Cartographer's adaptive object list.
+
+        Cartographer 3D owns BED_MESH_CALIBRATE when it is installed, so its
+        adapter computes adaptive bounds without calling Klipper's native
+        BedMeshCalibrate.set_adaptive_mesh().  Hook the adapter at connect
+        time, after the Cartographer package is importable, while leaving the
+        native bed_mesh integration in place for other probes.
+        """
+        try:
+            from cartographer.adapters.klipper.bed_mesh import KlipperBedMesh
+        except (ImportError, AttributeError):
+            return
+        if getattr(KlipperBedMesh, "_k2_prime_tower_hook", False):
+            return
+
+        original_get_objects = KlipperBedMesh.get_objects
+
+        def get_objects_with_prime_tower(adapter):
+            polygons = list(original_get_objects(adapter))
+            tower = adapter.printer.lookup_object("prime_tower", None)
+            if tower is None:
+                return polygons
+            eventtime = adapter.printer.get_reactor().monotonic()
+            status = tower.wait_for_scan(eventtime)
+            if status.get("blocked"):
+                raise adapter.printer.command_error(status["block_reason"])
+            if not status.get("detected"):
+                return polygons
+            polygon = [tuple(point) for point in status.get("polygon", [])]
+            if polygon and polygon not in polygons:
+                polygons.append(polygon)
+                bounds = status.get("bounds", [])
+                if len(bounds) == 4:
+                    logging.info(
+                        "prime_tower: Cartographer adaptive mesh includes "
+                        "tower X[%.3f, %.3f] Y[%.3f, %.3f]",
+                        bounds[0], bounds[2], bounds[1], bounds[3])
+            return polygons
+
+        KlipperBedMesh.get_objects = get_objects_with_prime_tower
+        KlipperBedMesh._k2_prime_tower_hook = True
+        logging.info(
+            "prime_tower: installed Cartographer adaptive-mesh integration")
 
     @staticmethod
     def _empty_status(source=None, error=None, ready=True,
