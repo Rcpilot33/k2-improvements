@@ -385,7 +385,11 @@ class PrimeTowerStatusTests(unittest.TestCase):
         start_print = config.split("[gcode_macro START_PRINT]", 1)[1]
         start_print = start_print.split("[gcode_macro", 1)[0]
 
-        self.assertIn("KAMP_PURGE_MARGIN + KAMP_BOUNDARY_INSET", start_print)
+        self.assertIn(
+            "KAMP_PURGE_MARGIN + KAMP_BOUNDARY_INSET + KAMP_MESH_SLACK",
+            start_print,
+        )
+        self.assertIn("KAMP_MESH_SLACK = 1.0", start_print)
         self.assertIn(
             "ADAPTIVE=1 ADAPTIVE_MARGIN={CARTO_ADAPTIVE_MARGIN}",
             start_print,
