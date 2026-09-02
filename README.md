@@ -129,8 +129,8 @@ the [complete installation guide](./INSTALL.md).
 | Add Cartographer later | **Install or change setup → Convert stock setup to Cartographer** |
 | Add one optional feature | **Optional extras** |
 | Repair one core component | **Maintenance and recovery → Core component installer** |
-| Reload changed configuration or macros | **Maintenance and recovery → Protected configuration / macro restart** |
-| Reload already-installed Klippy Python code | **Maintenance and recovery → Protected Klippy code reload** |
+| Apply changed configuration or macros | **Maintenance and recovery → Apply macro or printer-setting updates** |
+| Apply already-installed Klippy feature code | **Maintenance and recovery → Apply Klipper feature-code updates** |
 
 The menu detects installed components, skips completed work, and reports what
 was installed, skipped, or failed. The stock-probe installer will stop if it

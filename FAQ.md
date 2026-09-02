@@ -70,10 +70,10 @@ firmware-reset recovery performed by their installer.
 
 If the updated file is already connected to the printer by its existing
 symlink and the commit did not add installation wiring, use **Maintenance and
-recovery -> Protected configuration / macro restart** for `.cfg` changes or
-**Protected Klippy code reload** for Python changes. Reinstall the component
-when the update adds an include, module, generated copy, or other installation
-step.
+recovery -> Apply macro or printer-setting updates** for `.cfg` changes or
+**Apply Klipper feature-code updates** for Python changes. Reinstall the
+component when the update adds an include, module, generated copy, or other
+installation step.
 
 ## When I print from the side spool, the printer still acts like I am using the CFS
 

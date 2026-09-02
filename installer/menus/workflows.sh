@@ -196,7 +196,7 @@ EOF
 
 run_protected_firmware_restart() {
     clear
-    ui_heading 'PROTECTED CONFIGURATION / MACRO RESTART'
+    ui_heading 'APPLY MACRO OR PRINTER-SETTING UPDATES'
     cat <<'EOF'
 
 This reloads Klipper configuration and macros, resets the connected MCUs, and
@@ -227,7 +227,7 @@ EOF
 
 run_protected_klippy_code_restart() {
     clear
-    ui_heading 'PROTECTED KLIPPY CODE RELOAD'
+    ui_heading 'APPLY KLIPPER FEATURE-CODE UPDATES'
     cat <<'EOF'
 
 This starts a fresh Klippy host process to reload already-installed Python
@@ -264,8 +264,8 @@ menu_maintenance() {
         ui_heading 'MAINTENANCE AND RECOVERY'
         printf '\n'
         ui_menu_item 1 'Core component installer' "$(c_cyan 'OPEN MENU')"
-        ui_menu_item 2 'Protected configuration / macro restart' "$(c_cyan 'CONFIG ONLY')"
-        ui_menu_item 3 'Protected Klippy code reload' "$(c_yellow 'PYTHON CODE')"
+        ui_menu_item 2 'Apply macro or printer-setting updates'
+        ui_menu_item 3 'Apply Klipper feature-code updates'
         if is_cartographer; then
             ui_menu_item 4 'PR Touch SAVE_CONFIG cleanup' "$(if is_prtouch_clean; then state_complete; else state_available; fi)"
             ui_menu_item 5 'Factory reset and cleanup tools' "$(state_destructive)"

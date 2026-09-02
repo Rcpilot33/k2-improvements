@@ -339,11 +339,11 @@ When the installed path is already a symlink to the updated repository and no
 new include, generated copy, or installation step was added, reinstalling is
 not necessary. Use one of these actions under **Maintenance and recovery**:
 
-- **Protected configuration / macro restart** reloads `.cfg` files, resets the
+- **Apply macro or printer-setting updates** reloads `.cfg` files, resets the
   connected MCUs, and waits for K2 initialization.
-- **Protected Klippy code reload** starts a fresh Klippy process for existing
-  Python-module symlinks, then performs firmware-reset recovery and waits for
-  K2 initialization.
+- **Apply Klipper feature-code updates** starts a fresh Klippy process for
+  existing Python-module symlinks, then performs firmware-reset recovery and
+  waits for K2 initialization.
 
 Both actions require explicit confirmation because they stop an active print.
 If a commit added a module, include, generated file, or changed installer
