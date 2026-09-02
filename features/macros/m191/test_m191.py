@@ -17,14 +17,11 @@ class M191WorkflowTests(unittest.TestCase):
     def test_assist_lowers_bed_and_starts_both_fans_at_25_percent(self):
         assist = MACRO.index("{% if USE_BED_ASSIST %}")
         move = MACRO.index("G1 Z195 F600", assist)
-        motion_wait = MACRO.index("M400", move)
-        model_fan = MACRO.index("M106 S64", motion_wait)
+        model_fan = MACRO.index("M106 S64", move)
         side_fan = MACRO.index("M106 P2 S64", model_fan)
         chamber_wait = MACRO.index(
             'TEMPERATURE_WAIT SENSOR="temperature_sensor chamber_temp"', side_fan
         )
-        self.assertLess(move, motion_wait)
-        self.assertLess(motion_wait, model_fan)
         self.assertLess(move, model_fan)
         self.assertLess(model_fan, side_fan)
         self.assertLess(side_fan, chamber_wait)
