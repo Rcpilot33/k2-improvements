@@ -42,5 +42,6 @@ main-b0c7efe-axis-twist-v2|axis_twist_compensation|is_axis_twist|Axis Twist inst
 main-b0c7efe-carto-plate-v2|cartographer-plate-workflow|is_carto_plate_workflow|Cartographer plate workflow generation and guidance changed
 main-b0c7efe-plate-aware-v2|plate-aware-mesh|is_plate_aware_mesh|Plate-aware mesh installation and soak behavior changed
 updater-kamp-interactive-refresh-v1|kamp-adaptive-purge|is_kamp|KAMP updates now offer settings and firmware-retraction questions before the shared protected restart
+main-m191-chamber-circulation-v1|macros|is_macros|M191 now lowers the bed, circulates chamber air, and waits for the original bed temperature after assisted heating
 EOF
 }

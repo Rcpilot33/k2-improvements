@@ -3,11 +3,18 @@
 Adds `M191 S<temperature>` to set and wait for the K2 Plus chamber
 temperature.
 
-For targets above 35 C, the macro can temporarily use the heated bed and the
-internal circulation fan (`fan2`) to assist the chamber heater. Bed assistance
-is skipped when the chamber is already at the requested temperature. After the
-chamber reaches its target, the original slicer-requested bed target and
-circulation-fan power are restored.
+For targets above 35 C, the macro can temporarily use the heated bed to assist
+the chamber heater. During that active-heating path it homes when needed,
+moves the bed down to Z=195 so it sits below the chamber heater, and runs the
+model and side/auxiliary fans at 25% to circulate warm air. Bed assistance,
+movement, and circulation are all skipped when the chamber is already at the
+requested temperature.
+
+After the chamber reaches its target, both circulation fans are turned off and
+the original slicer-requested bed target is restored. Before returning to
+`START_PRINT`, the macro waits until the measured bed temperature is within
+5 C of that original nonzero target. A zero/off original bed target is restored
+but does not cause an impossible wait for the bed to cool to 5 C.
 
 The temperature-controlled **Chamber Fan** target is set 2 C above the exact
 requested chamber-heater target so normal sensor variation and control
