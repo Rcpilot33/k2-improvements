@@ -192,8 +192,14 @@ echo " skips by default. The preserved stock-purge fallback setting can"
 echo " opt into the original fixed path for this missing-data case only."
 echo ""
 echo "------------------------------------------------------------------"
-echo " 1. The installer will prompt for the required protected restart after"
-echo "    these instructions. Wait for the complete Klippy code reload and K2"
+if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" = "1" ]; then
+    echo " 1. This update or setup workflow will perform one final protected"
+    echo "    restart after every selected component has been installed. Wait for"
+else
+    echo " 1. The installer will prompt for the required protected restart after"
+    echo "    these instructions. Wait for"
+fi
+echo "    the complete Klippy code reload and K2"
 echo "    startup sequence. The new prime-tower scanner, [exclude_object], and"
 echo "    LINE_PURGE will then be active."
 echo ""

@@ -305,6 +305,29 @@ migration_component_restart_kind() {
     esac
 }
 
+migration_record_refreshed_component() {
+    local component succeeded_file dependency
+    component="$1"
+    succeeded_file="$2"
+
+    if ! grep -qxF "$component" "$succeeded_file" 2>/dev/null; then
+        printf '%s\n' "$component" >> "$succeeded_file"
+    fi
+
+    # Cartographer's installer always refreshes SAVE_CONFIG protection as a
+    # dependency. Record it now so a successful final restart does not ask the
+    # user to run the same installer a second time.
+    case "$component" in
+        cartographer) dependency=save-config-restart ;;
+        *) dependency= ;;
+    esac
+    if [ -n "$dependency" ] && \
+       migration_component_applicable "$dependency" 2>/dev/null && \
+       ! grep -qxF "$dependency" "$succeeded_file" 2>/dev/null; then
+        printf '%s\n' "$dependency" >> "$succeeded_file"
+    fi
+}
+
 migration_apply_components() {
     local components_file succeeded failures component restart_kind restart_script
     components_file="$1"
@@ -314,11 +337,18 @@ migration_apply_components() {
     failures=0
     restart_kind=config
 
-    while IFS= read -r component; do
+    # Read the plan on fd 3 so child installers retain the terminal on stdin.
+    # KAMP uses that terminal to offer its settings and firmware-retraction
+    # questions even though the final protected restart remains deferred.
+    while IFS= read -r component <&3; do
         [ -n "$component" ] || continue
+        if grep -qxF "$component" "$succeeded" 2>/dev/null; then
+            info "$(migration_component_label "$component") was already refreshed as a dependency"
+            continue
+        fi
         printf '\n--- Refreshing %s ---\n' "$(migration_component_label "$component")"
         if migration_repair_component "$component"; then
-            printf '%s\n' "$component" >> "$succeeded"
+            migration_record_refreshed_component "$component" "$succeeded"
             if [ "$(migration_component_restart_kind "$component")" = code ]; then
                 restart_kind=code
             fi
@@ -326,7 +356,7 @@ migration_apply_components() {
             warn "$(migration_component_label "$component") refresh failed; it remains pending"
             failures=$((failures + 1))
         fi
-    done < "$components_file"
+    done 3< "$components_file"
 
     if [ ! -s "$succeeded" ]; then
         rm -f "$succeeded"

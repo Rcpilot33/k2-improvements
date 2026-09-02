@@ -150,6 +150,19 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertIn("NO ACTIONS PENDING", menu)
         self.assertIn("Update installer / apply updates", menu)
 
+    def test_update_plan_keeps_terminal_input_available_to_installers(self):
+        menu = UPDATE_MENU.read_text(encoding="utf-8")
+        self.assertIn("read -r component <&3", menu)
+        self.assertIn('done 3< "$components_file"', menu)
+
+    def test_cartographer_refresh_records_save_config_dependency(self):
+        menu = UPDATE_MENU.read_text(encoding="utf-8")
+        self.assertIn("migration_record_refreshed_component", menu)
+        self.assertRegex(
+            menu,
+            r"cartographer\) dependency=save-config-restart",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
