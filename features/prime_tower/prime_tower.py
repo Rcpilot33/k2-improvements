@@ -285,6 +285,8 @@ class PrimeTower:
         self.padding = config.getfloat("padding", 0.5, minval=0.0)
         self.scan_timeout = config.getfloat(
             "scan_timeout", 120.0, minval=1.0)
+        self.scan_timeout_per_mb = config.getfloat(
+            "scan_timeout_per_mb", 10.0, minval=0.0)
         self._cache_key = None
         self._active_job = None
         self._status = self._empty_status()
@@ -483,7 +485,13 @@ class PrimeTower:
     def _start_scan(self, cache_key, path, eventtime):
         self._cancel_active_job()
         self._cache_key = cache_key
-        job = _ScanJob(cache_key, path, eventtime, self.scan_timeout)
+        file_size = cache_key[1]
+        size_timeout = 0.0
+        if file_size is not None:
+            size_timeout = (file_size / float(1024 * 1024)) * \
+                self.scan_timeout_per_mb
+        timeout = max(self.scan_timeout, size_timeout)
+        job = _ScanJob(cache_key, path, eventtime, timeout)
         self._active_job = job
         self._status = self._empty_status(path, ready=False)
         self._report_scan_status()

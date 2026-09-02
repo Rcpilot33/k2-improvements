@@ -267,9 +267,11 @@ class _FakePrinter:
 
 
 class _FakeConfig:
-    def __init__(self, path, reactor=None, scan_timeout=None):
+    def __init__(self, path, reactor=None, scan_timeout=None,
+                 scan_timeout_per_mb=None):
         self.printer = _FakePrinter(path, reactor)
         self.scan_timeout = scan_timeout
+        self.scan_timeout_per_mb = scan_timeout_per_mb
 
     def get_printer(self):
         return self.printer
@@ -277,6 +279,9 @@ class _FakeConfig:
     def getfloat(self, name, default, minval=None):
         if name == "scan_timeout" and self.scan_timeout is not None:
             return self.scan_timeout
+        if name == "scan_timeout_per_mb" and \
+                self.scan_timeout_per_mb is not None:
+            return self.scan_timeout_per_mb
         return default
 
 
@@ -305,6 +310,24 @@ class _FailingThread(_DeferredThread):
 
 
 class PrimeTowerStatusTests(unittest.TestCase):
+    def test_small_file_uses_minimum_scan_timeout(self):
+        scanner = PRIME_TOWER.PrimeTower(_FakeConfig(
+            "unused.gcode", scan_timeout=120.0,
+            scan_timeout_per_mb=10.0))
+        scanner._start_scan(("small.gcode", 1024 * 1024, 1),
+                            "small.gcode", 5.0)
+        self.assertEqual(scanner._active_job.deadline, 125.0)
+        scanner._cancel_active_job()
+
+    def test_large_file_timeout_scales_with_file_size(self):
+        scanner = PRIME_TOWER.PrimeTower(_FakeConfig(
+            "unused.gcode", scan_timeout=120.0,
+            scan_timeout_per_mb=10.0))
+        scanner._start_scan(("large.gcode", 40 * 1024 * 1024, 1),
+                            "large.gcode", 5.0)
+        self.assertEqual(scanner._active_job.deadline, 405.0)
+        scanner._cancel_active_job()
+
     def test_registers_cartographer_mesh_hook_for_connect(self):
         scanner = PRIME_TOWER.PrimeTower(_FakeConfig("unused.gcode"))
         self.assertIs(
