@@ -16,12 +16,6 @@ import threading
 
 
 _NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
-_PARAM_RE = re.compile(r"(?:^|\s)([XY])\s*(%s)" % _NUMBER, re.IGNORECASE)
-_E_PARAM_RE = re.compile(r"(?:^|\s)E\s*(%s)" % _NUMBER, re.IGNORECASE)
-_COMMAND_RE = re.compile(r"^\s*([GMT]\d+)\b", re.IGNORECASE)
-_TYPE_RE = re.compile(r"^\s*;\s*TYPE\s*:\s*(.*?)\s*$", re.IGNORECASE)
-_TOWER_END_RE = re.compile(
-    r"^\s*;\s*WIPE_TOWER_END\b", re.IGNORECASE)
 _TOWER_MARKER_BYTES_RE = re.compile(
     br"(?im)^[ \t]*;[ \t]*TYPE[ \t]*:[ \t]*Prime[ \t]+tower[ \t]*\r?$"
 )
@@ -81,6 +75,95 @@ def _check_cancel(cancel_event):
 def _finite_point(point):
     return point[0] is not None and point[1] is not None \
         and math.isfinite(point[0]) and math.isfinite(point[1])
+
+
+def _comment_type(line):
+    """Return a normalized TYPE value for a standalone byte comment."""
+    comment = line.lstrip()
+    if not comment.startswith(b";"):
+        return None
+    comment = comment[1:].strip().lower()
+    if not comment.startswith(b"type"):
+        return None
+    value = comment[4:].lstrip()
+    if not value.startswith(b":"):
+        return None
+    return value[1:].strip()
+
+
+def _is_tower_end(line):
+    """Recognize WIPE_TOWER_END without a regex on every G-code line."""
+    comment = line.lstrip()
+    if not comment.startswith(b";"):
+        return False
+    comment = comment[1:].lstrip().lower()
+    marker = b"wipe_tower_end"
+    if not comment.startswith(marker):
+        return False
+    suffix = comment[len(marker):len(marker) + 1]
+    return not suffix or not (suffix.isalnum() or suffix == b"_")
+
+
+def _command_number(code):
+    """Return (command letter, number, parameter offset), if supported."""
+    if not code:
+        return None
+    command_letter = code[:1].upper()
+    if command_letter not in (b"G", b"M"):
+        return None
+    index = 1
+    while index < len(code) and 48 <= code[index] <= 57:
+        index += 1
+    if index == 1:
+        return None
+    # Preserve the old regex's word-boundary behavior for malformed input.
+    if index < len(code) and code[index] not in b" \t;\r\n":
+        return None
+    return command_letter, int(code[1:index]), index
+
+
+def _motion_parameters(code, offset):
+    """Return X, Y, and E values using a cheap whitespace-token parser.
+
+    Creality Print emits normal whitespace-delimited G-code. Supporting an
+    axis letter separated from its value retains the flexibility of the old
+    regular expressions without applying them to every motion line.
+    """
+    x_value = y_value = e_value = None
+    pending_axis = None
+    for token in code[offset:].split():
+        if pending_axis is not None:
+            try:
+                value = float(token)
+            except ValueError:
+                pending_axis = None
+            else:
+                if pending_axis == b"X":
+                    x_value = value
+                elif pending_axis == b"Y":
+                    y_value = value
+                else:
+                    e_value = value
+                pending_axis = None
+                continue
+
+        axis = token[:1].upper()
+        if axis not in (b"X", b"Y", b"E"):
+            continue
+        if len(token) == 1:
+            pending_axis = axis
+            continue
+        try:
+            value = float(token[1:])
+        except ValueError:
+            continue
+        if axis == b"X":
+            x_value = value
+        elif axis == b"Y":
+            y_value = value
+        else:
+            e_value = value
+    return x_value, y_value, e_value
 
 
 def _file_contains_prime_tower(path, cancel_event=None):
@@ -159,13 +242,18 @@ def parse_prime_tower(path, padding=0.5, cancel_event=None):
     # cannot time out while its first tower marker is hundreds of MB away.
     if footer["enabled"] and footer["no_sparse"]:
         raise _UnsupportedPrimeTower(_NO_SPARSE_BLOCK_REASON)
-    if not _file_contains_prime_tower(path, cancel_event):
-        return {
-            "detected": False,
-            "polygon": [],
-            "bounds": [],
-            "blocks": 0,
-        }
+    # An enabled footer already tells us to expect tower toolpaths, so avoid
+    # reading the file once for marker discovery and then again for geometry.
+    # Older slicers may omit or misreport this footer; retain the quick byte
+    # marker pass as a compatibility fallback for those files.
+    if not footer["enabled"]:
+        if not _file_contains_prime_tower(path, cancel_event):
+            return {
+                "detected": False,
+                "polygon": [],
+                "bounds": [],
+                "blocks": 0,
+            }
     # The real toolpath marker remains the authority and fallback for files
     # from slicer versions that omit or misreport enable_prime_tower.
     if footer["no_sparse"]:
@@ -178,69 +266,73 @@ def parse_prime_tower(path, padding=0.5, cancel_event=None):
     e_pos = 0.0
     in_tower = False
     tower_blocks = 0
-    points = []
+    x_min = x_max = y_min = y_max = None
 
-    with open(path, "r", encoding="utf-8", errors="replace") as handle:
+    with open(path, "rb") as handle:
         for line_number, raw_line in enumerate(handle):
             if line_number % _DETAILED_CANCEL_INTERVAL == 0:
                 _check_cancel(cancel_event)
-            type_match = _TYPE_RE.match(raw_line)
-            if type_match is not None:
-                in_tower = type_match.group(1).strip().lower() == "prime tower"
-                if in_tower:
-                    tower_blocks += 1
+            line = raw_line.lstrip()
+            if not line:
                 continue
-            if in_tower and _TOWER_END_RE.match(raw_line):
-                in_tower = False
+            if line.startswith(b";"):
+                type_value = _comment_type(line)
+                if type_value is not None:
+                    in_tower = type_value == b"prime tower"
+                    if in_tower:
+                        tower_blocks += 1
+                elif in_tower and _is_tower_end(line):
+                    in_tower = False
                 continue
 
-            code = raw_line.split(";", 1)[0].strip()
+            comment_offset = line.find(b";")
+            code = (line if comment_offset < 0 else
+                    line[:comment_offset]).rstrip()
             if not code:
                 continue
-            command_match = _COMMAND_RE.match(code)
-            if command_match is None:
+            command_info = _command_number(code)
+            if command_info is None:
                 continue
-            command = command_match.group(1).upper()
-            if command == "G90":
+            command_letter, command_number, parameter_offset = command_info
+            if command_letter == b"G" and command_number == 90:
                 absolute_xy = True
                 continue
-            if command == "G91":
+            if command_letter == b"G" and command_number == 91:
                 absolute_xy = False
                 continue
-            if command == "M82":
+            if command_letter == b"M" and command_number == 82:
                 absolute_e = True
                 continue
-            if command == "M83":
+            if command_letter == b"M" and command_number == 83:
                 absolute_e = False
                 continue
 
-            params = dict((axis.upper(), float(value))
-                          for axis, value in _PARAM_RE.findall(code))
-            e_match = _E_PARAM_RE.search(code)
-            e_value = float(e_match.group(1)) if e_match is not None else None
-            if command == "G92":
-                if "X" in params:
-                    x_pos = params["X"]
-                if "Y" in params:
-                    y_pos = params["Y"]
+            if command_letter != b"G" or command_number not in \
+                    (0, 1, 2, 3, 92):
+                continue
+            x_value, y_value, e_value = _motion_parameters(
+                code, parameter_offset)
+            if command_number == 92:
+                if x_value is not None:
+                    x_pos = x_value
+                if y_value is not None:
+                    y_pos = y_value
                 if e_value is not None:
                     e_pos = e_value
-                continue
-            if command not in ("G0", "G1", "G2", "G3"):
                 continue
 
             old_x, old_y = x_pos, y_pos
             new_x, new_y = x_pos, y_pos
-            if "X" in params:
+            if x_value is not None:
                 if absolute_xy or x_pos is None:
-                    new_x = params["X"]
+                    new_x = x_value
                 else:
-                    new_x = x_pos + params["X"]
-            if "Y" in params:
+                    new_x = x_pos + x_value
+            if y_value is not None:
                 if absolute_xy or y_pos is None:
-                    new_y = params["Y"]
+                    new_y = y_value
                 else:
-                    new_y = y_pos + params["Y"]
+                    new_y = y_pos + y_value
             e_delta = 0.0
             if e_value is not None:
                 e_delta = e_value - e_pos if absolute_e else e_value
@@ -248,11 +340,17 @@ def parse_prime_tower(path, padding=0.5, cancel_event=None):
             x_pos, y_pos = new_x, new_y
             if in_tower and e_delta > 0.000001:
                 if _finite_point((old_x, old_y)):
-                    points.append((old_x, old_y))
+                    x_min = old_x if x_min is None else min(x_min, old_x)
+                    x_max = old_x if x_max is None else max(x_max, old_x)
+                    y_min = old_y if y_min is None else min(y_min, old_y)
+                    y_max = old_y if y_max is None else max(y_max, old_y)
                 if _finite_point((x_pos, y_pos)):
-                    points.append((x_pos, y_pos))
+                    x_min = x_pos if x_min is None else min(x_min, x_pos)
+                    x_max = x_pos if x_max is None else max(x_max, x_pos)
+                    y_min = y_pos if y_min is None else min(y_min, y_pos)
+                    y_max = y_pos if y_max is None else max(y_max, y_pos)
 
-    if not points:
+    if x_min is None:
         return {
             "detected": False,
             "polygon": [],
@@ -261,10 +359,10 @@ def parse_prime_tower(path, padding=0.5, cancel_event=None):
         }
 
     padding = max(0.0, float(padding))
-    x_min = min(point[0] for point in points) - padding
-    x_max = max(point[0] for point in points) + padding
-    y_min = min(point[1] for point in points) - padding
-    y_max = max(point[1] for point in points) + padding
+    x_min -= padding
+    x_max += padding
+    y_min -= padding
+    y_max += padding
     bounds = [x_min, y_min, x_max, y_max]
     return {
         "detected": True,

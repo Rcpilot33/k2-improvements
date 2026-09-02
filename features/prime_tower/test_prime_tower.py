@@ -69,6 +69,33 @@ class PrimeTowerParserTests(unittest.TestCase):
         self.assertTrue(result["detected"])
         self.assertEqual(result["bounds"], [9.5, 19.5, 20.5, 30.5])
 
+    def test_enabled_footer_skips_redundant_marker_pass(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir, "tower.gcode")
+            path.write_text(
+                "G90\nM83\nG1 X10 Y20\n;TYPE:Prime tower\n"
+                "G1 X20 Y30 E1\n; WIPE_TOWER_END\n"
+                "; enable_prime_tower = 1\n"
+                "; wipe_tower_no_sparse_layers = 0\n",
+                encoding="utf-8")
+            with mock.patch.object(
+                    PRIME_TOWER, "_file_contains_prime_tower",
+                    side_effect=AssertionError("redundant marker scan")):
+                result = PRIME_TOWER.parse_prime_tower(str(path))
+
+        self.assertTrue(result["detected"])
+        self.assertEqual(result["bounds"], [9.5, 19.5, 20.5, 30.5])
+
+    def test_binary_parser_accepts_lowercase_and_spaced_parameters(self):
+        result = self.parse("""g90
+m83
+g1 x 10 y 20
+; type : prime tower
+g1 x 20 y 30 e 1
+; wipe_tower_end
+""", padding=0)
+        self.assertEqual(result["bounds"], [10.0, 20.0, 20.0, 30.0])
+
     def test_no_tower_skips_detailed_text_scan(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir, "large-single-color.gcode")
