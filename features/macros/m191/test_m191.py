@@ -17,11 +17,14 @@ class M191WorkflowTests(unittest.TestCase):
     def test_assist_lowers_bed_and_starts_both_fans_at_25_percent(self):
         assist = MACRO.index("{% if USE_BED_ASSIST %}")
         move = MACRO.index("G1 Z195 F600", assist)
-        model_fan = MACRO.index("M106 S64", move)
+        motion_wait = MACRO.index("M400", move)
+        model_fan = MACRO.index("M106 S64", motion_wait)
         side_fan = MACRO.index("M106 P2 S64", model_fan)
         chamber_wait = MACRO.index(
             'TEMPERATURE_WAIT SENSOR="temperature_sensor chamber_temp"', side_fan
         )
+        self.assertLess(move, motion_wait)
+        self.assertLess(motion_wait, model_fan)
         self.assertLess(move, model_fan)
         self.assertLess(model_fan, side_fan)
         self.assertLess(side_fan, chamber_wait)
@@ -46,10 +49,15 @@ class M191WorkflowTests(unittest.TestCase):
 
     def test_zero_bed_target_does_not_wait_for_unreachable_temperature(self):
         self.assertIn("{% if ORIGINAL_BED_TARGET > 0.0 %}", MACRO)
-        self.assertIn("Original bed target was off; skipping bed target wait", MACRO)
+        self.assertIn("Original bed target was off, skipping bed target wait", MACRO)
 
     def test_old_direct_fan2_override_is_removed(self):
         self.assertNotIn("SET_PIN PIN=fan2", MACRO)
+
+    def test_respond_messages_do_not_contain_k2_comment_delimiter(self):
+        for line in MACRO.splitlines():
+            if "RESPOND MSG=" in line:
+                self.assertNotIn(";", line, msg=line)
 
 
 if __name__ == "__main__":
