@@ -56,11 +56,13 @@ installation. The installer performs a firmware restart and waits for K2 motor
 initialization before returning.
 
 The Cartographer installation also supplies Creality's inter-print
-`SAFE_MOVE_Z` compatibility command. It restricts the closed print service to
-its observed Z=20 endpoint, performs the move only while the printer is idle,
-and reports completion through `virtual_sdcard.run_dis` as the stock PR Touch
-extension does. Cartographer does not provide the stock nozzle-pressure
-collision sensing during this move.
+`SAFE_MOVE_Z` compatibility command. It permits only negative Z travel that
+stops at or above the observed Z=20 clearance floor, performs the move only
+while the printer is idle, and reports completion through
+`virtual_sdcard.run_dis` as the stock PR Touch extension does. The endpoint may
+remain above Z=20 when Creality's service calculated its relative travel before
+cancellation cleanup finished. Cartographer does not provide the stock
+nozzle-pressure collision sensing during this move.
 
 On a direct Cartographer install or a conversion from the stock-probe setup,
 the installer resets the PLA, PETG, ABS, ASA, DEFAULT, and PROBE offsets in
