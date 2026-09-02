@@ -106,6 +106,38 @@ class MigrationCatalogTests(unittest.TestCase):
             recommended(installed, completed=macro_ids), {"save-config-restart"}
         )
 
+    def test_integration_promotion_recommends_only_installed_changed_components(self):
+        installed = {
+            "cartographer",
+            "macros",
+            "save-config-restart",
+            "abort_homing",
+            "screws_tilt_adjust",
+            "kamp-adaptive-purge",
+            "r3men-bed",
+        }
+        completed_before_promotion = {
+            migration_id
+            for migration_id, _component, _detector, _reason in entries()
+            if not migration_id.startswith("main-b0c7efe-")
+        }
+        self.assertEqual(
+            recommended(installed, completed=completed_before_promotion),
+            {
+                "cartographer",
+                "macros",
+                "save-config-restart",
+                "abort_homing",
+                "screws_tilt_adjust",
+                "kamp-adaptive-purge",
+            },
+        )
+
+    def test_release_catalog_does_not_reuse_test_branch_ids(self):
+        self.assertFalse(
+            any(migration_id.startswith("integration-") for migration_id, *_ in entries())
+        )
+
     def test_every_catalog_component_has_a_direct_dispatch_and_label(self):
         menu = UPDATE_MENU.read_text(encoding="utf-8")
         for component in KNOWN_COMPONENTS:

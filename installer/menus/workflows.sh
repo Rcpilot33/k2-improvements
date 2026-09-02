@@ -194,39 +194,107 @@ EOF
     press_enter
 }
 
+run_protected_firmware_restart() {
+    clear
+    ui_heading 'APPLY MACRO OR PRINTER-SETTING UPDATES'
+    cat <<'EOF'
+
+This reloads Klipper configuration and macros, resets the connected MCUs, and
+waits for the K2 motor-controller initialization interval to finish.
+
+Use this after updating an already-installed symlinked .cfg file or making a
+configuration-only change. It does not reload imported Klippy Python modules.
+
+The restart stops an active print. Confirm the printer is idle before
+continuing.
+
+EOF
+    if ! confirm 'Run the protected firmware restart now?'; then
+        printf '\nCancelled; no restart was requested.\n'
+        press_enter
+        return
+    fi
+
+    printf '\n'
+    if sh "$INSTALLER_DIR/scripts/firmware_restart.sh"; then
+        printf '\n%s\n' "$(c_green 'Protected firmware restart completed successfully.')"
+    else
+        printf '\n%s\n' "$(c_red 'Protected firmware restart failed.')"
+        printf 'Check Fluidd and fully power-cycle before the next G28.\n'
+    fi
+    press_enter
+}
+
+run_protected_klippy_code_restart() {
+    clear
+    ui_heading 'APPLY KLIPPER FEATURE-CODE UPDATES'
+    cat <<'EOF'
+
+This starts a fresh Klippy host process to reload already-installed Python
+modules, then performs firmware-reset recovery and waits for the complete K2
+motor-controller initialization interval.
+
+Use this after updating Python source whose installer symlink is already in
+place. If an update added a new module, include, generated file, or changed
+installation wiring, reinstall that component instead.
+
+The reload stops an active print. Confirm the printer is idle before
+continuing. Never home between the host reload and firmware-reset stages.
+
+EOF
+    if ! confirm 'Run the protected Klippy code reload now?'; then
+        printf '\nCancelled; no restart was requested.\n'
+        press_enter
+        return
+    fi
+
+    printf '\n'
+    if sh "$INSTALLER_DIR/scripts/klippy_code_restart.sh"; then
+        printf '\n%s\n' "$(c_green 'Klippy Python modules and K2 MCU state reloaded successfully.')"
+    else
+        printf '\n%s\n' "$(c_red 'Protected Klippy code reload failed.')"
+        printf 'Check Fluidd and fully power-cycle before the next G28.\n'
+    fi
+    press_enter
+}
+
 menu_maintenance() {
     while :; do
         clear
         ui_heading 'MAINTENANCE AND RECOVERY'
         printf '\n'
         ui_menu_item 1 'Core component installer' "$(c_cyan 'OPEN MENU')"
+        ui_menu_item 2 'Apply macro or printer-setting updates'
+        ui_menu_item 3 'Apply Klipper feature-code updates'
         pending_updates=$(migration_pending_component_count)
         if [ "$pending_updates" -gt 0 ]; then
             update_state=$(c_yellow "$pending_updates ACTION(S) PENDING")
         else
             update_state=$(c_green 'CURRENT')
         fi
-        ui_menu_item 2 'Review installer update actions' "$update_state"
+        ui_menu_item 4 'Review installer update actions' "$update_state"
         if is_cartographer; then
-            ui_menu_item 3 'PR Touch SAVE_CONFIG cleanup' "$(if is_prtouch_clean; then state_complete; else state_available; fi)"
-            ui_menu_item 4 'Factory reset and cleanup tools' "$(state_destructive)"
-            printf '\n  0. Back\n\nSelect [0-4]: '
+            ui_menu_item 5 'PR Touch SAVE_CONFIG cleanup' "$(if is_prtouch_clean; then state_complete; else state_available; fi)"
+            ui_menu_item 6 'Factory reset and cleanup tools' "$(state_destructive)"
+            printf '\n  0. Back\n\nSelect [0-6]: '
         else
-            ui_menu_item 3 'Factory reset and cleanup tools' "$(state_destructive)"
-            printf '\n  0. Back\n\nSelect [0-3]: '
+            ui_menu_item 5 'Factory reset and cleanup tools' "$(state_destructive)"
+            printf '\n  0. Back\n\nSelect [0-5]: '
         fi
         read -r c
         case "$c" in
             1) menu_features ;;
-            2) menu_update_results ;;
-            3)
+            2) run_protected_firmware_restart ;;
+            3) run_protected_klippy_code_restart ;;
+            4) menu_update_results ;;
+            5)
                 if is_cartographer; then
                     run_extra_name prtouch-cleanup
                 else
                     menu_factory_reset
                 fi
                 ;;
-            4)
+            6)
                 if is_cartographer; then
                     menu_factory_reset
                 fi

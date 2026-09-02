@@ -20,4 +20,4 @@ python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
 
 echo "Installed axis_twist_compensation"
 
-sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
+sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"

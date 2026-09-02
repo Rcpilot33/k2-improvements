@@ -167,19 +167,6 @@ migration_mark_component_current() {
     migration_write_atomic "$MIGRATION_COMPLETED" "$temporary"
 }
 
-migration_mark_all_installed_current() {
-    local component
-    for component in cartographer save-config-restart abort_homing \
-        screws_tilt_adjust macros r3men-bed kamp-adaptive-purge \
-        axis_twist_compensation cartographer-plate-workflow plate-aware-mesh; do
-        if migration_component_installed "$component" 2>/dev/null; then
-            migration_mark_component_current "$component" || true
-        fi
-    done
-    mkdir -p "$MIGRATION_STATE_DIR"
-    : > "$MIGRATION_INITIALIZED"
-}
-
 migration_print_details() {
     local component
     clear
@@ -307,19 +294,34 @@ migration_repair_component() {
     esac
 }
 
+migration_component_restart_kind() {
+    case "$1" in
+        cartographer|save-config-restart|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|axis_twist_compensation)
+            echo code
+            ;;
+        *)
+            echo config
+            ;;
+    esac
+}
+
 migration_apply_components() {
-    local components_file succeeded failures component restart_script
+    local components_file succeeded failures component restart_kind restart_script
     components_file="$1"
     migration_require_idle || return 1
     succeeded="/tmp/k2-update-succeeded.$$"
     : > "$succeeded"
     failures=0
+    restart_kind=config
 
     while IFS= read -r component; do
         [ -n "$component" ] || continue
         printf '\n--- Refreshing %s ---\n' "$(migration_component_label "$component")"
         if migration_repair_component "$component"; then
             printf '%s\n' "$component" >> "$succeeded"
+            if [ "$(migration_component_restart_kind "$component")" = code ]; then
+                restart_kind=code
+            fi
         else
             warn "$(migration_component_label "$component") refresh failed; it remains pending"
             failures=$((failures + 1))
@@ -333,7 +335,11 @@ migration_apply_components() {
     fi
 
     printf '\n--- Final protected restart ---\n'
-    restart_script="$INSTALLER_DIR/scripts/firmware_restart.sh"
+    if [ "$restart_kind" = code ] || [ -f /tmp/k2-klippy-code-restart-required ]; then
+        restart_script="$INSTALLER_DIR/scripts/klippy_code_restart.sh"
+    else
+        restart_script="$INSTALLER_DIR/scripts/firmware_restart.sh"
+    fi
 
     if K2_DEFER_FIRMWARE_RESTART=0 sh "$restart_script"; then
         while IFS= read -r component; do

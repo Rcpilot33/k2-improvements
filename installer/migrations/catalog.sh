@@ -32,5 +32,14 @@ main-c293d81-plate-soak|plate-aware-mesh|is_plate_aware_mesh|Missing saved-mesh 
 main-b80d3f7-r3men-install|r3men-bed|is_r3men_bed|R3MEN installation formatting was corrected
 main-d6c9674-r3men-power|r3men-bed|is_r3men_bed|R3MEN heater-bed power configuration was corrected
 updater-40c2982-kamp-preservation-scope-v1|kamp-adaptive-purge|is_kamp|KAMP legacy migration now keeps only user-facing settings and removes defaults imported by the updater
+main-b0c7efe-cartographer-v2|cartographer|is_cartographer|Cartographer Python reload, adaptive mesh, prime-tower, and Safe Z fixes are available
+main-b0c7efe-macros-v2|macros|is_macros|Validated START_PRINT, M191, mesh, and prime-tower workflow fixes are available
+main-b0c7efe-save-config-v2|save-config-restart|is_save_config_restart|SAVE_CONFIG now uses the protected Klippy-code restart path
+main-b0c7efe-abort-homing-v2|abort_homing|is_abort_homing|Abort Homing now reloads patched Python safely
+main-b0c7efe-screws-tilt-v2|screws_tilt_adjust|is_screws_tilt|Screws Tilt installation now reloads patched Python safely
+main-b0c7efe-kamp-v2|kamp-adaptive-purge|is_kamp|KAMP settings, purge safety, prime-tower scanning, and activation changed
+main-b0c7efe-axis-twist-v2|axis_twist_compensation|is_axis_twist|Axis Twist installation now uses the protected Klippy-code restart
+main-b0c7efe-carto-plate-v2|cartographer-plate-workflow|is_carto_plate_workflow|Cartographer plate workflow generation and guidance changed
+main-b0c7efe-plate-aware-v2|plate-aware-mesh|is_plate_aware_mesh|Plate-aware mesh installation and soak behavior changed
 EOF
 }

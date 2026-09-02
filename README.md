@@ -32,14 +32,18 @@ The menu provides separate, resumable paths for:
 
 > [!CAUTION]
 > Do not use Klipper's host-only `RESTART` command or
-> `/etc/init.d/klipper restart` before homing. The installers, protected
-> `SAVE_CONFIG`, and documented restart paths use `FIRMWARE_RESTART`, wait for
-> the K2 motor controllers to initialize, and then return control. If that
-> sequence reports an error, power-cycle the printer before running `G28`.
+> `/etc/init.d/klipper restart` by itself before homing. Configuration-only
+> changes and protected `SAVE_CONFIG` use `FIRMWARE_RESTART`. Installers that
+> replace loaded Klippy Python modules use a guarded host restart followed by
+> firmware-reset recovery and the K2 initialization wait. If a protected
+> sequence reports an error, power-cycle before running `G28`.
 
-These improvements are not compatible with Creality's automatic calibration
-workflow. Use the provided manual calibration, bed-mesh, and tuning workflows
-after installation.
+These improvements are not compatible with Creality Print's **Print
+Calibration** option or Creality's automatic print-calibration workflow.
+Leave that option disabled when sending a print, then use the provided manual
+calibration, bed-mesh, and tuning workflows after installation. Enabling it can
+insert a separate Creality-controlled bed-stabilization delay before
+`START_PRINT`; see the [FAQ](./FAQ.md#can-i-still-use-the-automatic-calibration-features).
 
 ## Validated firmware
 
@@ -126,6 +130,8 @@ the [complete installation guide](./INSTALL.md).
 | Add one optional feature | **Optional extras** |
 | Repair one core component | **Maintenance and recovery → Core component installer** |
 | Update installed components after an installer update | **Update installer → Update and review required actions** |
+| Apply changed configuration or macros | **Maintenance and recovery → Apply macro or printer-setting updates** |
+| Apply already-installed Klippy feature code | **Maintenance and recovery → Apply Klipper feature-code updates** |
 
 The menu detects installed components, skips completed work, and reports what
 was installed, skipped, or failed. The stock-probe installer will stop if it
@@ -151,8 +157,10 @@ See the [bed-mesh guide](./features/macros/bed_mesh/README.md).
 ### Cartographer
 
 Confirm that the selected mount profile matches the physical mount and required
-spacers. The Jamin profile is printer-tested. The JimmyV profile is
-**untested** and uses JimmyV's documented offsets. Custom offsets are supported.
+spacers. The Jamin profile is printer-tested. The JimmyV legacy and final
+profiles are **untested** and use JimmyV's published offsets. Final profiles
+are provided for mounts without and with the 3DO nozzle camera. Custom offsets
+are supported.
 
 Complete Scan and Touch calibration, then tune final print Z from an actual
 first layer. Touch calibration selects the detection threshold and speed; its

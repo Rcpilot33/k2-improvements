@@ -27,8 +27,9 @@ See the repository [validation report](../../../../VALIDATION.md).
 
 ## Use
 
-1. For either KAMP variant, enable **Label objects** or
-   **Use exclude_object** in the slicer.
+1. For either KAMP variant in Creality Print 7.x, enable **Exclude objects**
+   under Process settings -> Others. **Label objects** alone is insufficient.
+   In OrcaSlicer, enable **Label objects** or **Use exclude_object**.
 2. Open the printer profile's **Machine start G-code** setting.
 3. Replace the complete block with the desired template.
 4. Save the profile and slice a test object.

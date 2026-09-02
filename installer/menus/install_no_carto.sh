@@ -50,6 +50,8 @@ menu_install_no_carto() {
     if ! confirm "Proceed with stock probe / no-Cartographer setup?"; then return 0; fi
 
     local installed=0 skipped=0 failed=0
+    local migration_installed_file="/tmp/k2-setup-installed.$$"
+    : > "$migration_installed_file"
     OLDIFS="$IFS"
     IFS='
 '
@@ -73,8 +75,15 @@ menu_install_no_carto() {
 
         local pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
         info "running $name (HOME=$pwd_home)"
-        if HOME="$pwd_home" sh "$script"; then
+        # A full setup reloads Klipper once after all components are installed.
+        # Individual component installers retain their immediate restart.
+        if HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 sh "$script"; then
             installed=$((installed+1))
+            case "$name" in
+                screws_tilt_adjust|abort_homing|save-config-restart|macros)
+                    printf '%s\n' "$name" >> "$migration_installed_file"
+                    ;;
+            esac
         else
             warn "$name install.sh failed (continuing)"
             failed=$((failed+1))
@@ -92,15 +101,28 @@ menu_install_no_carto() {
         info "Entware unslung boot hook installed (S99unslung)"
     fi
 
+    printf '\n--- final protected restart ---\n'
+    if [ -f /tmp/k2-klippy-code-restart-required ]; then
+        final_restart="$INSTALLER_DIR/scripts/klippy_code_restart.sh"
+    else
+        final_restart="$INSTALLER_DIR/scripts/firmware_restart.sh"
+    fi
+    if ! K2_DEFER_FIRMWARE_RESTART=0 sh "$final_restart"; then
+        warn "final protected restart failed"
+        failed=$((failed+1))
+    elif command -v migration_mark_component_current >/dev/null 2>&1; then
+        while IFS= read -r name; do
+            migration_mark_component_current "$name" || true
+        done < "$migration_installed_file"
+    fi
+    rm -f "$migration_installed_file"
+
     printf '\n%s\n' '----------------------------------------------------------------'
     printf 'Stock-probe summary: %s installed, %s skipped, %s failed\n' \
         "$(c_green "$installed")" "$skipped" "$(c_red "$failed")"
     printf '%s\n\n' '----------------------------------------------------------------'
     printf 'Detected setup: %s\n\n' "$(detect_install_profile)"
     if [ "$failed" -eq 0 ]; then
-        if command -v migration_mark_all_installed_current >/dev/null 2>&1; then
-            migration_mark_all_installed_current
-        fi
         printf '%s\n' "$(c_green 'All requested components completed without a restart error.')"
         printf 'Continue with manual calibration.\n\n'
     else
