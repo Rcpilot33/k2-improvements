@@ -1,8 +1,8 @@
 # Cartographer Mount Offset Setup
 
-Switches between the Jamin/default and JimmyV Cartographer mounts by editing
-only `custom/overrides.cfg`. It never modifies `custom/cartographer.cfg` or
-`printer.cfg`.
+Switches among the Jamin/default, JimmyV legacy, and JimmyV final Cartographer
+mounts by editing only `custom/overrides.cfg`. It never modifies
+`custom/cartographer.cfg` or `printer.cfg`.
 
 ## Profiles
 
@@ -24,10 +24,11 @@ With those overrides absent, the values in `cartographer.cfg` are effective:
 | `stepper_y position_endstop` | `-0.4` |
 | `stepper_y position_min` | `-0.4` |
 
-### JimmyV back-mount
+### JimmyV legacy back-mount
 
 This profile has not been tested on printer hardware in this fork. The
-installer writes the offsets specified in JimmyV's mount documentation:
+installer retains the offsets from JimmyV's earlier mount documentation for
+users who already have that mount:
 
 | Setting | Value |
 | --- | --- |
@@ -40,6 +41,36 @@ JimmyV also says to comment out the `[stepper_y]` `-0.4` values in
 the installer reads the stock `position_endstop` and `position_min` from
 `printer.cfg` and writes them to `[stepper_y]` in `overrides.cfg`. The later
 override has the same effective result.
+
+### JimmyV final back-mount without 3DO camera
+
+This profile has not been tested on printer hardware in this fork. Its values
+come from JimmyV's final published model page:
+
+| Setting | Value |
+| --- | --- |
+| `cartographer y_offset` | `12` |
+| `bed_mesh mesh_min` | `5, 12` |
+| `bed_mesh mesh_max` | `345, 340` |
+
+The installer restores the stock `printer.cfg` stepper-Y values through
+`overrides.cfg`, as described for the legacy profile.
+
+### JimmyV final back-mount with 3DO camera
+
+This profile has not been tested on printer hardware in this fork. It is for
+JimmyV's final mount with the 3DO v2 nozzle camera:
+
+| Setting | Value |
+| --- | --- |
+| `cartographer y_offset` | `17` |
+| `bed_mesh mesh_min` | `5, 17` |
+| `bed_mesh mesh_max` | `345, 340` |
+
+The installer restores the stock `printer.cfg` stepper-Y values through
+`overrides.cfg`, as described for the legacy profile.
+
+Source for both final profiles: [JimmyV's final Cartographer rear-mount model](https://www.crealitycloud.com/model-detail/cartographer-rear-mount-3do-nozzle-camera?profileId=6a7b9ef075286de2e713afa8).
 
 ### Custom mount
 

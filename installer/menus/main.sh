@@ -55,23 +55,3 @@ main_menu() {
         esac
     done
 }
-
-menu_update_installer() {
-    clear
-    ui_heading 'UPDATE INSTALLER'
-    printf '\n'
-    ensure_path
-    if [ -d "$INSTALLER_DIR/.git" ]; then
-        info "git pull in $INSTALLER_DIR"
-        if ( cd "$INSTALLER_DIR" && git pull --ff-only ); then
-            printf '\n%s\n' "$(c_green 'Update complete. Reloading the installer...')"
-            exec sh "$INSTALLER_DIR/menu.sh"
-        else
-            warn 'git pull failed; the current menu remains loaded.'
-        fi
-    else
-        warn "$INSTALLER_DIR is not a git checkout - cannot auto-update."
-        warn 'Re-run bootstrap.sh from the host to refresh.'
-    fi
-    press_enter
-}

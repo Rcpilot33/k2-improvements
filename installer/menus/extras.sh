@@ -6,7 +6,7 @@
 # return 0 for the extra to be installable - empty if no precondition).
 _EXTRAS='prtouch-cleanup|is_prtouch_clean|Remove orphan [prtouch_v3] SAVE_CONFIG header|installer/extras/prtouch-cleanup/install.sh|is_cartographer
 surface-selection-wrapper|is_surface_wrap|START_PRINT SURFACE= param loads matching scan/touch model|installer/extras/surface-selection-wrapper/install.sh|is_cartographer
-cartographer-offset-setup|is_carto_offset_set|Cartographer probe X/Y offset (Jamin/JimmyV/custom)|installer/extras/cartographer-offset-setup/install.sh|is_cartographer
+cartographer-offset-setup|is_carto_offset_set|Cartographer mount offset profiles/custom|installer/extras/cartographer-offset-setup/install.sh|is_cartographer
 cartographer-macros|is_carto_macros|CARTO_* macro buttons for Fluidd (calibrate/load/touch home)|installer/extras/cartographer-macros/install.sh|is_cartographer
 axis_twist_compensation|is_axis_twist|Optional Z-drift compensation across X|features/axis_twist_compensation/install.sh|
 plate-aware-mesh|is_plate_aware_mesh|Saved meshes selected by build plate and temperature|installer/extras/plate-aware-mesh/install.sh|is_stock_probe
@@ -136,6 +136,9 @@ run_carto_plate_workflow() {
     fi
 
     if [ "$failed" -eq 0 ] && is_carto_plate_workflow; then
+        if command -v migration_mark_component_current >/dev/null 2>&1; then
+            migration_mark_component_current cartographer-plate-workflow
+        fi
         printf '\n%s\n' "$(c_green 'Cartographer plate workflow installed successfully.')"
         printf 'When no print is active, run FIRMWARE_RESTART and wait for the complete\n'
         printf 'K2 startup sequence. Power-cycle before homing only if it reports an error.\n'
@@ -192,6 +195,7 @@ install_extra() {
     local req=$(printf  '%s' "$line" | cut -d'|' -f5)
     local script="$INSTALLER_DIR/$script_rel"
     local readme="$(dirname "$script")/README.md"
+    local script_arg=''
 
     clear
     ui_heading "$name"
@@ -261,6 +265,29 @@ install_extra() {
                 return 0
             fi
             ;;
+        kamp-adaptive-purge)
+            if "$det" 2>/dev/null; then
+                printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"
+                printf '  1. Review/change settings\n'
+                printf '  2. Reinstall/update KAMP\n'
+                printf '  0. Back\n\n'
+                printf 'Select [0-2]: '
+                local kamp_choice
+                read -r kamp_choice
+                case "$kamp_choice" in
+                    1) script_arg='--configure-only' ;;
+                    2) ;;
+                    0|b|B|q|Q|'') return 0 ;;
+                    *)
+                        warn 'invalid selection'
+                        press_enter
+                        return 0
+                        ;;
+                esac
+            else
+                if ! confirm "Apply $name now?"; then return 0; fi
+            fi
+            ;;
         *)
             if "$det" 2>/dev/null; then
                 printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"
@@ -274,8 +301,11 @@ install_extra() {
     local pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
     [ -n "$pwd_home" ] || pwd_home="$HOME"
     info "running $script (HOME=$pwd_home)"
-    if HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script"; then
+    if HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script" $script_arg; then
         info "$name install completed"
+        if command -v migration_mark_component_current >/dev/null 2>&1; then
+            migration_mark_component_current "$name"
+        fi
     else
         warn "$name install.sh exited non-zero"
     fi

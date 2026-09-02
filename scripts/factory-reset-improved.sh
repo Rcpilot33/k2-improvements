@@ -72,10 +72,31 @@ for DIR in "$UDISK_ROOT"/* "$UDISK_ROOT"/.[!.]* "$UDISK_ROOT"/..?*; do
 done
 
 if [ "$MODE" = "--dry-run" ]; then
+    UPDATER_STATE=/mnt/UDISK/root/.k2-improvements/installer-state/updater
+    if [ -d "$UPDATER_STATE" ]; then
+        echo "REMOVE: $UPDATER_STATE (installer update-tracker state)"
+    fi
     echo ""
     echo "Dry run only. Nothing was removed and factory reset was not triggered."
     exit 0
 fi
+
+# /mnt/UDISK/root is intentionally preserved, but update completion records
+# describe the installation being removed. Clear only that exact state folder
+# so a later install is evaluated as new instead of inheriting stale results.
+UPDATER_STATE=/mnt/UDISK/root/.k2-improvements/installer-state/updater
+case "$UPDATER_STATE" in
+    /mnt/UDISK/root/.k2-improvements/installer-state/updater)
+        if [ -d "$UPDATER_STATE" ]; then
+            echo "Clearing installer update-tracker state: $UPDATER_STATE"
+            rm -rf -- "$UPDATER_STATE"
+        fi
+        ;;
+    *)
+        echo "ERROR: unexpected updater state path; refusing reset." >&2
+        exit 1
+        ;;
+esac
 
 echo ""
 echo "Begin factory reset..."

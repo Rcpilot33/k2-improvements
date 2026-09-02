@@ -5,16 +5,63 @@
 # copy into custom/, drops K2 Plus-tailored settings + an [exclude_object]
 # block, and ensures all three are included from custom/main.cfg.
 #
-# Does NOT restart Klipper — the new macros are available on next config
-# reload. Print user-facing instructions at the end.
+# A standalone interactive install shows its complete instructions, then waits
+# for Enter before performing the required protected restart. Full setup
+# workflows set K2_DEFER_FIRMWARE_RESTART=1 and perform one final restart after
+# every selected component has been installed.
 
 set -e
 
 SCRIPT_DIR="$(readlink -f $(dirname $0))"
 KAMP_DIR="${HOME}/Klipper-Adaptive-Meshing-Purging"
 KAMP_REPO="https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging.git"
+OVERRIDES_CFG="${HOME}/printer_data/config/custom/overrides.cfg"
+INSTALLED_SETTINGS_CFG="${HOME}/printer_data/config/custom/kamp_settings.cfg"
+
+configure_kamp_settings() {
+    python3 "${SCRIPT_DIR}/configure_kamp_settings.py" \
+        "${SCRIPT_DIR}/kamp_settings.cfg" \
+        "${OVERRIDES_CFG}" \
+        "${INSTALLED_SETTINGS_CFG}"
+}
+
+activate_kamp() {
+    restart_script="$1"
+    restart_description="$2"
+
+    if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" != "1" ] && [ -t 0 ]; then
+        echo ""
+        echo "------------------------------------------------------------------"
+        echo " WARNING: the restart will stop an active print. Confirm the printer is idle."
+        printf " Press Enter to %s and activate KAMP..." "$restart_description"
+        read -r _kamp_restart_confirm
+    fi
+
+    sh "$restart_script"
+}
+
+if [ "${1:-}" = "--configure-only" ]; then
+    if [ ! -f ~/printer_data/config/custom/kamp_settings.cfg ]; then
+        echo "E: KAMP is not installed; run the complete installer first"
+        exit 1
+    fi
+    configure_kamp_settings
+    activate_kamp \
+        "${SCRIPT_DIR}/../../../scripts/firmware_restart.sh" \
+        "perform the protected firmware restart"
+    exit 0
+fi
 
 test -d ~/printer_data/config/custom || mkdir -p ~/printer_data/config/custom
+
+# Preserve user-facing values before any download or installed-file mutation.
+# Pre-overrides releases explicitly allowed users to tune kamp_settings.cfg.
+echo "I: preserving effective KAMP settings before refreshing defaults"
+configure_kamp_settings
+
+# Install the shared, lazy file scanner. Cartographer uses the same status
+# object for adaptive meshes; KAMP uses it even on the stock-probe path.
+sh "${SCRIPT_DIR}/../../../features/prime_tower/install.sh"
 
 # ------------------------------------------------------------
 # 1. Clone or update KAMP at $HOME/Klipper-Adaptive-Meshing-Purging
@@ -77,7 +124,17 @@ if [ -f ~/printer_data/config/custom/exclude_object.cfg ]; then
 fi
 
 # ------------------------------------------------------------
-# 6. Optional: enable Klipper firmware retraction
+# 6. User-facing KAMP settings were reviewed and preserved before the defaults
+#    file was replaced above.
+# ------------------------------------------------------------
+# Keep overrides.cfg last so user-selected values win over refreshed defaults.
+# ensure_included.py inserts future feature includes before this one. Add the
+# include only after the settings writer has successfully created the file.
+python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
+    ~/printer_data/config/custom/main.cfg overrides.cfg
+
+# ------------------------------------------------------------
+# 7. Optional: enable Klipper firmware retraction
 # ------------------------------------------------------------
 # KAMP's LINE_PURGE prefers G10/G11 (firmware retraction) over inline
 # G1 E-.5/+.5 fallbacks, and prints a recommendation message at print
@@ -126,7 +183,7 @@ else
 fi
 
 # ------------------------------------------------------------
-# 7. Done — instructions for the user
+# 8. Done — instructions for the user
 # ------------------------------------------------------------
 echo ""
 echo "=================================================================="
@@ -136,23 +193,26 @@ echo ""
 echo " Firmware retraction: ${FW_RETRACT_STATUS}"
 echo ""
 echo " IMPORTANT — slicer-side changes are required for KAMP to work."
-echo " Without them LINE_PURGE has nothing to read and falls back to a"
-echo " static purge at the bed origin (the original problem)."
+echo " Without object polygons, the K2 boundary guard warns and safely"
+echo " skips by default. The preserved stock-purge fallback setting can"
+echo " opt into the original fixed path for this missing-data case only."
 echo ""
 echo "------------------------------------------------------------------"
-echo " 1. Run FIRMWARE_RESTART when no print is active and wait for the complete K2 startup sequence."
-echo "    The new [exclude_object] block and LINE_PURGE macro will load."
+echo " 1. The installer will prompt for the required protected restart after"
+echo "    these instructions. Wait for the complete Klippy code reload and K2"
+echo "    startup sequence. The new prime-tower scanner, [exclude_object], and"
+echo "    LINE_PURGE will then be active."
 echo ""
 echo "------------------------------------------------------------------"
-echo " 2. Enable 'Label objects' in your slicer."
+echo " 2. Enable the slicer option that emits object polygons."
 echo ""
-echo "    KAMP reads EXCLUDE_OBJECT_DEFINE polygons. Without 'Label"
-echo "    objects' enabled, the slicer doesn't emit them and LINE_PURGE"
-echo "    falls back to a static purge at the bed origin."
+echo "    KAMP reads EXCLUDE_OBJECT_DEFINE polygons. Without those polygons,"
+echo "    LINE_PURGE is skipped."
 echo ""
 echo "    Creality Print 7.x: Process settings (left panel) -> use the"
-echo "                        search box, type 'label' -> enable"
-echo "                        'Label objects' (Others tab in 7.x)."
+echo "                        search box, type 'exclude' -> enable"
+echo "                        'Exclude objects' (Others tab in 7.x)."
+echo "                        'Label objects' alone is not sufficient."
 echo ""
 echo "    Orca / OrcaSlicer:  Process tab -> Quality -> Advanced ->"
 echo "                        enable 'Label objects' (or 'Use exclude_object')."
@@ -187,19 +247,22 @@ echo "    You should see:"
 echo "      - EXCLUDE_OBJECT_DEFINE NAME=... POLYGON=...  (one per object)"
 echo "      - LINE_PURGE  (in the start-print block)"
 echo ""
-echo "    If EXCLUDE_OBJECT_DEFINE is missing -> Label objects is OFF."
+echo "    If EXCLUDE_OBJECT_DEFINE is missing -> exclude-object output is OFF."
 echo "    If LINE_PURGE is missing -> machine start gcode change didn't save."
 echo ""
 echo "------------------------------------------------------------------"
 echo " 5. Tune (optional)."
 echo ""
-echo "    Defaults are in custom/kamp_settings.cfg. Common knobs:"
-echo "      variable_purge_margin : mm in front of print bbox (default 10)"
-echo "      variable_purge_amount : mm of filament purged    (default 25)"
-echo "      variable_purge_height : Z height during purge    (default 0.4)"
+echo "    Reopen Optional Extras -> KAMP adaptive purge and choose"
+echo "    'Review/change settings'. User selections are stored in"
+echo "    custom/overrides.cfg and survive future KAMP reinstalls."
 echo ""
-echo "    Override in custom/overrides.cfg to survive future re-installs."
+echo "    Maintained defaults remain in custom/kamp_settings.cfg."
 echo ""
 echo "------------------------------------------------------------------"
 echo " See installer/extras/kamp-adaptive-purge/README.md for the full guide."
 echo ""
+
+activate_kamp \
+    "${SCRIPT_DIR}/../../../scripts/klippy_code_restart.sh" \
+    "reload Klippy and perform the protected firmware restart"

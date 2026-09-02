@@ -61,6 +61,8 @@ menu_install_all() {
     if ! confirm "Proceed with Cartographer setup installation?"; then return 0; fi
 
     local installed=0 skipped=0 failed=0
+    local migration_installed_file="/tmp/k2-setup-installed.$$"
+    : > "$migration_installed_file"
     OLDIFS="$IFS"
     IFS='
 '
@@ -90,8 +92,12 @@ menu_install_all() {
         pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
         info "running $name (HOME=$pwd_home)"
 
-        if HOME="$pwd_home" sh "$script"; then
+        # A full setup reloads Klipper once after every component and the
+        # mandatory mount-selection step. Individual component installers
+        # retain their immediate restart behavior.
+        if HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 sh "$script"; then
             installed=$((installed+1))
+            printf '%s\n' "$name" >> "$migration_installed_file"
         else
             warn "$name install.sh failed (continuing)"
             failed=$((failed+1))
@@ -113,11 +119,6 @@ menu_install_all() {
         info "Entware unslung boot hook installed (S99unslung)"
     fi
 
-    printf '\n%s\n' '----------------------------------------------------------------'
-    printf 'Auto-install summary: %s installed, %s skipped, %s failed\n' \
-        "$(c_green "$installed")" "$skipped" "$(c_red "$failed")"
-    printf '%s\n\n' '----------------------------------------------------------------'
-
     # Mandatory final step: pick the Cartographer mount preset. The offset
     # values are hardware-specific so we can't auto-pick - but the user must
     # set them or Z-probing will be wrong across the bed.
@@ -133,9 +134,32 @@ menu_install_all() {
         fi
     fi
 
+    printf '\n--- final protected restart ---\n'
+    if [ -f /tmp/k2-klippy-code-restart-required ]; then
+        final_restart="$INSTALLER_DIR/scripts/klippy_code_restart.sh"
+    else
+        final_restart="$INSTALLER_DIR/scripts/firmware_restart.sh"
+    fi
+    if ! K2_DEFER_FIRMWARE_RESTART=0 sh "$final_restart"; then
+        warn "final protected restart failed"
+        failed=$((failed+1))
+    elif command -v migration_mark_component_current >/dev/null 2>&1; then
+        while IFS= read -r name; do
+            migration_mark_component_current "$name"
+        done < "$migration_installed_file"
+        mkdir -p "$MIGRATION_STATE_DIR"
+        : > "$MIGRATION_INITIALIZED"
+    fi
+    rm -f "$migration_installed_file"
+
+    printf '\n%s\n' '----------------------------------------------------------------'
+    printf 'Auto-install summary: %s installed, %s skipped, %s failed\n' \
+        "$(c_green "$installed")" "$skipped" "$(c_red "$failed")"
+    printf '%s\n\n' '----------------------------------------------------------------'
+
     printf '\nFinal manual steps:\n'
-    printf '  1. Confirm every firmware restart completed successfully. If any\n'
-    printf '     restart reported an error, power-cycle before the next G28.\n'
+    printf '  1. Confirm the final protected restart completed successfully. If it\n'
+    printf '     reported an error, power-cycle before the next G28.\n'
     printf '  2. Optional QoL: surface-selection-wrapper and axis_twist_compensation\n'
     printf '     are available from Optional extras.\n'
     printf '  3. Optional: firmware flashing is available from Cartographer tools.\n'

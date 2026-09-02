@@ -1,7 +1,7 @@
 #!/bin/sh
 # Switch Cartographer mount offsets without modifying cartographer.cfg.
 #
-# cartographer.cfg remains the Jamin/default baseline. JimmyV values are
+# cartographer.cfg remains the Jamin/default baseline. JimmyV profile values are
 # written to custom/overrides.cfg, which is included later and therefore wins.
 
 set -eu
@@ -52,7 +52,11 @@ CURRENT_MESH_MIN=$(cfg_value "$OVERRIDES_CFG" bed_mesh mesh_min)
 CURRENT_MESH_MAX=$(cfg_value "$OVERRIDES_CFG" bed_mesh mesh_max)
 
 if [ "$CURRENT_Y" = "36" ] && [ "$CURRENT_MESH_MIN" = "5, 36" ] && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
-    CURRENT_PROFILE="JimmyV back-mount"
+    CURRENT_PROFILE="JimmyV legacy back-mount"
+elif [ "$CURRENT_Y" = "12" ] && [ "$CURRENT_MESH_MIN" = "5, 12" ] && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
+    CURRENT_PROFILE="JimmyV final back-mount without 3DO camera"
+elif [ "$CURRENT_Y" = "17" ] && [ "$CURRENT_MESH_MIN" = "5, 17" ] && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
+    CURRENT_PROFILE="JimmyV final back-mount with 3DO camera"
 elif [ -z "$CURRENT_Y" ] && [ -z "$CURRENT_MESH_MIN" ] && [ -z "$CURRENT_MESH_MAX" ]; then
     CURRENT_PROFILE="Jamin/default (cartographer.cfg baseline)"
 else
@@ -78,8 +82,10 @@ echo "  position_min:     $STOCK_MIN"
 echo
 echo "Pick your mount:"
 echo "  1. Jamin/default - remove mount overrides and use cartographer.cfg"
-echo "  2. JimmyV UNTESTED - documented y=36, mesh=5,36 to 345,340, stock stepper_y"
-echo "  3. Custom          - enter offsets, mesh limits, and stepper_y source"
+echo "  2. JimmyV legacy UNTESTED       - y=36, mesh=5,36 to 345,340"
+echo "  3. JimmyV final no 3DO UNTESTED - y=12, mesh=5,12 to 345,340"
+echo "  4. JimmyV final 3DO UNTESTED    - y=17, mesh=5,17 to 345,340"
+echo "  5. Custom - enter offsets, mesh limits, and stepper_y source"
 echo "  b. Cancel"
 echo
 printf 'Choose: '
@@ -87,8 +93,10 @@ read -r choice
 
 case "$choice" in
     1) PROFILE=jamin; LABEL='Jamin/default' ;;
-    2) PROFILE=jimmyv; LABEL='JimmyV back-mount' ;;
-    3)
+    2) PROFILE=jimmyv_legacy; LABEL='JimmyV legacy back-mount' ;;
+    3) PROFILE=jimmyv_final_12; LABEL='JimmyV final back-mount without 3DO camera' ;;
+    4) PROFILE=jimmyv_final_17; LABEL='JimmyV final back-mount with 3DO camera' ;;
+    5)
         PROFILE=custom
         LABEL='custom mount'
 
@@ -156,14 +164,28 @@ awk -v profile="$PROFILE" -v stock_endstop="$STOCK_ENDSTOP" -v stock_min="$STOCK
     -v custom_stepper="$CUSTOM_STEPPER" '
 function emit_values(section) {
     if (profile == "jamin") return
-    if (profile == "jimmyv" && section == "[cartographer]") {
-        print "# cartographer-offset-setup: JimmyV mount"
+    if (profile == "jimmyv_legacy" && section == "[cartographer]") {
+        print "# cartographer-offset-setup: JimmyV legacy mount"
         print "y_offset: 36"
-    } else if (profile == "jimmyv" && section == "[bed_mesh]") {
-        print "# cartographer-offset-setup: JimmyV mount"
+    } else if (profile == "jimmyv_legacy" && section == "[bed_mesh]") {
+        print "# cartographer-offset-setup: JimmyV legacy mount"
         print "mesh_min: 5, 36"
         print "mesh_max: 345, 340"
-    } else if (profile == "jimmyv" && section == "[stepper_y]") {
+    } else if (profile == "jimmyv_final_12" && section == "[cartographer]") {
+        print "# cartographer-offset-setup: JimmyV final mount without 3DO camera"
+        print "y_offset: 12"
+    } else if (profile == "jimmyv_final_12" && section == "[bed_mesh]") {
+        print "# cartographer-offset-setup: JimmyV final mount without 3DO camera"
+        print "mesh_min: 5, 12"
+        print "mesh_max: 345, 340"
+    } else if (profile == "jimmyv_final_17" && section == "[cartographer]") {
+        print "# cartographer-offset-setup: JimmyV final mount with 3DO camera"
+        print "y_offset: 17"
+    } else if (profile == "jimmyv_final_17" && section == "[bed_mesh]") {
+        print "# cartographer-offset-setup: JimmyV final mount with 3DO camera"
+        print "mesh_min: 5, 17"
+        print "mesh_max: 345, 340"
+    } else if ((profile == "jimmyv_legacy" || profile == "jimmyv_final_12" || profile == "jimmyv_final_17") && section == "[stepper_y]") {
         print "# cartographer-offset-setup: restore stock printer.cfg values"
         print "position_endstop: " stock_endstop
         print "position_min: " stock_min
@@ -209,7 +231,7 @@ END {
             print "[bed_mesh]"
             emit_values("[bed_mesh]")
         }
-        if (!("[stepper_y]" in seen) && (profile == "jimmyv" || custom_stepper == "stock")) {
+        if (!("[stepper_y]" in seen) && (profile == "jimmyv_legacy" || profile == "jimmyv_final_12" || profile == "jimmyv_final_17" || custom_stepper == "stock")) {
             print ""
             print "[stepper_y]"
             emit_values("[stepper_y]")
@@ -218,7 +240,7 @@ END {
 }
 ' "$OVERRIDES_CFG" > "$NEW_CFG"
 
-# If JimmyV caused these sections to be created, do not leave empty section
+# If a JimmyV profile caused these sections to be created, do not leave empty section
 # headers behind when switching back to the baseline profile.
 if [ "$PROFILE" = "jamin" ] || { [ "$PROFILE" = "custom" ] && [ "$CUSTOM_STEPPER" = "baseline" ]; }; then
     CLEAN_CFG="${NEW_CFG}.clean"

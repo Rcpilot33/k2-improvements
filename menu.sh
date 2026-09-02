@@ -28,8 +28,11 @@ fi
 . "$SCRIPT_DIR/installer/menus/carto_fw.sh"
 . "$SCRIPT_DIR/installer/menus/factory_reset.sh"
 . "$SCRIPT_DIR/installer/menus/workflows.sh"
+. "$SCRIPT_DIR/installer/migrations/catalog.sh"
+. "$SCRIPT_DIR/installer/menus/update.sh"
 . "$SCRIPT_DIR/installer/menus/main.sh"
 
 require_root
 ensure_path
+migration_offer_on_startup
 main_menu
