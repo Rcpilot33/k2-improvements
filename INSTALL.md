@@ -317,7 +317,9 @@ offered again when the same migration later appears on another branch.
 The KAMP migration preserves settings edited directly in the older
 `custom/kamp_settings.cfg` by copying values into `custom/overrides.cfg` before
 the maintained defaults are refreshed. Existing values in `overrides.cfg`
-take precedence.
+take precedence. Only settings exposed by the maintained KAMP settings workflow
+are imported; upstream mesh, dockable-probe, and Smart Park defaults remain in
+the maintained defaults file instead of becoming permanent user overrides.
 
 You may also rerun either bootstrap command, or update the checkout manually:
 

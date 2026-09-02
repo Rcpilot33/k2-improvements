@@ -9,6 +9,23 @@ from pathlib import Path
 
 
 SECTION = "gcode_macro _kamp_settings"
+MARKER = "# KAMP settings preserved by the installer updater."
+PRESERVED_KEYS = {
+    "variable_verbose_enable",
+    "variable_purge_height",
+    "variable_tip_distance",
+    "variable_purge_margin",
+    "variable_purge_amount",
+    "variable_flow_rate",
+}
+OBSOLETE_IMPORTED_KEYS = {
+    "variable_mesh_margin",
+    "variable_fuzz_amount",
+    "variable_probe_dock_enable",
+    "variable_attach_macro",
+    "variable_detach_macro",
+    "variable_smart_park_height",
+}
 SECTION_RE = re.compile(r"^\s*\[([^]]+)]\s*(?:[#;].*)?$")
 OPTION_RE = re.compile(r"^(\s*)(variable_[A-Za-z0-9_]+)(\s*:\s*)(.*?)(\s*(?:[#;].*)?)$")
 
@@ -29,9 +46,15 @@ def section_values(path):
     return values
 
 
+def legacy_user_values(path):
+    return {
+        key: value
+        for key, value in section_values(path).items()
+        if key in PRESERVED_KEYS
+    }
+
+
 def update_overrides(path, legacy):
-    if not legacy:
-        return False
     original = path.read_text(encoding="utf-8") if path.exists() else ""
     lines = original.splitlines(keepends=True)
     start = None
@@ -46,11 +69,25 @@ def update_overrides(path, legacy):
             end = index
             break
 
+    removed_obsolete = False
+    if start is not None and MARKER in original:
+        kept = []
+        for raw in lines[start + 1:end]:
+            option = OPTION_RE.match(raw.rstrip("\r\n"))
+            if option and option.group(2) in OBSOLETE_IMPORTED_KEYS:
+                removed_obsolete = True
+                continue
+            kept.append(raw)
+        lines[start + 1:end] = kept
+        end = start + 1 + len(kept)
+
     if start is None:
+        if not legacy:
+            return False
         if lines and lines[-1].strip():
             lines.append("\n")
         lines.extend([
-            "# KAMP settings preserved by the installer updater.\n",
+            MARKER + "\n",
             "[gcode_macro _KAMP_Settings]\n",
         ])
         lines.extend("{}: {}\n".format(key, value) for key, value in legacy.items())
@@ -67,6 +104,9 @@ def update_overrides(path, legacy):
             found.add(option.group(2))
         missing = [(key, value) for key, value in legacy.items() if key not in found]
         lines[end:end] = ["{}: {}\n".format(key, value) for key, value in missing]
+
+    if not legacy and not removed_obsolete:
+        return False
 
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=".kamp.", dir=str(path.parent), text=True)
@@ -85,7 +125,7 @@ def main():
         raise SystemExit("usage: preserve_kamp_settings.py LEGACY_CFG OVERRIDES_CFG")
     legacy_path = Path(sys.argv[1]).expanduser()
     overrides_path = Path(sys.argv[2]).expanduser()
-    legacy = section_values(legacy_path)
+    legacy = legacy_user_values(legacy_path)
     if update_overrides(overrides_path, legacy):
         print("I: preserved legacy KAMP settings in {}".format(overrides_path))
     else:

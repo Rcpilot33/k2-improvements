@@ -31,5 +31,6 @@ main-d58c860-plate-mesh|plate-aware-mesh|is_plate_aware_mesh|Optional plate-awar
 main-c293d81-plate-soak|plate-aware-mesh|is_plate_aware_mesh|Missing saved-mesh soak became configurable
 main-b80d3f7-r3men-install|r3men-bed|is_r3men_bed|R3MEN installation formatting was corrected
 main-d6c9674-r3men-power|r3men-bed|is_r3men_bed|R3MEN heater-bed power configuration was corrected
+updater-40c2982-kamp-preservation-scope-v1|kamp-adaptive-purge|is_kamp|KAMP legacy migration now keeps only user-facing settings and removes defaults imported by the updater
 EOF
 }
