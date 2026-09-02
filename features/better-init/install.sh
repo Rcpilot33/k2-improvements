@@ -21,4 +21,4 @@ ln -sf ${SCRIPT_DIR}/bin/systemctl /mnt/UDISK/bin/
 # update the path
 echo 'export PATH=/mnt/UDISK/bin:$PATH' > /etc/profile.d/better-init.sh
 
-sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"
+sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"

@@ -6,9 +6,8 @@ mechanically before enabling this optional feature.
 
 ## Calibration
 
-The installer replaces loaded Klippy Python modules, then performs the
-protected Klippy host reload, firmware-reset recovery, and K2 motor
-initialization wait. When it completes successfully, run:
+The installer performs a firmware restart and waits for K2 motor initialization.
+When it completes successfully, run:
 
 ```gcode
 G28

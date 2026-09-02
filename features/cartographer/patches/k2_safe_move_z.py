@@ -13,8 +13,8 @@ import math
 
 
 class K2SafeMoveZ:
-    MIN_SAFE_Z = 20.0
-    MIN_SAFE_Z_TOLERANCE = 0.25
+    TARGET_Z = 20.0
+    TARGET_TOLERANCE = 0.25
     COMPLETION_TOLERANCE = 0.05
 
     def __init__(self, config):
@@ -34,7 +34,7 @@ class K2SafeMoveZ:
             desc=self.cmd_SAFE_MOVE_Z_help)
 
     cmd_SAFE_MOVE_Z_help = (
-        "Handle Creality's guarded inter-print safe Z move")
+        "Handle Creality's guarded inter-print Z=20 safe move")
 
     def _require_idle(self, gcmd):
         print_stats = self.printer.lookup_object('print_stats')
@@ -59,10 +59,6 @@ class K2SafeMoveZ:
         speed = gcmd.get_float('SPD')
         if not math.isfinite(distance):
             raise gcmd.error('[SAFE_MOVE_Z] DIS must be finite')
-        if distance >= 0.0:
-            raise gcmd.error(
-                '[SAFE_MOVE_Z] Refusing non-negative travel %.3fmm' %
-                (distance,))
         if (not math.isfinite(speed) or speed <= 0.0
                 or speed > self.max_z_velocity):
             raise gcmd.error(
@@ -77,14 +73,9 @@ class K2SafeMoveZ:
 
         start_z = toolhead.get_position()[2]
         target_z = start_z + distance
-        # Z=20 is the closest observed safe endpoint to the nozzle.  c440x
-        # calculates DIS before this command is executed, so cancellation
-        # cleanup or another queued move can make the eventual endpoint higher
-        # than 20.  A higher endpoint leaves more bed/nozzle clearance and is
-        # safe; an endpoint below the Z=20 floor is not.
-        if target_z < self.MIN_SAFE_Z - self.MIN_SAFE_Z_TOLERANCE:
+        if abs(target_z - self.TARGET_Z) > self.TARGET_TOLERANCE:
             raise gcmd.error(
-                '[SAFE_MOVE_Z] Refusing target below safe Z floor: Z=%.3f' %
+                '[SAFE_MOVE_Z] Refusing unexpected target Z=%.3f' %
                 (target_z,))
         if target_z < self.position_min or target_z > self.position_max:
             raise gcmd.error(
@@ -97,8 +88,8 @@ class K2SafeMoveZ:
         virtual_sdcard.run_dis = 0.0
 
         gcmd.respond_info(
-            '[SAFE_MOVE_Z] Moving Z %.3fmm from %.3fmm to %.3fmm at '
-            '%.3fmm/s' % (distance, start_z, target_z, speed))
+            '[SAFE_MOVE_Z] Moving Z %.3fmm to %.3fmm at %.3fmm/s' %
+            (distance, target_z, speed))
         toolhead.manual_move([None, None, target_z, None], speed)
         toolhead.wait_moves()
 

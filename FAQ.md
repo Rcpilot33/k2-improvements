@@ -10,17 +10,7 @@ Do not run the installer on a K2 Pro or any other K2-series printer.
 ## Can I still use the automatic calibration features?
 
 No. K2 Improvements uses the documented manual calibration, mesh, and tuning
-workflows. Do not enable Creality Print's **Print Calibration** option or the
-printer's automatic print-calibration workflow when sending a print.
-
-That Creality-controlled pre-print sequence runs before this project's
-`START_PRINT`. On firmware `1.1.5.5`, a reproduced 100 C bed request entered a
-600-second stabilization period, set the chamber-fan target to 30 C, and later
-sent `WAIT_BED_STABLE_END`. K2 Improvements does not provide that command, so
-Klipper rejects it after the delay. The fan can also remove chamber heat while
-the bed is stabilizing. Disable **Print Calibration**, reslice or resend as
-needed, and let `START_PRINT` perform the supported mesh and Cartographer
-workflow.
+workflows. Do not enable Creality's automatic print-calibration workflow.
 
 ## Fluidd is installed, but the camera does not appear
 
@@ -40,9 +30,8 @@ matrix. Use one of the versions listed in [VALIDATION.md](./VALIDATION.md).
 
 On affected K2 Plus stock-probe and Cartographer installations, Klipper's
 ordinary host-only restart can leave the motor controllers in their previous
-runtime state. `FIRMWARE_RESTART` reloads configuration, resets the connected
-MCUs, and restores correct homing, but does not reload Python modules already
-cached by the Klippy host process.
+runtime state. `FIRMWARE_RESTART` resets Klippy and the connected MCUs and
+restores correct homing.
 
 The shared SAVE_CONFIG protection therefore makes `SAVE_CONFIG` request a
 firmware-level restart directly after writing the configuration. This preserves
@@ -51,29 +40,6 @@ The shared restart helper also waits for the K2 motor-controller startup to
 finish after Moonraker first reports Klipper ready. This has been validated on
 both the stock PR Touch and Cartographer paths. If the helper reports a failure,
 fully power-cycle the printer before attempting to home.
-
-Installers that replace Klippy Python modules use a separate protected helper:
-it starts a fresh Klippy process, requests the required firmware reset, retries
-once for the K2's observed `key301` startup state, and then performs the same
-stabilization check. Never home between those stages.
-
-## I updated the installer. Are the changes already active?
-
-Not necessarily. `git pull` updates the repository, but it does not reload an
-active macro or an already imported Klippy Python module. Rerun the affected
-item under **Maintenance and recovery -> Core component installer**, or
-reinstall the affected item under **Optional extras**. Then wait for its
-protected restart to finish before homing. Macro-only changes need the
-firmware restart; Python-backed features such as Cartographer's Klipper patches
-or the prime-tower scanner need the protected Klippy host reload and
-firmware-reset recovery performed by their installer.
-
-If the updated file is already connected to the printer by its existing
-symlink and the commit did not add installation wiring, use **Maintenance and
-recovery -> Apply macro or printer-setting updates** for `.cfg` changes or
-**Apply Klipper feature-code updates** for Python changes. Reinstall the
-component when the update adds an include, module, generated copy, or other
-installation step.
 
 ## When I print from the side spool, the printer still acts like I am using the CFS
 

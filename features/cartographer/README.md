@@ -9,8 +9,6 @@ a large stock-probe mesh.
 - Faster bed scanning
 - Denser mesh data
 - Adaptive meshing around the current print
-- Automatic inclusion of a detected Creality Print prime tower in the
-  adaptive mesh
 - Separate scan and touch models for supported plate workflows
 
 ## Important differences
@@ -20,32 +18,6 @@ installation therefore includes the probe plugin, bridge service, Klipper
 configuration, and K2-specific macros.
 
 Installing Cartographer replaces the active stock `prtouch_v3` configuration.
-
-The installer also adds a printer-side prime-tower scanner. Creality Print
-does not label its prime tower as an exclude object, so its actual
-`;TYPE:Prime tower` extrusion paths are read from the selected G-code file.
-When normal object polygons are available, the detected tower footprint is
-included automatically in the Cartographer adaptive mesh. Rotated, resized,
-and normally layered towers use their real sliced motion rather than slicer
-metadata. Prints without a tower retain the existing behavior.
-
-The scan runs in a background worker, is cooperatively cancelable, and uses a
-timeout that scales with file size. `START_PRINT` waits for the result before
-printer preparation, so large files may show a deliberate preflight delay in
-the console. Selecting a different file cancels obsolete work and starts a new
-scan. The final detected block count, bounds, file size, and elapsed time are
-recorded in `klippy.log`.
-Implementation details and timeout behavior are documented in the shared
-[prime-tower scanner guide](../prime_tower/README.md).
-
-Creality Print's **Prime tower -> No sparse layers (beta)** option is not
-supported on the K2 Plus. A delayed tower can command the bed back to
-first-layer height after the model is already tall, creating a collision risk.
-If an actual prime-tower toolpath and that setting are both present, adaptive
-mesh preflight rejects the file and directs the user to disable the option and
-reslice. The managed `START_PRINT` macro performs the same check before any
-printer preparation moves. A profile that retains the setting does not block
-a file with no prime tower.
 
 The installer also adds a status-only compatibility layer for the stock K2
 touchscreen. Creality's live Z-offset page reads the nonstandard
@@ -61,18 +33,15 @@ After installation, `K2_CARTOGRAPHER_TOUCHSCREEN_STATUS` reports both the live
 touchscreen.
 
 Choose the correct physical mount preset before the first homing move after
-installation. The guided Cartographer path offers the mount-offset picker
-before its final protected Klippy-code reload, firmware-reset recovery, and K2
-motor-initialization wait.
+installation. The installer performs a firmware restart and waits for K2 motor
+initialization before returning.
 
 The Cartographer installation also supplies Creality's inter-print
-`SAFE_MOVE_Z` compatibility command. It permits only negative Z travel that
-stops at or above the observed Z=20 clearance floor, performs the move only
-while the printer is idle, and reports completion through
-`virtual_sdcard.run_dis` as the stock PR Touch extension does. The endpoint may
-remain above Z=20 when Creality's service calculated its relative travel before
-cancellation cleanup finished. Cartographer does not provide the stock
-nozzle-pressure collision sensing during this move.
+`SAFE_MOVE_Z` compatibility command. It restricts the closed print service to
+its observed Z=20 endpoint, performs the move only while the printer is idle,
+and reports completion through `virtual_sdcard.run_dis` as the stock PR Touch
+extension does. Cartographer does not provide the stock nozzle-pressure
+collision sensing during this move.
 
 On a direct Cartographer install or a conversion from the stock-probe setup,
 the installer resets the PLA, PETG, ABS, ASA, DEFAULT, and PROBE offsets in
@@ -95,8 +64,8 @@ Use **Install or change setup -> Install Cartographer setup** from the menu.
 After installation:
 
 1. Select the mount and offset profile that matches the installed hardware.
-2. Confirm the protected Klippy-code reload and firmware-reset sequence
-   completed successfully; otherwise power-cycle before homing.
+2. Confirm the installer restart completed successfully; otherwise power-cycle
+   before homing.
 3. Follow the [Cartographer setup guide](./SETUP.md).
 4. Flash probe firmware only if needed; firmware flashing is a separate menu
    action.

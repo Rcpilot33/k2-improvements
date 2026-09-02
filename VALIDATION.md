@@ -64,45 +64,14 @@ For the no-Cartographer path, a saved `default` mesh must match the active
 |---|:---:|
 | Protected `SAVE_CONFIG` on stock PR Touch followed by `G28` (>10 consecutive cycles) | PASS |
 | Protected `SAVE_CONFIG` on Cartographer followed by `G28` | PASS |
-| Configuration-only installer `FIRMWARE_RESTART`, K2 initialization wait, and `G28` | PASS |
-| Klippy-code installer host restart plus firmware-restart recovery | PASS |
-| `screws_tilt_adjust` and `abort_homing` repair installs using the code-reload helper | PASS |
+| Installer `FIRMWARE_RESTART` followed by K2 initialization wait and `G28` | PASS |
+| `screws_tilt_adjust` and `abort_homing` repair installs using the shared restart helper | PASS |
 
 The repeated stock-probe test used a temporary `3,3` mesh to shorten each
 cycle; the configured mesh was restored to `19,19` after testing. Moonraker can
 report Klipper ready before the Creality motor-controller startup messages have
 finished, so the shared helper waits an additional K2-specific stabilization
 interval and verifies that Klipper is still ready before returning.
-
-### Current Cartographer, KAMP, and chamber workflow (`1.1.5.5`)
-
-| Test | Status |
-|---|:---:|
-| M191 bed assist only while below the requested chamber temperature | PASS |
-| M191 restores the original slicer bed target after chamber heating | PASS |
-| Chamber-fan target remains 2 C above the requested chamber target | PASS |
-| Already-hot chamber skips bed assist without a macro parsing error | PASS |
-| `CHAMBER_TEMP=0` print path | PASS |
-| Prime tower included in Cartographer adaptive mesh at multiple locations | PASS |
-| KAMP purge avoids the tower and selects front, left, or right safe corridors | PASS |
-| No safe purge corridor warns and skips without leaving the usable area | PASS |
-| Creality `No sparse layers (beta)` rejected only when an actual tower exists | PASS |
-| Large 19.5 MB / 1,703-block tower file scan, adaptive mesh, and purge | PASS |
-| Cancel, resend, fresh tower scan, mesh, and purge | PASS |
-| Cartographer `SAFE_MOVE_Z` cancellation cleanup stays at or above Z=20 | PASS |
-
-The large-file test completed its background prime-tower scan in about 107
-seconds on the printer, then produced the expected adaptive mesh and KAMP
-purge. The scanner uses a size-scaled timeout rather than a fixed small-file
-limit. Its result is tied to the selected file identity; changing the selected
-path, size, or modification time cancels stale work and starts another scan.
-
-Creality Print's **Print Calibration** option was also reproduced separately.
-It invoked a Creality-controlled 600-second bed-stabilization sequence at a
-100 C bed target, set the chamber-fan target to 30 C, and sent the unsupported
-`WAIT_BED_STABLE_END` command before this project's `START_PRINT`. This is an
-incompatibility finding, not a supported workflow; the option must remain
-disabled.
 
 ### Creality Print templates (`1.1.5.5` exhaustive cycle)
 

@@ -3,19 +3,8 @@
 
 is_entware()       { [ -x /opt/bin/opkg ]; }
 is_better_root()   { grep -q '^root:.*:/mnt/UDISK/root:' /etc/passwd 2>/dev/null; }
-is_cartographer() {
-    local klipper_dir="${KLIPPER_DIR:-/usr/share/klipper}"
-    local config_present=1
-
-    if [ -f "$PRINTER_CFG_DIR/custom/cartographer.cfg" ] || \
-       grep -q '^\[cartographer\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null; then
-        config_present=0
-    fi
-
-    [ "$config_present" -eq 0 ] &&
-    [ -e "$klipper_dir/klippy/extras/cartographer.py" ] &&
-    grep -q '^class TriggerDispatch' "$klipper_dir/klippy/mcu.py" 2>/dev/null
-}
+is_cartographer()  { [ -f "$PRINTER_CFG_DIR/custom/cartographer.cfg" ] || \
+                     grep -q '^\[cartographer\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null; }
 is_moonraker()     { [ -d /mnt/UDISK/printer_data/moonraker ] || [ -f /mnt/UDISK/printer_data/config/moonraker.conf ]; }
 is_fluidd()        { grep -lq 'crealityk2' /usr/share/fluidd/assets/*.js 2>/dev/null; }
 is_macros() {
@@ -106,7 +95,7 @@ is_carto_offset_set() { is_cartographer; }  # always "set" if cartographer is in
 is_motor_guard()   { grep -q 'motor-state-guard' "$PRINTER_CFG_DIR/custom/start_print.cfg" 2>/dev/null; }
 
 # Returns a human label for the currently-installed cartographer offset preset.
-# Echoes a recognized mount profile, a custom X/Y label, or no Cartographer.
+# Echoes one of: "Jamin", "JimmyV", "custom (x=N y=N)", "(no cartographer)"
 detect_carto_offset_label() {
     local cfg="$PRINTER_CFG_DIR/custom/cartographer.cfg"
     local overrides="$PRINTER_CFG_DIR/custom/overrides.cfg"
@@ -124,10 +113,8 @@ detect_carto_offset_label() {
     fi
     case "${x:-?} ${y:-?}" in
         "0 -15") echo "Jamin (x=0 y=-15)" ;;
-        "0 36")  echo "JimmyV legacy (x=0 y=36)" ;;
-        "0 12")  echo "JimmyV final no 3DO (x=0 y=12)" ;;
-        "0 17")  echo "JimmyV final 3DO (x=0 y=17)" ;;
-        *)        echo "custom (x=${x:-?} y=${y:-?})" ;;
+        "0 36")  echo "JimmyV (x=0 y=36)" ;;
+        *)       echo "custom (x=${x:-?} y=${y:-?})" ;;
     esac
 }
 is_homing_hasattr() { grep -q "hasattr.*get_suspended_det_status" "$KLIPPER_DIR/klippy/extras/homing.py" 2>/dev/null; }

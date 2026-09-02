@@ -23,17 +23,14 @@ project overview and shortest supported path, begin with the
 
 > [!CAUTION]
 > Do not use Klipper's host-only `RESTART` command or
-> `/etc/init.d/klipper restart` by itself before homing. Configuration-only
-> changes and protected `SAVE_CONFIG` use `FIRMWARE_RESTART`. Installers that
-> replace loaded Klippy Python modules use a guarded host restart followed by
-> firmware-reset recovery and the K2 initialization wait. If a protected
-> sequence reports an error, power-cycle before running `G28`.
+> `/etc/init.d/klipper restart` before homing. The installers, protected
+> `SAVE_CONFIG`, and documented restart paths use `FIRMWARE_RESTART`, wait for
+> the K2 motor controllers to initialize, and then return control. If that
+> sequence reports an error, power-cycle the printer before running `G28`.
 
-The modifications are not compatible with Creality Print's **Print
-Calibration** option or Creality's automatic print-calibration workflow.
-Complete the factory setup before installing, leave **Print Calibration**
-disabled when sending prints, then use the provided manual calibration,
-bed-mesh, and tuning workflows.
+The modifications are not compatible with Creality's automatic calibration
+workflow. Complete the factory setup before installing, then use the provided
+manual calibration, bed-mesh, and tuning workflows.
 
 Validated Creality firmware versions are `1.1.3.13`, `1.1.5.2`, and `1.1.5.5`.
 See [VALIDATION.md](./VALIDATION.md) for the complete test matrix.
@@ -172,8 +169,8 @@ Cartographer is detected.
 | 2 | Install, repair, or change the printer setup path. |
 | 3 | Open Cartographer firmware, recovery, mount-offset, and calibration tools. |
 | 4 | Install optional hardware, print-workflow, and security extras. |
-| 5 | Open component repair, protected restart, PR Touch cleanup, and factory-reset tools. |
-| 6 | Update the installer with a fast-forward-only pull and reload the menu. |
+| 5 | Open component repair, PR Touch cleanup, and factory-reset tools. |
+| 6 | Update installer files, review applicable component migrations, and apply selected repairs. |
 | 0 | Exit. |
 
 States are displayed as words so they remain meaningful without terminal
@@ -271,9 +268,7 @@ also fails. Read the complete
 The installer offers a mount picker after the automated Cartographer steps:
 
 - **Jamin:** tested on printer hardware
-- **JimmyV legacy:** untested; retains the documented 36 mm back-mount profile
-- **JimmyV final without 3DO camera:** untested; uses the published 12 mm profile
-- **JimmyV final with 3DO camera:** untested; uses the published 17 mm profile
+- **JimmyV:** untested; uses JimmyV's documented mount offsets
 - **Custom:** uses offsets entered by the user
 
 Managed values are written to `overrides.cfg`, where they take precedence
@@ -292,7 +287,7 @@ Install extras individually from **Optional extras**:
 
 | Extra | Purpose |
 |---|---|
-| [Cartographer offset setup](./installer/extras/cartographer-offset-setup/README.md) | Select Jamin, JimmyV legacy/final, or custom offsets; requires Cartographer. |
+| [Cartographer offset setup](./installer/extras/cartographer-offset-setup/README.md) | Select Jamin, JimmyV, or custom offsets; requires Cartographer. |
 | Cartographer plate workflow ([macros](./installer/extras/cartographer-macros/README.md), [automatic selection](./installer/extras/surface-selection-wrapper/README.md)) | Installs selector/action controls and slicer-driven surface selection; requires Cartographer. |
 | [Axis twist compensation](./features/axis_twist_compensation/README.md) | Compensates optional Z drift across X. |
 | [KAMP adaptive purge](./installer/extras/kamp-adaptive-purge/README.md) | Installs the patched adaptive purge workflow and slicer templates. |
@@ -307,20 +302,24 @@ key in a second terminal before disabling password login.
 ## Updating
 
 Use **6. Update installer → Update and review required actions**. The updater
-records the installed components, pulls the current branch, and opens a result
-screen containing only applicable component refreshes. Each action can be run
-there, or all listed actions can be applied together with one final protected
-restart. Declined or failed actions remain available under **Review pending
-update actions**.
+records the old and new revisions, detects which affected components are
+installed, and opens a results screen. From there you can apply one repair,
+apply all recommendations, read the reasons, or finish later. The same pending
+list is available under **Maintenance and recovery → Review installer update
+actions**.
 
-An installation that predates update tracking receives one cumulative review
-of historical component migrations. This deliberately favors a safe one-time
-refresh when the installed component age cannot be proven. Newly installed or
-successfully refreshed components receive individual completion records, so
-later updates offer only new work. Components and optional extras not detected
-on the printer are omitted.
+The first tracker-aware update conservatively evaluates all earlier migration
+entries because installations made by older releases have no completion
+history. Recommendations for optional extras that are not installed are
+filtered out. A successfully verified repair is recorded and will not be
+offered again when the same migration later appears on another branch.
 
-You can also rerun either bootstrap command, or update manually with:
+The KAMP migration preserves settings edited directly in the older
+`custom/kamp_settings.cfg` by copying values into `custom/overrides.cfg` before
+the maintained defaults are refreshed. Existing values in `overrides.cfg`
+take precedence.
+
+You may also rerun either bootstrap command, or update the checkout manually:
 
 ```sh
 cd /mnt/UDISK/root/k2-improvements
@@ -332,42 +331,13 @@ branch diverge or would be overwritten, the pull stops instead of silently
 discarding them. Inspect `git status --short` and `git diff` before deciding
 whether to preserve or restore those local files.
 
-Updating the repository does not by itself reload already active macros or
-Klippy Python modules. The tracked update workflow handles changed installation
-wiring and managed copies by dispatching the affected installers directly. For
-manual updates, rerun each affected installer:
-
-- use **Maintenance and recovery -> Core component installer** for a changed
-  core component such as **Macros**, **Cartographer**, `screws_tilt_adjust`, or
-  `abort_homing`;
-- use **Optional extras** to reinstall a changed extra such as KAMP; and
-- wait for the installer-requested protected restart to complete before the
-  next `G28`.
-
-Configuration-only changes use the protected firmware restart. Components
-that replace Klippy Python code perform a protected host reload followed by
-firmware-reset recovery and the K2 initialization wait. A full guided setup
-normally skips components already detected as installed, so use the individual
-component or extra installer when the purpose is to refresh existing files.
-
-When the installed path is already a symlink to the updated repository and no
-new include, generated copy, or installation step was added, reinstalling is
-not necessary. Use one of these actions under **Maintenance and recovery**:
-
-- **Apply macro or printer-setting updates** reloads `.cfg` files, resets the
-  connected MCUs, and waits for K2 initialization.
-- **Apply Klipper feature-code updates** starts a fresh Klippy process for
-  existing Python-module symlinks, then performs firmware-reset recovery and
-  waits for K2 initialization.
-
-Both actions require explicit confirmation because they stop an active print.
-If a commit added a module, include, generated file, or changed installer
-wiring, rerun the affected component installer instead.
-
 Feature installers can create backup files beside managed configuration files.
 These backups are not intended to remain inside the Git repository. The
 current surface-selection installer stores its backups outside the repository
 so they do not block later updates.
+
+Factory-reset workflows clear the updater completion records so a replacement
+installation does not inherit the previous installation's migration state.
 
 ## Factory reset and cleanup
 
@@ -386,11 +356,6 @@ Both paths are destructive. Configuration, custom macros, saved meshes, logs,
 and backups may be removed. On success, `wipe.sock` normally returns `ok` and
 the printer reset terminates the SSH session. A remaining menu session with a
 large failure banner means the reset did not complete.
-
-Both installer-managed reset paths clear the update tracker records stored
-under the otherwise-preserved root directory. The replacement installation is
-therefore evaluated independently and cannot inherit completed migrations from
-the installation that was removed.
 
 ### Firmware reinstall does not always restore a clean state
 

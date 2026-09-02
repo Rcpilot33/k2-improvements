@@ -24,16 +24,6 @@ sys.path.insert(0, '/mnt/UDISK/root/cartographer3d-plugin/src')
 from cartographer.extra import *
 EOF
 
-        rm -f ~/klipper/klippy/mcu.pyc \
-            ~/klipper/klippy/serialhdl.pyc \
-            ~/klipper/klippy/clocksync.pyc \
-            ~/klipper/klippy/__pycache__/mcu.*.pyc \
-            ~/klipper/klippy/__pycache__/serialhdl.*.pyc \
-            ~/klipper/klippy/__pycache__/clocksync.*.pyc \
-            ~/klipper/klippy/extras/homing.pyc \
-            ~/klipper/klippy/extras/temperature_mcu.pyc \
-            ~/klipper/klippy/extras/__pycache__/homing.*.pyc \
-            ~/klipper/klippy/extras/__pycache__/temperature_mcu.*.pyc
         ln -sf ${SCRIPT_DIR}/patches/mcu.py ~/klipper/klippy/mcu.py
         ln -sf ${SCRIPT_DIR}/patches/serialhdl.py ~/klipper/klippy/serialhdl.py
         ln -sf ${SCRIPT_DIR}/patches/clocksync.py ~/klipper/klippy/clocksync.py
@@ -56,7 +46,7 @@ EOF
             -e 's/^#(.*carto.*)/\1/' \
             ~/printer_data/config/custom/main.cfg
 
-        sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"
+        sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
         echo ""
         echo "*** ENSURE Y SPACERS ARE INSTALLED ***"
         echo ""
@@ -85,7 +75,7 @@ EOF
             -e 's/^([^#].*carto.*)/#\1/' \
             ~/printer_data/config/custom/main.cfg
 
-        sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"
+        sh "${SCRIPT_DIR}/../../scripts/firmware_restart.sh"
         echo ""
         echo "*** ENSURE Y SPACERS ARE NOT INSTALLED ***"
         echo ""

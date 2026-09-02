@@ -7,8 +7,8 @@ EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ] || [ $EXIT_CODE -eq 2 ]; then
     rm -f /mnt/UDISK/root/klipper/klippy/webhooks.pyc
-    if ! sh ${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh; then
-        echo "E: abort_homing was patched, but its required Klippy code reload failed" >&2
+    if ! sh ${SCRIPT_DIR}/../../scripts/firmware_restart.sh; then
+        echo "E: abort_homing was patched, but its required firmware restart failed" >&2
         exit 1
     fi
     STATE_DIR=/mnt/UDISK/root/.k2-improvements/installer-state

@@ -167,6 +167,19 @@ migration_mark_component_current() {
     migration_write_atomic "$MIGRATION_COMPLETED" "$temporary"
 }
 
+migration_mark_all_installed_current() {
+    local component
+    for component in cartographer save-config-restart abort_homing \
+        screws_tilt_adjust macros r3men-bed kamp-adaptive-purge \
+        axis_twist_compensation cartographer-plate-workflow plate-aware-mesh; do
+        if migration_component_installed "$component" 2>/dev/null; then
+            migration_mark_component_current "$component" || true
+        fi
+    done
+    mkdir -p "$MIGRATION_STATE_DIR"
+    : > "$MIGRATION_INITIALIZED"
+}
+
 migration_print_details() {
     local component
     clear
@@ -257,6 +270,15 @@ migration_repair_component() {
                 sh "$INSTALLER_DIR/features/screws_tilt_adjust/install.sh"
             ;;
         kamp-adaptive-purge)
+            # Older releases explicitly invited direct edits to
+            # custom/kamp_settings.cfg. Save those effective values in the
+            # durable overrides file before the legacy installer replaces it.
+            HOME="$pwd_home" python3 \
+                "$INSTALLER_DIR/installer/migrations/preserve_kamp_settings.py" \
+                "$pwd_home/printer_data/config/custom/kamp_settings.cfg" \
+                "$pwd_home/printer_data/config/custom/overrides.cfg" &&
+            HOME="$pwd_home" python3 "$INSTALLER_DIR/scripts/ensure_included.py" \
+                "$pwd_home/printer_data/config/custom/main.cfg" overrides.cfg &&
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/kamp-adaptive-purge/install.sh"
             ;;
@@ -285,21 +307,12 @@ migration_repair_component() {
     esac
 }
 
-migration_component_restart_kind() {
-    case "$1" in
-        cartographer|save-config-restart|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|axis_twist_compensation)
-            echo code ;;
-        *) echo config ;;
-    esac
-}
-
 migration_apply_components() {
-    local components_file succeeded restart_kind failures component restart_script
+    local components_file succeeded failures component restart_script
     components_file="$1"
     migration_require_idle || return 1
     succeeded="/tmp/k2-update-succeeded.$$"
     : > "$succeeded"
-    restart_kind=config
     failures=0
 
     while IFS= read -r component; do
@@ -307,7 +320,6 @@ migration_apply_components() {
         printf '\n--- Refreshing %s ---\n' "$(migration_component_label "$component")"
         if migration_repair_component "$component"; then
             printf '%s\n' "$component" >> "$succeeded"
-            [ "$(migration_component_restart_kind "$component")" = code ] && restart_kind=code
         else
             warn "$(migration_component_label "$component") refresh failed; it remains pending"
             failures=$((failures + 1))
@@ -321,11 +333,7 @@ migration_apply_components() {
     fi
 
     printf '\n--- Final protected restart ---\n'
-    if [ "$restart_kind" = code ] || [ -f /tmp/k2-klippy-code-restart-required ]; then
-        restart_script="$INSTALLER_DIR/scripts/klippy_code_restart.sh"
-    else
-        restart_script="$INSTALLER_DIR/scripts/firmware_restart.sh"
-    fi
+    restart_script="$INSTALLER_DIR/scripts/firmware_restart.sh"
 
     if K2_DEFER_FIRMWARE_RESTART=0 sh "$restart_script"; then
         while IFS= read -r component; do
@@ -387,7 +395,7 @@ menu_update_results() {
             ''|*[!0-9]*) ;;
             *)
                 if [ "$choice" -eq "$all_choice" ] 2>/dev/null; then
-                    if confirm 'Refresh every listed component and perform one final protected restart?'; then
+                    if confirm 'Refresh every listed component? Installers may restart Klipper as required.'; then
                         migration_apply_components "$pending_file" || true
                         press_enter
                     fi

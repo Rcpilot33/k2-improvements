@@ -3,22 +3,10 @@
 Replaces the stock start macro with a temperature-aware workflow that:
 
 - heats and optionally soaks the bed;
-- waits for the exact requested chamber temperature through `M191` without
-  leaving the chamber heater at a hidden higher target;
+- waits for the requested chamber temperature;
 - applies material-specific Z offsets;
 - levels the gantry and prepares the correct bed mesh; and
 - handles either Cartographer or the stock probe path.
-
-When Cartographer or KAMP has installed the shared prime-tower scanner,
-`START_PRINT` waits for that selected-file preflight before preparation moves.
-Cartographer adaptive meshing includes a detected Creality Print prime tower
-and expands the active mesh enough to contain the configured KAMP purge path.
-The scan is bounded, cancelable, and rerun when a newly selected file identity
-changes; a large G-code file can therefore add a visible preflight delay.
-
-Leave Creality Print's **Print Calibration** option disabled. Its separate
-Creality-controlled heat-soak and mesh sequence runs before `START_PRINT` and
-is not compatible with this workflow.
 
 ## Slicer setup
 

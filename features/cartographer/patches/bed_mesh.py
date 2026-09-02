@@ -448,35 +448,13 @@ class BedMeshCalibrate:
     def set_adaptive_mesh(self, gcmd):
         if not gcmd.get_int('ADAPTIVE', 0):
             return False
-        tower_status = None
-        prime_tower = self.printer.lookup_object("prime_tower", None)
-        if prime_tower is not None:
-            eventtime = self.printer.get_reactor().monotonic()
-            wait_for_scan = getattr(prime_tower, "wait_for_scan", None)
-            if wait_for_scan is not None:
-                tower_status = wait_for_scan(eventtime)
-            else:
-                tower_status = prime_tower.get_status(eventtime)
-            if tower_status.get("blocked"):
-                raise gcmd.error(tower_status["block_reason"])
         exclude_objects = self.printer.lookup_object("exclude_object", None)
         if exclude_objects is None:
             gcmd.respond_info("Exclude objects not enabled. Using full mesh...")
             return False
-        objects = list(exclude_objects.get_status().get("objects", []))
+        objects = exclude_objects.get_status().get("objects", [])
         if not objects:
             return False
-        if tower_status is not None:
-            if tower_status.get("detected"):
-                objects.append({
-                    "name": "__prime_tower_footprint__",
-                    "polygon": tower_status["polygon"],
-                })
-                bounds = tower_status["bounds"]
-                gcmd.respond_info(
-                    "Adaptive mesh includes prime tower: "
-                    "X[%.1f,%.1f] Y[%.1f,%.1f]" %
-                    (bounds[0], bounds[2], bounds[1], bounds[3]))
         margin = gcmd.get_float('ADAPTIVE_MARGIN', self.adaptive_margin)
 
         # List all exclude_object points by axis and iterate over
