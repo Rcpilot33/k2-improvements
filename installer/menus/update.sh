@@ -6,9 +6,6 @@ MIGRATION_COMPLETED="$MIGRATION_STATE_DIR/completed-migrations"
 MIGRATION_INITIALIZED="$MIGRATION_STATE_DIR/initialized"
 MIGRATION_LAST_PULL="$MIGRATION_STATE_DIR/last-pull"
 MIGRATION_INSTALLED_SNAPSHOT="$MIGRATION_STATE_DIR/installed-before-update"
-MIGRATION_AWAITING_REBOOT="$MIGRATION_STATE_DIR/awaiting-reboot-verification"
-MIGRATION_AWAITING_BOOT_ID="$MIGRATION_STATE_DIR/awaiting-reboot-boot-id"
-K2_BOOT_ID_FILE="${K2_BOOT_ID_FILE:-/proc/sys/kernel/random/boot_id}"
 
 migration_component_label() {
     case "$1" in
@@ -168,72 +165,6 @@ migration_mark_component_current() {
         migration_catalog | awk -F'|' -v component="$component" '$2 == component { print $1 }'
     } | awk 'NF && !seen[$0]++' > "$temporary"
     migration_write_atomic "$MIGRATION_COMPLETED" "$temporary"
-}
-
-migration_remember_reboot_verification() {
-    local components_file temporary boot_id
-    components_file="$1"
-    mkdir -p "$MIGRATION_STATE_DIR"
-
-    temporary="$MIGRATION_STATE_DIR/.awaiting-reboot.$$"
-    awk 'NF && !seen[$0]++' "$components_file" > "$temporary"
-    migration_write_atomic "$MIGRATION_AWAITING_REBOOT" "$temporary"
-
-    boot_id=$(cat "$K2_BOOT_ID_FILE" 2>/dev/null || echo unknown)
-    temporary="$MIGRATION_STATE_DIR/.awaiting-boot-id.$$"
-    printf '%s\n' "$boot_id" > "$temporary"
-    migration_write_atomic "$MIGRATION_AWAITING_BOOT_ID" "$temporary"
-}
-
-migration_klipper_ready() {
-    local api info curl_bin
-    api="${MOONRAKER_URL:-http://127.0.0.1:7125}"
-    if [ -n "${K2_CURL:-}" ]; then
-        curl_bin=$K2_CURL
-    elif [ -x /opt/bin/curl ]; then
-        curl_bin=/opt/bin/curl
-    elif command -v curl >/dev/null 2>&1; then
-        curl_bin=$(command -v curl)
-    else
-        return 1
-    fi
-    info=$("$curl_bin" -fsS --max-time 3 "$api/printer/info" 2>/dev/null || true)
-    printf '%s' "$info" | \
-        grep -qE '"state"[[:space:]]*:[[:space:]]*"ready"'
-}
-
-# If installation completed but activation required a physical power cycle,
-# verify it on the next boot.  The boot-id guard prevents a same-boot Klippy
-# recovery from being mistaken for the required full-controller reset.
-migration_reconcile_after_reboot() {
-    local previous_boot current_boot remaining component temporary
-    [ -s "$MIGRATION_AWAITING_REBOOT" ] || return 0
-    [ -s "$MIGRATION_AWAITING_BOOT_ID" ] || return 0
-
-    previous_boot=$(cat "$MIGRATION_AWAITING_BOOT_ID" 2>/dev/null || true)
-    current_boot=$(cat "$K2_BOOT_ID_FILE" 2>/dev/null || echo unknown)
-    [ "$previous_boot" != unknown ] || return 0
-    [ "$current_boot" != unknown ] || return 0
-    [ "$previous_boot" != "$current_boot" ] || return 0
-    migration_klipper_ready || return 0
-
-    temporary="$MIGRATION_STATE_DIR/.still-awaiting.$$"
-    : > "$temporary"
-    remaining=0
-    while IFS= read -r component; do
-        [ -n "$component" ] || continue
-        if ! migration_mark_component_current "$component"; then
-            printf '%s\n' "$component" >> "$temporary"
-            remaining=$((remaining + 1))
-        fi
-    done < "$MIGRATION_AWAITING_REBOOT"
-
-    if [ "$remaining" -eq 0 ]; then
-        rm -f "$temporary" "$MIGRATION_AWAITING_REBOOT" "$MIGRATION_AWAITING_BOOT_ID"
-    else
-        migration_write_atomic "$MIGRATION_AWAITING_REBOOT" "$temporary"
-        printf '%s\n' "$current_boot" > "$MIGRATION_AWAITING_BOOT_ID"
-    fi
 }
 
 migration_print_details() {
@@ -453,10 +384,9 @@ migration_apply_components() {
             warn 'one or more updates remain pending; review the messages above'
         fi
     else
-        migration_remember_reboot_verification "$succeeded"
         rm -f "$succeeded"
-        warn 'final protected restart failed; completed repairs await verification after a power cycle'
-        warn 'power-cycle before homing or attempting a print, then reopen the installer'
+        warn 'final protected restart failed; completed repairs remain pending for verification'
+        warn 'power-cycle before homing or attempting a print'
         return 1
     fi
 
@@ -596,7 +526,6 @@ menu_update_installer() {
 
 migration_offer_on_startup() {
     local old new branch temporary
-    migration_reconcile_after_reboot
     if [ -f "$MIGRATION_STATE_DIR/review-after-reload" ]; then
         rm -f "$MIGRATION_STATE_DIR/review-after-reload"
         menu_update_results
