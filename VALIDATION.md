@@ -38,10 +38,15 @@ receive a third recovery attempt with progressively longer settling time. If
 all attempts fail, the updater verifies a changed boot ID and ready Klipper
 state before recording completion after the required power cycle.
 
-The successful retry also confirmed that Moonraker's initial `ready` state can
-precede completion of the K2 controller startup traffic. The code-reload helper
-now applies the full controller stabilization interval both before issuing its
-firmware reset and after Klipper returns ready from that reset.
+Follow-up observation distinguished normal restart presentation from a failed
+restart. Fluidd normally cycles through disconnect, unknown, and `key3` startup
+messages, often rendered in red, while Serial-485 status traffic continues.
+Those messages are not failure signals. In the failed `1.1.3.13` attempt,
+Klippy instead timed out connecting the main MCU, raised a `serialqueue`
+`NoneType` exception, and remained in shutdown until the recovery attempt.
+The helper now tolerates the normal states, advances after a persistent true
+error/shutdown, and requires consecutive Klippy-ready and K2 `motor_ready`
+checks before reporting success.
 
 ### Core print workflows
 
@@ -82,10 +87,10 @@ For the no-Cartographer path, a saved `default` mesh must match the active
 | `screws_tilt_adjust` and `abort_homing` repair installs using the code-reload helper | PASS |
 
 The repeated stock-probe test used a temporary `3,3` mesh to shorten each
-cycle; the configured mesh was restored to `19,19` after testing. Moonraker can
-report Klipper ready before the Creality motor-controller startup messages have
-finished, so the shared helper waits an additional K2-specific stabilization
-interval and verifies that Klipper is still ready before returning.
+cycle; the configured mesh was restored to `19,19` after testing. The shared
+helper verifies consecutive Klipper-ready and K2 motor-ready states before
+returning. Continuing Serial-485 console output is treated as normal runtime
+traffic rather than an incomplete-startup signal.
 
 ### Current Cartographer, KAMP, and chamber workflow (`1.1.5.5`)
 

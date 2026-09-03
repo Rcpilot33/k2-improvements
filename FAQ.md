@@ -47,17 +47,20 @@ cached by the Klippy host process.
 The shared SAVE_CONFIG protection therefore makes `SAVE_CONFIG` request a
 firmware-level restart directly after writing the configuration. This preserves
 the normal save operation while including the MCU reset that the K2 Plus needs.
-The shared restart helper also waits for the K2 motor-controller startup to
-finish after Moonraker first reports Klipper ready. This has been validated on
-both the stock PR Touch and Cartographer paths. If the helper reports a failure,
-fully power-cycle the printer before attempting to home.
+The shared restart helper verifies both Klipper's `ready` state and the K2
+`motor_control.motor_ready` state across consecutive checks. It does not wait
+for console silence because normal Serial-485 status traffic continues after
+startup. This has been validated on both the stock PR Touch and Cartographer
+paths. If the helper reports a failure, fully power-cycle the printer before
+attempting to home.
 
 Installers that replace Klippy Python modules use a separate protected helper:
-it starts a fresh Klippy process, requests the required firmware reset, retries
-for the K2's observed MCU startup races, and then performs the same
-stabilization check. Because Moonraker can report `ready` while the K2
-controllers are still producing startup traffic, the helper also waits through
-the controller stabilization interval before sending that firmware reset.
+it starts a fresh Klippy process, waits for Klippy and the K2 motor controller,
+requests the required firmware reset, and retries the K2's observed MCU startup
+failures. The normal Fluidd sequence can include disconnect, unknown, and
+`key3`/startup messages; the helper waits through those states. A persistent
+`error` or `shutdown` state advances to the next recovery attempt without
+consuming the full general timeout.
 Firmware `1.1.3.13` receives a third attempt because its
 primary or Linux MCU can occasionally miss two consecutive startup windows.
 Never home between those stages. If every attempt fails, fully power-cycle the

@@ -16,16 +16,58 @@ cat > "$TMP_DIR/bin/curl" <<'EOF'
 #!/bin/sh
 case " $* " in
     *' -X POST '*)
-        : > "$K2_TEST_POST_MARKER"
+        printf '%s\n' post >> "$K2_TEST_POST_MARKER"
         printf '%s\n' '{"result":"ok"}'
         ;;
-    *)
-        if [ "${K2_TEST_READY_AFTER_POST:-0}" = 1 ] && \
-           [ -e "$K2_TEST_POST_MARKER" ]; then
-            printf '%s\n' '{"state":"ready"}'
+    *'/printer/objects/query?motor_control'*)
+        if [ -n "${K2_TEST_MOTOR_FALSE_COUNT:-}" ]; then
+            count_file=$K2_TEST_MOTOR_COUNTER
+            count=0
+            [ ! -e "$count_file" ] || count=$(cat "$count_file")
+            count=$((count + 1))
+            printf '%s\n' "$count" > "$count_file"
+            if [ "$count" -le "$K2_TEST_MOTOR_FALSE_COUNT" ]; then
+                printf '%s\n' '{"motor_ready":false}'
+            else
+                printf '%s\n' '{"motor_ready":true}'
+            fi
         else
-            printf '%s\n' "${K2_TEST_INFO_JSON}"
+            printf '%s\n' "${K2_TEST_MOTOR_JSON:-{\"motor_ready\":true}}"
         fi
+        ;;
+    *)
+        posts=0
+        [ ! -e "$K2_TEST_POST_MARKER" ] || posts=$(wc -l < "$K2_TEST_POST_MARKER")
+        case "${K2_TEST_SEQUENCE:-fixed}" in
+            normal-transitions)
+                count_file=$K2_TEST_INFO_COUNTER
+                count=0
+                [ ! -e "$count_file" ] || count=$(cat "$count_file")
+                count=$((count + 1))
+                printf '%s\n' "$count" > "$count_file"
+                case "$count" in
+                    1) printf '%s\n' '{"state":"startup","state_message":"key3"}' ;;
+                    2) printf '%s\n' '{}' ;;
+                    3) printf '%s\n' '{"state":"startup","state_message":"key3"}' ;;
+                    *) printf '%s\n' '{"state":"ready"}' ;;
+                esac
+                ;;
+            persistent-failure)
+                if [ "$posts" -eq 1 ]; then
+                    printf '%s\n' '{"state":"shutdown","state_message":"key1"}'
+                else
+                    printf '%s\n' '{"state":"ready"}'
+                fi
+                ;;
+            *)
+                if [ "${K2_TEST_READY_AFTER_POST:-0}" = 1 ] && \
+                   [ "$posts" -gt 0 ]; then
+                    printf '%s\n' '{"state":"ready"}'
+                else
+                    printf '%s\n' "${K2_TEST_INFO_JSON}"
+                fi
+                ;;
+        esac
         ;;
 esac
 EOF
@@ -71,10 +113,46 @@ K2_TEST_POST_MARKER="$TMP_DIR/ready.post" \
 K2_WAIT_FOR_KLIPPY_STARTUP=1 K2_FIRMWARE_RESTART_ATTEMPTS=1 \
     sh "$REPO_DIR/scripts/firmware_restart.sh" >"$TMP_DIR/ready.out" 2>&1
 [ -e "$TMP_DIR/ready.post" ] || fail 'ready startup state did not request FIRMWARE_RESTART'
-grep -q 'motor initialization interval complete' "$TMP_DIR/ready.out" || \
+grep -q 'remained ready for 5 seconds' "$TMP_DIR/ready.out" || \
     fail 'ready path did not complete stabilization'
-grep -q 'waiting 25 seconds for K2 controller startup before firmware reset' \
-    "$TMP_DIR/ready.out" || fail 'pre-reset controller stabilization was skipped'
+grep -q 'K2 motor controller are ready' "$TMP_DIR/ready.out" || \
+    fail 'pre-reset motor-ready gate was skipped'
+
+# Fluidd's normal disconnect/unknown/key3 startup sequence must not consume a
+# recovery attempt. The helper should wait through it and complete one reset.
+PATH="$TMP_DIR/bin:$PATH" K2_CURL="$TMP_DIR/bin/curl" \
+K2_TEST_SEQUENCE=normal-transitions \
+K2_TEST_INFO_COUNTER="$TMP_DIR/normal.counter" \
+K2_TEST_POST_MARKER="$TMP_DIR/normal.post" \
+K2_READY_STABLE_SECONDS=2 K2_FIRMWARE_RESTART_ATTEMPTS=2 \
+    sh "$REPO_DIR/scripts/firmware_restart.sh" >"$TMP_DIR/normal.out" 2>&1
+[ "$(wc -l < "$TMP_DIR/normal.post")" -eq 1 ] || \
+    fail 'normal startup transitions incorrectly consumed a recovery attempt'
+
+# A persistent key1-style shutdown should advance to recovery without using
+# the full general startup timeout, and the second attempt may still recover.
+PATH="$TMP_DIR/bin:$PATH" K2_CURL="$TMP_DIR/bin/curl" \
+K2_TEST_SEQUENCE=persistent-failure \
+K2_TEST_POST_MARKER="$TMP_DIR/failure.post" \
+K2_FAILURE_GRACE_SECONDS=3 K2_READY_STABLE_SECONDS=2 \
+K2_FIRMWARE_RESTART_ATTEMPTS=2 \
+    sh "$REPO_DIR/scripts/firmware_restart.sh" >"$TMP_DIR/failure.out" 2>&1
+[ "$(wc -l < "$TMP_DIR/failure.post")" -eq 2 ] || \
+    fail 'persistent shutdown did not trigger exactly one recovery attempt'
+grep -q 'remained in error/shutdown for 3 seconds' "$TMP_DIR/failure.out" || \
+    fail 'persistent shutdown was not identified'
+
+# Klippy ready alone is insufficient while the K2 motor controller explicitly
+# reports that it is not ready.
+PATH="$TMP_DIR/bin:$PATH" K2_CURL="$TMP_DIR/bin/curl" \
+K2_TEST_INFO_JSON='{"state":"ready"}' \
+K2_TEST_MOTOR_FALSE_COUNT=2 \
+K2_TEST_MOTOR_COUNTER="$TMP_DIR/motor.counter" \
+K2_TEST_POST_MARKER="$TMP_DIR/motor.post" \
+K2_READY_STABLE_SECONDS=2 K2_FIRMWARE_RESTART_ATTEMPTS=1 \
+    sh "$REPO_DIR/scripts/firmware_restart.sh" >"$TMP_DIR/motor.out" 2>&1
+[ "$(cat "$TMP_DIR/motor.counter")" -ge 4 ] || \
+    fail 'motor-ready false state did not delay stable completion'
 
 # Completed repairs remain pending on the same boot, then reconcile only after
 # a real reboot and a ready Klipper API response.
