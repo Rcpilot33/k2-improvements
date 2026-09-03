@@ -54,8 +54,15 @@ fully power-cycle the printer before attempting to home.
 
 Installers that replace Klippy Python modules use a separate protected helper:
 it starts a fresh Klippy process, requests the required firmware reset, retries
-once for the K2's observed `key301` startup state, and then performs the same
-stabilization check. Never home between those stages.
+for the K2's observed MCU startup races, and then performs the same
+stabilization check. Because Moonraker can report `ready` while the K2
+controllers are still producing startup traffic, the helper also waits through
+the controller stabilization interval before sending that firmware reset.
+Firmware `1.1.3.13` receives a third attempt because its
+primary or Linux MCU can occasionally miss two consecutive startup windows.
+Never home between those stages. If every attempt fails, fully power-cycle the
+printer. After power-up, reopen the installer; it uses the changed system boot
+ID and a ready Klipper state to verify and clear the completed update action.
 
 ## I updated the installer. Are the changes already active?
 

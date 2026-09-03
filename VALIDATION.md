@@ -30,6 +30,19 @@ Firmware `1.1.5.5` received the broadest optional-feature cycle. Firmware
 `1.1.3.13` and `1.1.5.2` then repeated all three installation paths and the
 core print workflows with the current code.
 
+On firmware `1.1.3.13`, a later standalone KAMP refresh exposed an intermittent
+vendor Klippy startup race. One run exhausted two recovery attempts and passed
+`G28` after a complete power cycle; a repeat installation recovered
+automatically and also passed `G28`. Feature-code updates on this firmware now
+receive a third recovery attempt with progressively longer settling time. If
+all attempts fail, the updater verifies a changed boot ID and ready Klipper
+state before recording completion after the required power cycle.
+
+The successful retry also confirmed that Moonraker's initial `ready` state can
+precede completion of the K2 controller startup traffic. The code-reload helper
+now applies the full controller stabilization interval both before issuing its
+firmware reset and after Klipper returns ready from that reset.
+
 ### Core print workflows
 
 | Workflow | `1.1.3.13` | `1.1.5.2` | `1.1.5.5` |
