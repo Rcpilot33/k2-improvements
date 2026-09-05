@@ -58,7 +58,12 @@ if [ "$WAIT_FOR_STARTUP" = "1" ]; then
     if [ "$COUNT" -ge 60 ]; then
         echo "W: fresh Klippy host startup did not settle within 60 seconds" >&2
     else
-        echo "I: fresh Klippy host startup has settled; continuing with the protected K2 firmware reset"
+        echo "I: fresh Klippy host startup has settled; waiting 5 seconds before the protected K2 firmware reset"
+        # Moonraker can report the replacement Klippy process as settled while
+        # its MCU and vendor-extension startup callbacks are still unwinding.
+        # Give that process a short quiet interval before asking it to perform
+        # the second, firmware-level restart.
+        sleep 5
     fi
 fi
 
