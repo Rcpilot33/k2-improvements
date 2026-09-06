@@ -43,7 +43,7 @@ class ProtectedRestartTests(unittest.TestCase):
                 mock.patch.object(MODULE, 'open', open_mock,
                                   create=True), \
                 mock.patch.object(MODULE.subprocess, 'Popen') as popen:
-            self.config._schedule_protected_restart(self.gcode)
+            self.config._schedule_post_restart_firmware_reset(self.gcode)
 
         helper = str(MODULE_PATH.parents[2] / 'scripts' /
                      'save_config_restart.sh')
@@ -55,14 +55,30 @@ class ProtectedRestartTests(unittest.TestCase):
         fake_stdout.__exit__.assert_called_once()
         self.assertEqual(
             self.gcode.responses,
-            ['SAVE_CONFIG complete; protected Klippy and firmware restart '
-             'scheduled'])
+            ['SAVE_CONFIG complete; stock Klipper restart and protected '
+             'firmware restart scheduled'])
 
     def test_missing_worker_stops_without_requesting_restart(self):
         with mock.patch.object(MODULE.os.path, 'isfile', return_value=False), \
                 self.assertRaisesRegex(RuntimeError,
                                        'protected restart helper is missing'):
-            self.config._schedule_protected_restart(self.gcode)
+            self.config._schedule_post_restart_firmware_reset(self.gcode)
+
+    def test_save_config_preserves_stock_restart_then_uses_worker(self):
+        source = MODULE_PATH.read_text(encoding='utf-8')
+        command = source.split('def cmd_SAVE_CONFIG(self, gcmd):', 1)[1]
+        command = command.split('cmd_CXSAVE_CONFIG_help', 1)[0]
+        schedule = command.index(
+            'self._schedule_post_restart_firmware_reset(gcode)')
+        stock_restart = command.index("gcode.request_restart('restart')")
+        self.assertLess(schedule, stock_restart)
+
+    def test_worker_avoids_klippy_service_restart(self):
+        worker = MODULE_PATH.parents[2] / 'scripts' / 'save_config_restart.sh'
+        source = worker.read_text(encoding='utf-8')
+        self.assertIn('motor_control=motor_ready', source)
+        self.assertIn('K2_FIRMWARE_RESTART_ATTEMPTS=1', source)
+        self.assertNotIn('klippy_code_restart.sh', source)
 
 
 if __name__ == '__main__':

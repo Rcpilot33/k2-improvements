@@ -95,15 +95,14 @@ is_save_config_restart() {
     local system_configfile="${KLIPPER_DIR:-/usr/share/klipper}/klippy/configfile.py"
     local configfile
 
-    # The current implementation deliberately no longer calls Klipper's
-    # internal request_restart() directly.  It launches the detached worker so
-    # SAVE_CONFIG can finish shutting down before the guarded host/MCU restart
-    # sequence begins.  Recognize that complete implementation rather than the
-    # legacy direct-call signature.
+    # The worker must be scheduled before stock request_restart() destroys the
+    # SAVE_CONFIG command context. Recognize both halves of that chain so a
+    # partial or legacy implementation is offered for repair.
     for configfile in "$root_configfile" "$system_configfile"; do
         [ -f "$configfile" ] || continue
-        if grep -q '_schedule_protected_restart' "$configfile" 2>/dev/null &&
-           grep -q 'save_config_restart\.sh' "$configfile" 2>/dev/null; then
+        if grep -q '_schedule_post_restart_firmware_reset' "$configfile" 2>/dev/null &&
+           grep -q 'save_config_restart\.sh' "$configfile" 2>/dev/null &&
+           grep -q "request_restart('restart')" "$configfile" 2>/dev/null; then
             return 0
         fi
     done

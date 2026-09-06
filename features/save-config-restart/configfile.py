@@ -471,7 +471,7 @@ class PrinterConfig:
                 logging.exception(msg)
                 raise gcode.error(msg)
 
-    def _schedule_protected_restart(self, gcode):
+    def _schedule_post_restart_firmware_reset(self, gcode):
         # configfile.py is installed as a symlink into Klippy. Resolve that
         # symlink so this remains branch-aware and invokes the helper from the
         # same k2-improvements checkout that supplied the loaded module.
@@ -485,9 +485,9 @@ class PrinterConfig:
                 "SAVE_CONFIG completed, but protected restart helper is "
                 "missing: %s" % (helper,))
 
-        # The worker must survive the Klippy service restart it initiates.
-        # Give it a separate session and detach every standard stream from
-        # Klippy; diagnostics remain available in /tmp on the printer.
+        # The worker must survive the stock in-process Klipper restart. Give it
+        # a separate session and detach every standard stream from Klippy;
+        # diagnostics remain available in /tmp on the printer.
         log_path = '/tmp/k2-save-config-restart.log'
         try:
             with open(os.devnull, 'r') as null_in:
@@ -497,14 +497,14 @@ class PrinterConfig:
                         stdout=log_out, stderr=subprocess.STDOUT,
                         close_fds=True, preexec_fn=os.setsid)
         except Exception:
-            msg = ("SAVE_CONFIG completed, but the protected restart could "
-                   "not be scheduled; power-cycle before homing")
+            msg = ("SAVE_CONFIG completed, but the post-restart firmware "
+                   "reset could not be scheduled; power-cycle before homing")
             logging.exception(msg)
             raise gcode.error(msg)
         gcode.respond_info(
-            "SAVE_CONFIG complete; protected Klippy and firmware restart "
-            "scheduled")
-        
+            "SAVE_CONFIG complete; stock Klipper restart and protected "
+            "firmware restart scheduled")
+
     cmd_SAVE_CONFIG_help = "Overwrite config file and restart printer safely"
     def cmd_SAVE_CONFIG(self, gcmd):
         if not self.autosave.fileconfig.sections():
@@ -550,11 +550,13 @@ class PrinterConfig:
             msg = "Unable to write config file during SAVE_CONFIG"
             logging.exception(msg)
             raise gcode.error(msg)
-        # Do not use Klipper's immediate internal restart here. On the K2 Plus
-        # it can start a replacement host while the Linux MCU is still in its
-        # shutdown transition. Route SAVE_CONFIG through the same guarded
-        # host-process and firmware restart sequence used by the installer.
-        self._schedule_protected_restart(gcode)
+        # Preserve Klipper's stock SAVE_CONFIG restart.  A detached worker is
+        # scheduled first because this command context is destroyed by the
+        # restart.  The worker observes that restart, waits for the K2 motor
+        # controller to report ready, and only then requests one firmware
+        # restart for safe subsequent homing.
+        self._schedule_post_restart_firmware_reset(gcode)
+        gcode.request_restart('restart')
 
     cmd_CXSAVE_CONFIG_help = "Overwrite config file by cx "
     def cmd_CXSAVE_CONFIG(self, gcmd):

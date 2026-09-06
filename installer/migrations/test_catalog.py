@@ -164,7 +164,7 @@ class MigrationCatalogTests(unittest.TestCase):
             r"cartographer\) dependency=save-config-restart",
         )
 
-    def test_save_config_detector_recognizes_protected_worker(self):
+    def test_save_config_detector_recognizes_stock_restart_chain(self):
         detectors = FEATURE_DETECTORS.read_text(encoding="utf-8")
         match = re.search(
             r"is_save_config_restart\(\) \{(?P<body>.*?)\n\}",
@@ -173,13 +173,23 @@ class MigrationCatalogTests(unittest.TestCase):
         )
         self.assertIsNotNone(match)
         body = match.group("body")
-        self.assertIn("_schedule_protected_restart", body)
+        self.assertIn("_schedule_post_restart_firmware_reset", body)
         self.assertIn("save_config_restart\\.sh", body)
-        self.assertNotIn("gcode.request_restart('firmware_restart')", body)
+        self.assertIn("request_restart('restart')", body)
 
     def test_save_config_tracks_controller_stabilization_update(self):
         self.assertIn(
             "save-config-controller-stabilization-v1",
+            {
+                migration_id
+                for migration_id, component, _detector, _reason in entries()
+                if component == "save-config-restart"
+            },
+        )
+
+    def test_save_config_tracks_stock_restart_chain_update(self):
+        self.assertIn(
+            "save-config-stock-restart-chain-v1",
             {
                 migration_id
                 for migration_id, component, _detector, _reason in entries()

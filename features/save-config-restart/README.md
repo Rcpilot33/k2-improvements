@@ -6,11 +6,12 @@ direction. This has been reproduced with both the stock PR Touch and
 Cartographer installation paths.
 
 This shared core feature preserves Klipper's normal `SAVE_CONFIG` file update
-and schedules the repository's protected restart worker after the file has
-been replaced. The worker reloads Klippy, waits for the fresh host process to
-settle, gives the K2 controllers a 25-second initialization interval before
-`FIRMWARE_RESTART`, and then verifies that Klipper and the K2 motor controllers
-remain ready.
+and stock in-process restart. Immediately before that restart, it schedules a
+detached worker which observes the old Klipper session disappear, waits for the
+new session and `motor_control.motor_ready`, and then requests exactly one
+`FIRMWARE_RESTART`. The worker again verifies both Klipper and motor-controller
+readiness before reporting success. A runtime `SAVE_CONFIG` never restarts the
+Linux Klippy service.
 
 The stock-probe and Cartographer installers both install this feature. Its
 initial installation replaces Klippy's `configfile.py`, so the installer uses
