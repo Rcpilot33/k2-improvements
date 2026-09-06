@@ -197,6 +197,16 @@ class MigrationCatalogTests(unittest.TestCase):
             },
         )
 
+    def test_installer_tracks_motor_ready_restart_update(self):
+        self.assertIn(
+            "installer-protected-motor-ready-v1",
+            {
+                migration_id
+                for migration_id, component, _detector, _reason in entries()
+                if component == "save-config-restart"
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

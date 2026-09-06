@@ -15,7 +15,12 @@ Linux Klippy service.
 
 The stock-probe and Cartographer installers both install this feature. Its
 initial installation replaces Klippy's `configfile.py`, so the installer uses
-the same protected Klippy-code reload sequence. Runtime restart diagnostics
-are written to `/tmp/k2-save-config-restart.log`, with the final state in
+a protected Klippy-code reload sequence. That installer-only path restarts the
+Linux service, requires both the fresh Klipper session and K2 motor controller
+to become ready, and then requests one firmware restart. It stops without a
+firmware-reset request if the initial controller startup fails.
+
+Runtime restart diagnostics are written to
+`/tmp/k2-save-config-restart.log`, with the final state in
 `/tmp/k2-save-config-restart.status`. If a protected restart fails, fully
 power-cycle before homing.

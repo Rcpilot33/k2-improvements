@@ -19,7 +19,11 @@ case " $* " in
         printf '%s\n' '{"result":"ok"}'
         ;;
     *'motor_control=motor_ready'*)
-        printf '%s\n' '{"result":{"status":{"motor_control":{"motor_ready":true}}}}'
+        if [ -n "${K2_TEST_MOTOR_JSON:-}" ]; then
+            printf '%s\n' "$K2_TEST_MOTOR_JSON"
+        else
+            printf '%s\n' '{"result":{"status":{"motor_control":{"motor_ready":true}}}}'
+        fi
         ;;
     *)
         if [ "${K2_TEST_READY_AFTER_POST:-0}" = 1 ] &&
@@ -69,29 +73,47 @@ cat > "$TMP_DIR/bin/firmware-helper" <<'EOF'
 EOF
 chmod +x "$TMP_DIR/bin/save-curl" "$TMP_DIR/bin/firmware-helper"
 
-# The ready host path must wait through the full pre-reset controller window.
+# The ready host path must require motor readiness before and after its one
+# firmware restart; it no longer relies on a fixed delay.
 PATH="$TMP_DIR/bin:$PATH" K2_CURL="$TMP_DIR/bin/curl" \
 K2_TEST_INFO_JSON='{"state":"ready"}' \
 K2_TEST_POST_MARKER="$TMP_DIR/ready.post" \
 K2_TEST_SLEEP_LOG="$TMP_DIR/ready.sleeps" \
 K2_WAIT_FOR_KLIPPY_STARTUP=1 K2_FIRMWARE_RESTART_ATTEMPTS=1 \
     sh "$REPO_DIR/scripts/firmware_restart.sh" >"$TMP_DIR/ready.out" 2>&1
-grep -q 'waiting 25 seconds for K2 controller startup before firmware reset' \
-    "$TMP_DIR/ready.out" || fail 'pre-reset controller stabilization was skipped'
-[ "$(grep -c '^25$' "$TMP_DIR/ready.sleeps")" -eq 1 ] ||
-    fail 'expected one pre-reset 25-second wait'
+grep -q 'K2 motor controller are ready; continuing with one protected firmware reset' \
+    "$TMP_DIR/ready.out" || fail 'pre-reset motor readiness was not verified'
+[ "$(grep -c '^25$' "$TMP_DIR/ready.sleeps" || true)" -eq 0 ] ||
+    fail 'installer still used a fixed 25-second readiness delay'
 grep -q 'K2 motor controller reports ready' "$TMP_DIR/ready.out" ||
     fail 'post-reset motor readiness was not verified'
 
-# Firmware 1.1.3.13 must receive a third automatic recovery attempt.
+# The installer must request exactly one firmware restart on every firmware.
 PATH="$TMP_DIR/bin:$PATH" K2_CURL="$TMP_DIR/bin/curl" \
 K2_KLIPPER_SERVICE="$TMP_DIR/bin/klipper-service" \
 K2_PRINTER_FW_OVERRIDE=1.1.3.13 K2_TEST_INFO_JSON='{"state":"ready"}' \
 K2_TEST_POST_MARKER="$TMP_DIR/old-fw.post" \
 K2_TEST_SLEEP_LOG="$TMP_DIR/old-fw.sleeps" \
     sh "$REPO_DIR/scripts/klippy_code_restart.sh" >"$TMP_DIR/old-fw.out" 2>&1
-grep -q 'attempt 1/3' "$TMP_DIR/old-fw.out" ||
-    fail '1.1.3.13 did not receive three recovery attempts'
+[ "$(grep -c 'requesting FIRMWARE_RESTART through Moonraker' "$TMP_DIR/old-fw.out")" -eq 1 ] ||
+    fail 'installer did not use exactly one firmware restart'
+
+# A premature API-ready state with motor_ready=false must stop before reset.
+if PATH="$TMP_DIR/bin:$PATH" K2_CURL="$TMP_DIR/bin/curl" \
+    K2_KLIPPER_SERVICE="$TMP_DIR/bin/klipper-service" \
+    K2_TEST_INFO_JSON='{"state":"ready"}' \
+    K2_TEST_MOTOR_JSON='{"result":{"status":{"motor_control":{"motor_ready":false}}}}' \
+    K2_TEST_POST_MARKER="$TMP_DIR/failed-start.post" \
+    K2_TEST_SLEEP_LOG="$TMP_DIR/failed-start.sleeps" \
+    K2_MOTOR_READY_TIMEOUT=2 \
+    sh "$REPO_DIR/scripts/klippy_code_restart.sh" \
+        >"$TMP_DIR/failed-start.out" 2>&1; then
+    fail 'installer accepted API ready while the motor controller was not ready'
+fi
+[ ! -e "$TMP_DIR/failed-start.post" ] ||
+    fail 'installer requested firmware restart before motor readiness'
+grep -q 'no firmware restart was requested' "$TMP_DIR/failed-start.out" ||
+    fail 'installer failure did not explain the safe stop'
 
 # Runtime SAVE_CONFIG must observe stock restart and motor readiness, then call
 # the firmware helper exactly once without restarting the Klippy service.

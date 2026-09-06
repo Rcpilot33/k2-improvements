@@ -47,6 +47,7 @@ main-m191-cleanup-response-v1|macros|is_macros|M191 assisted-heating cleanup mes
 save-config-protected-worker-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG now uses the delayed protected restart worker
 save-config-controller-stabilization-v1|save-config-restart|is_save_config_restart|Protected code reload now waits for K2 controller startup before resetting firmware
 save-config-stock-restart-chain-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG now preserves the stock Klipper restart before one motor-ready firmware reset
+installer-protected-motor-ready-v1|save-config-restart|is_save_config_restart|Installer code reload now requires motor readiness before one firmware reset
 test-stock-case-fan-release-v1|macros|is_macros|Stock-probe pre-print now releases Creality's one-time 100% case-fan override
 EOF
 }
