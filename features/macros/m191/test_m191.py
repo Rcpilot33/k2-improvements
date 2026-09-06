@@ -10,9 +10,27 @@ MACRO = Path(__file__).with_name("m191.cfg").read_text(encoding="utf-8")
 class M191WorkflowTests(unittest.TestCase):
     def test_assist_requires_chamber_below_requested_target(self):
         self.assertIn(
-            "{% set USE_BED_ASSIST = S > 35.0 and CHAMBER_TEMP < S %}",
+            "{% set WAIT_FOR_CHAMBER = S > 35.0 %}",
             MACRO,
         )
+        self.assertIn(
+            "{% set USE_BED_ASSIST = WAIT_FOR_CHAMBER and CHAMBER_TEMP < S %}",
+            MACRO,
+        )
+
+    def test_passive_chamber_targets_are_applied_without_waiting(self):
+        wait_guard = MACRO.index("{% if WAIT_FOR_CHAMBER %}")
+        chamber_wait = MACRO.index(
+            'TEMPERATURE_WAIT SENSOR="temperature_sensor chamber_temp"',
+            wait_guard,
+        )
+        passive_branch = MACRO.index("{% else %}", chamber_wait)
+        passive_message = MACRO.index(
+            "at or below the 35c active-heating threshold", passive_branch
+        )
+        self.assertLess(wait_guard, chamber_wait)
+        self.assertLess(chamber_wait, passive_branch)
+        self.assertLess(passive_branch, passive_message)
 
     def test_assist_lowers_bed_and_starts_both_fans_at_25_percent(self):
         assist = MACRO.index("{% if USE_BED_ASSIST %}")

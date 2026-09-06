@@ -50,5 +50,6 @@ save-config-stock-restart-chain-v1|save-config-restart|is_save_config_restart|SA
 installer-protected-motor-ready-v1|save-config-restart|is_save_config_restart|Installer code reload now requires motor readiness before one firmware reset
 save-config-motor-e-recovery-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG now recovers only the validated key798 extruder-motor startup fault
 test-stock-case-fan-release-v1|macros|is_macros|Stock-probe pre-print now releases Creality's one-time 100% case-fan override
+test-low-chamber-no-wait-v1|macros|is_macros|Chamber targets at or below 35 C no longer block pre-print or missing-mesh creation
 EOF
 }

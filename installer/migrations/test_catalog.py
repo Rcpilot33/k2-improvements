@@ -217,6 +217,16 @@ class MigrationCatalogTests(unittest.TestCase):
             },
         )
 
+    def test_macros_track_passive_chamber_no_wait_update(self):
+        self.assertIn(
+            "test-low-chamber-no-wait-v1",
+            {
+                migration_id
+                for migration_id, component, _detector, _reason in entries()
+                if component == "macros"
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

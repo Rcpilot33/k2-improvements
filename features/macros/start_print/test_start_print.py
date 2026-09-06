@@ -33,6 +33,10 @@ class StartPrintConfigTests(unittest.TestCase):
         self.assertEqual(self.config.count("M107 P1"), 1)
         self.assertNotIn("[delayed_gcode", self.config)
 
+    def test_active_chamber_wait_uses_creality_35c_boundary(self):
+        self.assertIn("{% if CHAMBER_TEMP > 35 %}", self.config)
+        self.assertNotIn("{% if CHAMBER_TEMP > 40 %}", self.config)
+
 
 if __name__ == "__main__":
     unittest.main()
