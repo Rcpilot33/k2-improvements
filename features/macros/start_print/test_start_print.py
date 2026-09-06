@@ -37,6 +37,29 @@ class StartPrintConfigTests(unittest.TestCase):
         self.assertIn("{% if CHAMBER_TEMP > 35 %}", self.config)
         self.assertNotIn("{% if CHAMBER_TEMP > 40 %}", self.config)
 
+    def test_preheat_applies_fan_margin_for_existing_mesh_path(self):
+        self.assertIn(
+            "SET_TEMPERATURE_FAN_TARGET TEMPERATURE_FAN=chamber_fan "
+            "TARGET={CHAMBER_TEMP + 2.0}",
+            self.config,
+        )
+        self.assertNotIn("M141 S{CHAMBER_TEMP}", self.config)
+
+    def test_preheat_keeps_passive_chamber_heater_off(self):
+        active_guard = self.config.index("{% if CHAMBER_TEMP > 35 %}")
+        active_heater = self.config.index(
+            "SET_HEATER_TEMPERATURE HEATER=chamber_heater "
+            "TARGET={CHAMBER_TEMP}",
+            active_guard,
+        )
+        passive_branch = self.config.index("{% else %}", active_heater)
+        passive_heater = self.config.index(
+            "SET_HEATER_TEMPERATURE HEATER=chamber_heater TARGET=0",
+            passive_branch,
+        )
+        self.assertLess(active_heater, passive_branch)
+        self.assertLess(passive_branch, passive_heater)
+
 
 if __name__ == "__main__":
     unittest.main()

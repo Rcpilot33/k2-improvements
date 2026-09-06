@@ -32,6 +32,20 @@ class M191WorkflowTests(unittest.TestCase):
         self.assertLess(chamber_wait, passive_branch)
         self.assertLess(passive_branch, passive_message)
 
+    def test_passive_chamber_target_keeps_heater_off(self):
+        target_policy = MACRO.index("{% if WAIT_FOR_CHAMBER %}")
+        active_heater = MACRO.index(
+            "SET_HEATER_TEMPERATURE HEATER=chamber_heater TARGET={S}",
+            target_policy,
+        )
+        passive_branch = MACRO.index("{% else %}", active_heater)
+        passive_heater = MACRO.index(
+            "SET_HEATER_TEMPERATURE HEATER=chamber_heater TARGET=0",
+            passive_branch,
+        )
+        self.assertLess(active_heater, passive_branch)
+        self.assertLess(passive_branch, passive_heater)
+
     def test_assist_lowers_bed_and_starts_both_fans_at_25_percent(self):
         assist = MACRO.index("{% if USE_BED_ASSIST %}")
         move = MACRO.index("G1 Z195 F600", assist)

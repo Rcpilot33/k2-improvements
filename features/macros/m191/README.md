@@ -2,8 +2,9 @@
 
 Adds `M191 S<temperature>` to control the K2 Plus chamber temperature.
 Targets from 1 through 35 C set the chamber heater and the cooling-fan target
-but return without waiting because Creality does not actively heat the chamber
-in that range. Targets above 35 C wait for the requested temperature.
+to passive mode and return without waiting because Creality does not actively
+heat the chamber in that range. Targets above 35 C enable the heater and wait
+for the requested temperature.
 
 For targets above 35 C, the macro can temporarily use the heated bed to assist
 the chamber heater. During that active-heating path it homes when needed,
