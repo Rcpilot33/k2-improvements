@@ -93,8 +93,21 @@ is_abort_homing_firmware_restart() {
 is_save_config_restart() {
     local root_configfile="${HOME:-/mnt/UDISK/root}/klipper/klippy/configfile.py"
     local system_configfile="${KLIPPER_DIR:-/usr/share/klipper}/klippy/configfile.py"
-    grep -q "gcode.request_restart('firmware_restart')" \
-        "$root_configfile" "$system_configfile" 2>/dev/null
+    local configfile
+
+    # The current implementation deliberately no longer calls Klipper's
+    # internal request_restart() directly.  It launches the detached worker so
+    # SAVE_CONFIG can finish shutting down before the guarded host/MCU restart
+    # sequence begins.  Recognize that complete implementation rather than the
+    # legacy direct-call signature.
+    for configfile in "$root_configfile" "$system_configfile"; do
+        [ -f "$configfile" ] || continue
+        if grep -q '_schedule_protected_restart' "$configfile" 2>/dev/null &&
+           grep -q 'save_config_restart\.sh' "$configfile" 2>/dev/null; then
+            return 0
+        fi
+    done
+    return 1
 }
 is_better_init()   { [ -f /etc/profile.d/better-init.sh ]; }
 

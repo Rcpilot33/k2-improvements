@@ -9,6 +9,7 @@ HERE = Path(__file__).resolve().parent
 CATALOG = HERE / "catalog.sh"
 UPDATE_MENU = HERE.parent / "menus" / "update.sh"
 MAIN_MENU = HERE.parent / "menus" / "main.sh"
+FEATURE_DETECTORS = HERE.parent / "detect" / "features.sh"
 
 KNOWN_COMPONENTS = {
     "cartographer",
@@ -162,6 +163,19 @@ class MigrationCatalogTests(unittest.TestCase):
             menu,
             r"cartographer\) dependency=save-config-restart",
         )
+
+    def test_save_config_detector_recognizes_protected_worker(self):
+        detectors = FEATURE_DETECTORS.read_text(encoding="utf-8")
+        match = re.search(
+            r"is_save_config_restart\(\) \{(?P<body>.*?)\n\}",
+            detectors,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        body = match.group("body")
+        self.assertIn("_schedule_protected_restart", body)
+        self.assertIn("save_config_restart\\.sh", body)
+        self.assertNotIn("gcode.request_restart('firmware_restart')", body)
 
 
 if __name__ == "__main__":
