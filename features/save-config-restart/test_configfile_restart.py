@@ -91,6 +91,15 @@ class ProtectedRestartTests(unittest.TestCase):
         self.assertIn('failed(stock-error)', source)
         self.assertIn('K2_FIRMWARE_RESTART_ATTEMPTS=1', source)
 
+    def test_worker_recovers_exact_ready_callback_signature(self):
+        worker = MODULE_PATH.parents[2] / 'scripts' / 'save_config_restart.sh'
+        source = worker.read_text(encoding='utf-8')
+        self.assertIn('is_recoverable_ready_callback_error', source)
+        self.assertIn(
+            'Internal error during ready callback: No active exception to reraise',
+            source)
+        self.assertIn('complete(recovered-ready-callback)', source)
+
 
 if __name__ == '__main__':
     unittest.main()

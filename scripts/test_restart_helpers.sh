@@ -87,7 +87,7 @@ case "$*" in
             2) printf '%s\n' '{"state":"startup"}' ;;
             *)
                 printf '%s\n' "$K2_TEST_ERROR_LINE" >> "$K2_TEST_KLIPPY_LOG"
-                printf '%s\n' '{"state":"shutdown","state_message":"{\"code\":\"key1\",\"msg\":\"Internal error during ready callback\"}"}'
+                printf '%s\n' "$K2_TEST_ERROR_JSON"
                 ;;
         esac
         ;;
@@ -160,6 +160,7 @@ K2_TEST_INFO_COUNT="$TMP_DIR/recovery.info-count" \
 K2_TEST_KLIPPY_LOG="$TMP_DIR/recovery.klippy.log" \
 K2_KLIPPY_LOG="$TMP_DIR/recovery.klippy.log" \
 K2_TEST_ERROR_LINE="!! {\"code\":\"key798\",\"msg\":\"Motor connection failed, exceeding maximum retry count\",\"values\":['e']}" \
+K2_TEST_ERROR_JSON='{"state":"shutdown","state_message":"{\"code\":\"key798\",\"msg\":\"Motor connection failed, exceeding maximum retry count\",\"values\":[\"e\"]}"}' \
 K2_TEST_FIRMWARE_MARKER="$TMP_DIR/recovery.firmware" \
 K2_TEST_SLEEP_LOG="$TMP_DIR/recovery.sleeps" \
 K2_FIRMWARE_RESTART_HELPER="$TMP_DIR/bin/firmware-helper" \
@@ -172,6 +173,51 @@ K2_SAVE_CONFIG_MOTOR_E_RECOVERY_DELAY=0 \
 grep -q 'complete(recovered-motor-e)' /tmp/k2-save-config-restart.status ||
     fail 'validated key798 motor-e recovery was not recorded'
 
+# The exact key1 ready-callback exception is the second hardware-validated
+# recovery.  Include a historical key3 line to mirror the real restart log and
+# prove classification uses the current Moonraker state rather than old states.
+printf '%s\n' 'baseline' \
+    'previous {"code":"key3","msg":"Printer is not ready"}' \
+    > "$TMP_DIR/ready-callback.klippy.log"
+PATH="$TMP_DIR/bin:$PATH" K2_CURL="$TMP_DIR/bin/save-error-curl" \
+K2_TEST_INFO_COUNT="$TMP_DIR/ready-callback.info-count" \
+K2_TEST_KLIPPY_LOG="$TMP_DIR/ready-callback.klippy.log" \
+K2_KLIPPY_LOG="$TMP_DIR/ready-callback.klippy.log" \
+K2_TEST_ERROR_LINE='Transition to shutdown state: Internal error during ready callback: No active exception to reraise' \
+K2_TEST_ERROR_JSON='{"state":"shutdown","state_message":"{\"code\":\"key1\",\"msg\":\"Internal error during ready callback: No active exception to reraise\"}"}' \
+K2_TEST_FIRMWARE_MARKER="$TMP_DIR/ready-callback.firmware" \
+K2_TEST_SLEEP_LOG="$TMP_DIR/ready-callback.sleeps" \
+K2_FIRMWARE_RESTART_HELPER="$TMP_DIR/bin/firmware-helper" \
+K2_SAVE_CONFIG_TRANSITION_TIMEOUT=5 K2_SAVE_CONFIG_READY_TIMEOUT=5 \
+K2_SAVE_CONFIG_READY_CALLBACK_RECOVERY_DELAY=0 \
+    sh "$REPO_DIR/scripts/save_config_restart.sh" \
+        >"$TMP_DIR/ready-callback.out" 2>&1
+[ -e "$TMP_DIR/ready-callback.firmware" ] ||
+    fail 'validated key1 ready-callback fault did not request recovery'
+grep -q 'complete(recovered-ready-callback)' \
+    /tmp/k2-save-config-restart.status ||
+    fail 'validated key1 ready-callback recovery was not recorded'
+
+# A similar key1 message must remain fail-closed.
+printf '%s\n' baseline > "$TMP_DIR/other-key1.klippy.log"
+if PATH="$TMP_DIR/bin:$PATH" K2_CURL="$TMP_DIR/bin/save-error-curl" \
+    K2_TEST_INFO_COUNT="$TMP_DIR/other-key1.info-count" \
+    K2_TEST_KLIPPY_LOG="$TMP_DIR/other-key1.klippy.log" \
+    K2_KLIPPY_LOG="$TMP_DIR/other-key1.klippy.log" \
+    K2_TEST_ERROR_LINE='Internal error during a different callback' \
+    K2_TEST_ERROR_JSON='{"state":"shutdown","state_message":"{\"code\":\"key1\",\"msg\":\"Internal error during a different callback\"}"}' \
+    K2_TEST_FIRMWARE_MARKER="$TMP_DIR/other-key1.firmware" \
+    K2_TEST_SLEEP_LOG="$TMP_DIR/other-key1.sleeps" \
+    K2_FIRMWARE_RESTART_HELPER="$TMP_DIR/bin/firmware-helper" \
+    K2_SAVE_CONFIG_TRANSITION_TIMEOUT=5 K2_SAVE_CONFIG_READY_TIMEOUT=5 \
+    K2_SAVE_CONFIG_READY_CALLBACK_RECOVERY_DELAY=0 \
+    sh "$REPO_DIR/scripts/save_config_restart.sh" \
+        >"$TMP_DIR/other-key1.out" 2>&1; then
+    fail 'different key1 fault was automatically recovered'
+fi
+[ ! -e "$TMP_DIR/other-key1.firmware" ] ||
+    fail 'different key1 fault invoked firmware recovery'
+
 # A different error remains fail-closed and must not invoke the helper.
 printf '%s\n' baseline > "$TMP_DIR/other-error.klippy.log"
 if PATH="$TMP_DIR/bin:$PATH" K2_CURL="$TMP_DIR/bin/save-error-curl" \
@@ -179,6 +225,7 @@ if PATH="$TMP_DIR/bin:$PATH" K2_CURL="$TMP_DIR/bin/save-error-curl" \
     K2_TEST_KLIPPY_LOG="$TMP_DIR/other-error.klippy.log" \
     K2_KLIPPY_LOG="$TMP_DIR/other-error.klippy.log" \
     K2_TEST_ERROR_LINE='!! {"code":"key298","msg":"Can not update MCU rpi config as it is shutdown","values":["rpi"]}' \
+    K2_TEST_ERROR_JSON='{"state":"error","state_message":"{\"code\":\"key298\",\"msg\":\"Can not update MCU rpi config as it is shutdown\",\"values\":[\"rpi\"]}"}' \
     K2_TEST_FIRMWARE_MARKER="$TMP_DIR/other-error.firmware" \
     K2_TEST_SLEEP_LOG="$TMP_DIR/other-error.sleeps" \
     K2_FIRMWARE_RESTART_HELPER="$TMP_DIR/bin/firmware-helper" \

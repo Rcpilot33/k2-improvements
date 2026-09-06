@@ -52,5 +52,6 @@ save-config-motor-e-recovery-v1|save-config-restart|is_save_config_restart|SAVE_
 test-stock-case-fan-release-v1|macros|is_macros|Stock-probe pre-print now releases Creality's one-time 100% case-fan override
 test-low-chamber-no-wait-v1|macros|is_macros|Chamber targets at or below 35 C no longer block pre-print or missing-mesh creation
 test-low-chamber-target-policy-v2|macros|is_macros|All mesh paths now use a 2 C chamber-fan margin and keep the heater off at or below 35 C
+save-config-ready-callback-recovery-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG now recovers the validated key1 ready-callback exception
 EOF
 }

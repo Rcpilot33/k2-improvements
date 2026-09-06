@@ -15,6 +15,7 @@ API_URL="${MOONRAKER_URL:-http://127.0.0.1:7125}"
 TRANSITION_TIMEOUT="${K2_SAVE_CONFIG_TRANSITION_TIMEOUT:-30}"
 READY_TIMEOUT="${K2_SAVE_CONFIG_READY_TIMEOUT:-90}"
 MOTOR_E_RECOVERY_DELAY="${K2_SAVE_CONFIG_MOTOR_E_RECOVERY_DELAY:-10}"
+READY_CALLBACK_RECOVERY_DELAY="${K2_SAVE_CONFIG_READY_CALLBACK_RECOVERY_DELAY:-10}"
 KLIPPY_LOG="${K2_KLIPPY_LOG:-/mnt/UDISK/printer_data/logs/klippy.log}"
 
 case "$TRANSITION_TIMEOUT" in
@@ -34,6 +35,13 @@ esac
 case "$MOTOR_E_RECOVERY_DELAY" in
     ''|*[!0-9]*)
         echo "E: K2_SAVE_CONFIG_MOTOR_E_RECOVERY_DELAY must be a non-negative integer" >&2
+        exit 1
+        ;;
+esac
+
+case "$READY_CALLBACK_RECOVERY_DELAY" in
+    ''|*[!0-9]*)
+        echo "E: K2_SAVE_CONFIG_READY_CALLBACK_RECOVERY_DELAY must be a non-negative integer" >&2
         exit 1
         ;;
 esac
@@ -76,27 +84,35 @@ capture_restart_error() {
     fi
 }
 
+normalized_current_error() {
+    # Moonraker embeds Klipper's state_message as escaped JSON, while klippy.log
+    # records the same error as ordinary JSON.  Classify only Moonraker's
+    # current state_message; the appended log can contain harmless key3 startup
+    # states from earlier in this same restart.
+    printf '%s\n' "$INFO" | sed 's/\\"/"/g'
+}
+
 is_recoverable_motor_e_error() {
-    awk '
+    normalized_current_error | awk '
         /"code"[[:space:]]*:[[:space:]]*"key798"/ &&
         /Motor connection failed, exceeding maximum retry count/ &&
         /"values"[[:space:]]*:[[:space:]]*\[[[:space:]]*["\047]e["\047][[:space:]]*\]/ {
             found = 1
         }
         END { exit !found }
-    ' "$ERROR_LOG" || return 1
+    '
+}
 
-    ERROR_CODES=$(sed -n \
-        's/.*"code"[[:space:]]*:[[:space:]]*"\(key[0-9][0-9]*\)".*/\1/p' \
-        "$ERROR_LOG" | sort -u)
-    [ -n "$ERROR_CODES" ] || return 1
-    for ERROR_CODE in $ERROR_CODES; do
-        case "$ERROR_CODE" in
-            key1|key798) ;;
-            *) return 1 ;;
-        esac
-    done
-    return 0
+is_recoverable_ready_callback_error() {
+    normalized_current_error | awk '
+        /"code"[[:space:]]*:[[:space:]]*"key1"/ {
+            key1 = 1
+        }
+        /Internal error during ready callback: No active exception to reraise/ {
+            exact_message = 1
+        }
+        END { exit !(key1 && exact_message) }
+    '
 }
 
 printf 'scheduled %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
@@ -124,7 +140,7 @@ fi
 
 printf 'waiting-stock-restart %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
 echo "I: stock Klipper restart observed; waiting for Klipper and K2 motors"
-RECOVER_MOTOR_E=0
+RECOVERY_KIND=none
 COUNT=0
 while [ "$COUNT" -lt "$READY_TIMEOUT" ]; do
     if printer_ready && motor_ready; then
@@ -133,7 +149,11 @@ while [ "$COUNT" -lt "$READY_TIMEOUT" ]; do
     if printer_failed; then
         capture_restart_error
         if is_recoverable_motor_e_error; then
-            RECOVER_MOTOR_E=1
+            RECOVERY_KIND=motor-e
+            break
+        fi
+        if is_recoverable_ready_callback_error; then
+            RECOVERY_KIND=ready-callback
             break
         fi
         echo "E: stock SAVE_CONFIG restart entered an unrecognized error state" >&2
@@ -152,24 +172,35 @@ if [ "$COUNT" -ge "$READY_TIMEOUT" ]; then
 fi
 
 printf 'firmware-restart %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
-if [ "$RECOVER_MOTOR_E" -eq 1 ]; then
-    printf 'recovering-motor-e %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
-    echo "W: recognized exact key798 extruder-motor startup failure"
-    echo "I: waiting ${MOTOR_E_RECOVERY_DELAY} seconds for shutdown to settle"
-    sleep "$MOTOR_E_RECOVERY_DELAY"
-    echo "I: requesting one firmware restart for the validated key798 motor-e recovery"
-else
-    echo "I: stock Klipper restart and K2 motor initialization completed"
-    echo "I: requesting one protected firmware restart"
-fi
+case "$RECOVERY_KIND" in
+    motor-e)
+        printf 'recovering-motor-e %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
+        echo "W: recognized exact key798 extruder-motor startup failure"
+        echo "I: waiting ${MOTOR_E_RECOVERY_DELAY} seconds for shutdown to settle"
+        sleep "$MOTOR_E_RECOVERY_DELAY"
+        echo "I: requesting one firmware restart for the validated key798 motor-e recovery"
+        ;;
+    ready-callback)
+        printf 'recovering-ready-callback %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
+        echo "W: recognized exact key1 ready-callback exception"
+        echo "I: waiting ${READY_CALLBACK_RECOVERY_DELAY} seconds for shutdown to settle"
+        sleep "$READY_CALLBACK_RECOVERY_DELAY"
+        echo "I: requesting one firmware restart for the validated ready-callback recovery"
+        ;;
+    *)
+        echo "I: stock Klipper restart and K2 motor initialization completed"
+        echo "I: requesting one protected firmware restart"
+        ;;
+esac
 FIRMWARE_HELPER="${K2_FIRMWARE_RESTART_HELPER:-$SCRIPT_DIR/firmware_restart.sh}"
 if K2_DEFER_FIRMWARE_RESTART=0 K2_FIRMWARE_RESTART_ATTEMPTS=1 \
     sh "$FIRMWARE_HELPER"; then
-    if [ "$RECOVER_MOTOR_E" -eq 1 ]; then
-        printf 'complete(recovered-motor-e) %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
-    else
-        printf 'complete %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
-    fi
+    case "$RECOVERY_KIND" in
+        motor-e) RESULT='complete(recovered-motor-e)' ;;
+        ready-callback) RESULT='complete(recovered-ready-callback)' ;;
+        *) RESULT=complete ;;
+    esac
+    printf '%s %s\n' "$RESULT" "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
 else
     rc=$?
     printf 'failed(%s) %s\n' "$rc" "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
