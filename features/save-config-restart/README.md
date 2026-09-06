@@ -13,6 +13,12 @@ new session and `motor_control.motor_ready`, and then requests exactly one
 readiness before reporting success. A runtime `SAVE_CONFIG` never restarts the
 Linux Klippy service.
 
+If the stock restart reaches the specifically validated `key798` extruder
+motor (`e`) connection failure, the worker lets shutdown settle and requests
+one firmware restart, matching the recovery confirmed on hardware. It records
+the captured error in `/tmp/k2-save-config-restart.error.log`. Any other error
+code remains fail-closed and requires manual inspection and a power cycle.
+
 The stock-probe and Cartographer installers both install this feature. Its
 initial installation replaces Klippy's `configfile.py`, so the installer uses
 a protected Klippy-code reload sequence. That installer-only path restarts the

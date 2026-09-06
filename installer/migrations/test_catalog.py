@@ -207,6 +207,16 @@ class MigrationCatalogTests(unittest.TestCase):
             },
         )
 
+    def test_save_config_tracks_validated_motor_e_recovery(self):
+        self.assertIn(
+            "save-config-motor-e-recovery-v1",
+            {
+                migration_id
+                for migration_id, component, _detector, _reason in entries()
+                if component == "save-config-restart"
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

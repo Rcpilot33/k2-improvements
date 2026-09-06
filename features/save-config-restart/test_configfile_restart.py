@@ -80,6 +80,17 @@ class ProtectedRestartTests(unittest.TestCase):
         self.assertIn('K2_FIRMWARE_RESTART_ATTEMPTS=1', source)
         self.assertNotIn('klippy_code_restart.sh', source)
 
+    def test_worker_recovers_only_validated_motor_e_signature(self):
+        worker = MODULE_PATH.parents[2] / 'scripts' / 'save_config_restart.sh'
+        source = worker.read_text(encoding='utf-8')
+        self.assertIn('is_recoverable_motor_e_error', source)
+        self.assertIn('"key798"', source)
+        self.assertIn('Motor connection failed, exceeding maximum retry count',
+                      source)
+        self.assertIn('complete(recovered-motor-e)', source)
+        self.assertIn('failed(stock-error)', source)
+        self.assertIn('K2_FIRMWARE_RESTART_ATTEMPTS=1', source)
+
 
 if __name__ == '__main__':
     unittest.main()
