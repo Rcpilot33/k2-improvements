@@ -53,5 +53,6 @@ test-stock-case-fan-release-v1|macros|is_macros|Stock-probe pre-print now releas
 test-low-chamber-no-wait-v1|macros|is_macros|Chamber targets at or below 35 C no longer block pre-print or missing-mesh creation
 test-low-chamber-target-policy-v2|macros|is_macros|All mesh paths now use a 2 C chamber-fan margin and keep the heater off at or below 35 C
 save-config-ready-callback-recovery-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG now recovers the validated key1 ready-callback exception
+save-config-full-callback-recovery-v1|save-config-restart|is_save_config_restart|Validated callback recovery now resets the Linux host MCU and resynchronizes Creality printer state
 EOF
 }
