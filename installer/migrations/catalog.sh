@@ -44,5 +44,6 @@ main-b0c7efe-plate-aware-v2|plate-aware-mesh|is_plate_aware_mesh|Plate-aware mes
 updater-kamp-interactive-refresh-v1|kamp-adaptive-purge|is_kamp|KAMP updates now offer settings and firmware-retraction questions before the shared protected restart
 main-m191-chamber-circulation-v1|macros|is_macros|M191 now lowers the bed, circulates chamber air, and waits for the original bed temperature after assisted heating
 main-m191-cleanup-response-v1|macros|is_macros|M191 assisted-heating cleanup messages were corrected for the K2 command parser
+installer-protected-motor-ready-v1|save-config-restart|is_save_config_restart|Installer code reload now requires K2 motor readiness before one firmware reset
 EOF
 }

@@ -11,7 +11,10 @@ and changes its requested restart from a host-only restart to
 
 The stock-probe and Cartographer installers both install this feature. Its
 initial installation replaces Klippy's `configfile.py`, so the installer uses
-the protected Klippy-code reload sequence to start a fresh host process and
-then reset the K2 MCUs. Once loaded, normal `SAVE_CONFIG` operations request
+a protected Klippy-code reload sequence. That installer path starts a fresh
+host process, waits for both Klipper and the K2 motor controller to report
+ready, and then requests one firmware restart. If motor readiness is not
+confirmed, it stops without requesting that reset. Once loaded, normal
+`SAVE_CONFIG` operations request
 `FIRMWARE_RESTART`, wait for motor-controller startup, and verify that Klipper
 remains ready. If a protected restart fails, fully power-cycle before homing.

@@ -138,6 +138,16 @@ class MigrationCatalogTests(unittest.TestCase):
             any(migration_id.startswith("integration-") for migration_id, *_ in entries())
         )
 
+    def test_installer_tracks_motor_ready_restart_update(self):
+        self.assertIn(
+            "installer-protected-motor-ready-v1",
+            {
+                migration_id
+                for migration_id, component, _detector, _reason in entries()
+                if component == "save-config-restart"
+            },
+        )
+
     def test_every_catalog_component_has_a_direct_dispatch_and_label(self):
         menu = UPDATE_MENU.read_text(encoding="utf-8")
         for component in KNOWN_COMPONENTS:
