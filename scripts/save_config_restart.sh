@@ -16,6 +16,11 @@ TRANSITION_TIMEOUT="${K2_SAVE_CONFIG_TRANSITION_TIMEOUT:-30}"
 READY_TIMEOUT="${K2_SAVE_CONFIG_READY_TIMEOUT:-90}"
 MOTOR_E_RECOVERY_DELAY="${K2_SAVE_CONFIG_MOTOR_E_RECOVERY_DELAY:-10}"
 READY_CALLBACK_RECOVERY_DELAY="${K2_SAVE_CONFIG_READY_CALLBACK_RECOVERY_DELAY:-10}"
+HOST_MCU_SETTLE_DELAY="${K2_SAVE_CONFIG_HOST_MCU_SETTLE_DELAY:-2}"
+HOST_MCU_SERVICE="${K2_HOST_MCU_SERVICE:-/etc/init.d/klipper_mcu}"
+CREALITY_APP_SETTLE_DELAY="${K2_SAVE_CONFIG_CREALITY_APP_SETTLE_DELAY:-5}"
+CREALITY_APP_SERVICE="${K2_CREALITY_APP_SERVICE:-/etc/init.d/app}"
+MASTER_SERVER_PROCESS="${K2_MASTER_SERVER_PROCESS:-master-server}"
 KLIPPY_LOG="${K2_KLIPPY_LOG:-/mnt/UDISK/printer_data/logs/klippy.log}"
 
 case "$TRANSITION_TIMEOUT" in
@@ -42,6 +47,20 @@ esac
 case "$READY_CALLBACK_RECOVERY_DELAY" in
     ''|*[!0-9]*)
         echo "E: K2_SAVE_CONFIG_READY_CALLBACK_RECOVERY_DELAY must be a non-negative integer" >&2
+        exit 1
+        ;;
+esac
+
+case "$HOST_MCU_SETTLE_DELAY" in
+    ''|*[!0-9]*)
+        echo "E: K2_SAVE_CONFIG_HOST_MCU_SETTLE_DELAY must be a non-negative integer" >&2
+        exit 1
+        ;;
+esac
+
+case "$CREALITY_APP_SETTLE_DELAY" in
+    ''|*[!0-9]*)
+        echo "E: K2_SAVE_CONFIG_CREALITY_APP_SETTLE_DELAY must be a non-negative integer" >&2
         exit 1
         ;;
 esac
@@ -115,6 +134,42 @@ is_recoverable_ready_callback_error() {
     '
 }
 
+restart_host_mcu() {
+    if [ ! -x "$HOST_MCU_SERVICE" ]; then
+        echo "E: Linux host-MCU service is unavailable: $HOST_MCU_SERVICE" >&2
+        return 1
+    fi
+    echo "I: restarting the Linux host-MCU cleared by the validated callback shutdown"
+    if ! "$HOST_MCU_SERVICE" stop; then
+        echo "E: failed to stop the Linux host-MCU service" >&2
+        return 1
+    fi
+    if ! "$HOST_MCU_SERVICE" start; then
+        echo "E: failed to start the Linux host-MCU service" >&2
+        return 1
+    fi
+    sleep "$HOST_MCU_SETTLE_DELAY"
+}
+
+restart_creality_app() {
+    if [ ! -x "$CREALITY_APP_SERVICE" ]; then
+        echo "E: Creality application service is unavailable: $CREALITY_APP_SERVICE" >&2
+        return 1
+    fi
+    echo "I: restarting Creality master-server to resynchronize printer state"
+    if ! "$CREALITY_APP_SERVICE" restart; then
+        echo "E: failed to restart the Creality application service" >&2
+        return 1
+    fi
+    sleep "$CREALITY_APP_SETTLE_DELAY"
+    if ! command -v pidof >/dev/null 2>&1 ||
+       ! pidof "$MASTER_SERVER_PROCESS" >/dev/null 2>&1; then
+        echo "E: Creality master-server did not return after the application restart" >&2
+        return 1
+    fi
+    echo "I: Creality master-server is running with refreshed printer state"
+}
+
 printf 'scheduled %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
 rm -f "$ERROR_LOG"
 if [ -r "$KLIPPY_LOG" ]; then
@@ -185,6 +240,12 @@ case "$RECOVERY_KIND" in
         echo "W: recognized exact key1 ready-callback exception"
         echo "I: waiting ${READY_CALLBACK_RECOVERY_DELAY} seconds for shutdown to settle"
         sleep "$READY_CALLBACK_RECOVERY_DELAY"
+        if ! restart_host_mcu; then
+            echo "E: callback recovery could not reset the Linux host-MCU" >&2
+            echo "E: power-cycle the printer before any homing test" >&2
+            printf 'failed(host-mcu-restart) %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
+            exit 1
+        fi
         echo "I: requesting one firmware restart for the validated ready-callback recovery"
         ;;
     *)
@@ -195,6 +256,12 @@ esac
 FIRMWARE_HELPER="${K2_FIRMWARE_RESTART_HELPER:-$SCRIPT_DIR/firmware_restart.sh}"
 if K2_DEFER_FIRMWARE_RESTART=0 K2_FIRMWARE_RESTART_ATTEMPTS=1 \
     sh "$FIRMWARE_HELPER"; then
+    if [ "$RECOVERY_KIND" = ready-callback ] && ! restart_creality_app; then
+        echo "E: Klipper recovered, but Creality printer state could not be resynchronized" >&2
+        echo "E: do not start a print through Creality Print until its state is current" >&2
+        printf 'failed(creality-app-restart) %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
+        exit 1
+    fi
     case "$RECOVERY_KIND" in
         motor-e) RESULT='complete(recovered-motor-e)' ;;
         ready-callback) RESULT='complete(recovered-ready-callback)' ;;

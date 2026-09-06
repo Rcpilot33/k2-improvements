@@ -71,6 +71,24 @@ cat > "$TMP_DIR/bin/firmware-helper" <<'EOF'
 [ "${K2_FIRMWARE_RESTART_ATTEMPTS:-}" = 1 ] || exit 2
 : > "$K2_TEST_FIRMWARE_MARKER"
 EOF
+cat > "$TMP_DIR/bin/host-mcu-service" <<'EOF'
+#!/bin/sh
+case "$1" in
+    stop|start) printf '%s\n' "$1" >> "$K2_TEST_HOST_MCU_MARKER" ;;
+    *) exit 1 ;;
+esac
+EOF
+cat > "$TMP_DIR/bin/creality-app-service" <<'EOF'
+#!/bin/sh
+[ "$1" = restart ] || exit 1
+printf '%s\n' "$1" >> "$K2_TEST_CREALITY_APP_MARKER"
+EOF
+cat > "$TMP_DIR/bin/pidof" <<'EOF'
+#!/bin/sh
+[ "$1" = master-server ] || exit 1
+[ -e "$K2_TEST_CREALITY_APP_MARKER" ] || exit 1
+printf '%s\n' 1234
+EOF
 cat > "$TMP_DIR/bin/save-error-curl" <<'EOF'
 #!/bin/sh
 case "$*" in
@@ -95,7 +113,8 @@ case "$*" in
 esac
 EOF
 chmod +x "$TMP_DIR/bin/save-curl" "$TMP_DIR/bin/save-error-curl" \
-    "$TMP_DIR/bin/firmware-helper"
+    "$TMP_DIR/bin/firmware-helper" "$TMP_DIR/bin/host-mcu-service" \
+    "$TMP_DIR/bin/creality-app-service" "$TMP_DIR/bin/pidof"
 
 # The ready host path must require motor readiness before and after its one
 # firmware restart; it no longer relies on a fixed delay.
@@ -163,6 +182,10 @@ K2_TEST_ERROR_LINE="!! {\"code\":\"key798\",\"msg\":\"Motor connection failed, e
 K2_TEST_ERROR_JSON='{"state":"shutdown","state_message":"{\"code\":\"key798\",\"msg\":\"Motor connection failed, exceeding maximum retry count\",\"values\":[\"e\"]}"}' \
 K2_TEST_FIRMWARE_MARKER="$TMP_DIR/recovery.firmware" \
 K2_TEST_SLEEP_LOG="$TMP_DIR/recovery.sleeps" \
+K2_TEST_HOST_MCU_MARKER="$TMP_DIR/recovery.host-mcu" \
+K2_HOST_MCU_SERVICE="$TMP_DIR/bin/host-mcu-service" \
+K2_TEST_CREALITY_APP_MARKER="$TMP_DIR/recovery.creality-app" \
+K2_CREALITY_APP_SERVICE="$TMP_DIR/bin/creality-app-service" \
 K2_FIRMWARE_RESTART_HELPER="$TMP_DIR/bin/firmware-helper" \
 K2_SAVE_CONFIG_TRANSITION_TIMEOUT=5 K2_SAVE_CONFIG_READY_TIMEOUT=5 \
 K2_SAVE_CONFIG_MOTOR_E_RECOVERY_DELAY=0 \
@@ -172,6 +195,10 @@ K2_SAVE_CONFIG_MOTOR_E_RECOVERY_DELAY=0 \
     fail 'validated key798 motor-e fault did not request recovery'
 grep -q 'complete(recovered-motor-e)' /tmp/k2-save-config-restart.status ||
     fail 'validated key798 motor-e recovery was not recorded'
+[ ! -e "$TMP_DIR/recovery.host-mcu" ] ||
+    fail 'key798 motor-e recovery unnecessarily restarted the Linux host-MCU'
+[ ! -e "$TMP_DIR/recovery.creality-app" ] ||
+    fail 'key798 motor-e recovery unnecessarily restarted the Creality application service'
 
 # The exact key1 ready-callback exception is the second hardware-validated
 # recovery.  Include a historical key3 line to mirror the real restart log and
@@ -187,9 +214,15 @@ K2_TEST_ERROR_LINE='Transition to shutdown state: Internal error during ready ca
 K2_TEST_ERROR_JSON='{"state":"shutdown","state_message":"{\"code\":\"key1\",\"msg\":\"Internal error during ready callback: No active exception to reraise\"}"}' \
 K2_TEST_FIRMWARE_MARKER="$TMP_DIR/ready-callback.firmware" \
 K2_TEST_SLEEP_LOG="$TMP_DIR/ready-callback.sleeps" \
+K2_TEST_HOST_MCU_MARKER="$TMP_DIR/ready-callback.host-mcu" \
+K2_HOST_MCU_SERVICE="$TMP_DIR/bin/host-mcu-service" \
+K2_TEST_CREALITY_APP_MARKER="$TMP_DIR/ready-callback.creality-app" \
+K2_CREALITY_APP_SERVICE="$TMP_DIR/bin/creality-app-service" \
 K2_FIRMWARE_RESTART_HELPER="$TMP_DIR/bin/firmware-helper" \
 K2_SAVE_CONFIG_TRANSITION_TIMEOUT=5 K2_SAVE_CONFIG_READY_TIMEOUT=5 \
 K2_SAVE_CONFIG_READY_CALLBACK_RECOVERY_DELAY=0 \
+K2_SAVE_CONFIG_HOST_MCU_SETTLE_DELAY=0 \
+K2_SAVE_CONFIG_CREALITY_APP_SETTLE_DELAY=0 \
     sh "$REPO_DIR/scripts/save_config_restart.sh" \
         >"$TMP_DIR/ready-callback.out" 2>&1
 [ -e "$TMP_DIR/ready-callback.firmware" ] ||
@@ -197,6 +230,17 @@ K2_SAVE_CONFIG_READY_CALLBACK_RECOVERY_DELAY=0 \
 grep -q 'complete(recovered-ready-callback)' \
     /tmp/k2-save-config-restart.status ||
     fail 'validated key1 ready-callback recovery was not recorded'
+[ "$(tr '\n' ' ' < "$TMP_DIR/ready-callback.host-mcu")" = 'stop start ' ] ||
+    fail 'validated key1 recovery did not restart the Linux host-MCU cleanly'
+grep -q 'restarting the Linux host-MCU' "$TMP_DIR/ready-callback.out" ||
+    fail 'validated key1 recovery did not report the Linux host-MCU reset'
+[ "$(cat "$TMP_DIR/ready-callback.creality-app")" = restart ] ||
+    fail 'validated key1 recovery did not restart the Creality application service'
+grep -q 'resynchronize printer state' "$TMP_DIR/ready-callback.out" ||
+    fail 'validated key1 recovery did not report the Creality state resynchronization'
+grep -q 'master-server is running with refreshed printer state' \
+    "$TMP_DIR/ready-callback.out" ||
+    fail 'validated key1 recovery did not verify the restarted master-server'
 
 # A similar key1 message must remain fail-closed.
 printf '%s\n' baseline > "$TMP_DIR/other-key1.klippy.log"
