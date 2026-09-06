@@ -15,6 +15,7 @@ fi
 API_URL="${MOONRAKER_URL:-http://127.0.0.1:7125}"
 ATTEMPTS="${K2_FIRMWARE_RESTART_ATTEMPTS:-1}"
 WAIT_FOR_STARTUP="${K2_WAIT_FOR_KLIPPY_STARTUP:-0}"
+STABILIZATION_SECONDS="${K2_STABILIZATION_SECONDS:-25}"
 
 case "$ATTEMPTS" in
     ''|*[!0-9]*|0)
@@ -23,7 +24,9 @@ case "$ATTEMPTS" in
         ;;
 esac
 
-if [ -x /opt/bin/curl ]; then
+if [ -n "${K2_CURL:-}" ]; then
+    CURL=$K2_CURL
+elif [ -x /opt/bin/curl ]; then
     CURL=/opt/bin/curl
 elif command -v curl >/dev/null 2>&1; then
     CURL=$(command -v curl)
@@ -48,7 +51,12 @@ if [ "$WAIT_FOR_STARTUP" = "1" ]; then
     while [ "$COUNT" -lt 60 ]; do
         INFO=$("$CURL" -fsS --max-time 2 "$API_URL/printer/info" 2>/dev/null || true)
         if printf '%s' "$INFO" | \
-            grep -qE '"state"[[:space:]]*:[[:space:]]*"(ready|error|shutdown)"'; then
+            grep -qE '"state"[[:space:]]*:[[:space:]]*"ready"'; then
+            break
+        fi
+        if printf '%s' "$INFO" | \
+            grep -qE '"state"[[:space:]]*:[[:space:]]*"(error|shutdown)"'; then
+            echo "W: fresh Klippy host entered shutdown during MCU startup; beginning firmware-reset recovery" >&2
             break
         fi
         COUNT=$((COUNT + 1))
@@ -58,12 +66,22 @@ if [ "$WAIT_FOR_STARTUP" = "1" ]; then
     if [ "$COUNT" -ge 60 ]; then
         echo "W: fresh Klippy host startup did not settle within 60 seconds" >&2
     else
-        echo "I: fresh Klippy host startup has settled; waiting 5 seconds before the protected K2 firmware reset"
-        # Moonraker can report the replacement Klippy process as settled while
-        # its MCU and vendor-extension startup callbacks are still unwinding.
-        # Give that process a short quiet interval before asking it to perform
-        # the second, firmware-level restart.
-        sleep 5
+        if printf '%s' "$INFO" | \
+            grep -qE '"state"[[:space:]]*:[[:space:]]*"ready"'; then
+            echo "I: fresh Klippy host is ready; waiting ${STABILIZATION_SECONDS} seconds for K2 controller startup before firmware reset"
+            # Hardware testing on 1.1.3.13 showed that five seconds still
+            # lands inside Creality's controller initialization.  Allow the
+            # observed 15-20 second activity window to finish, then confirm
+            # Klippy stayed ready before asking it to reset the MCUs.
+            sleep "$STABILIZATION_SECONDS"
+            INFO=$("$CURL" -fsS --max-time 2 "$API_URL/printer/info" 2>/dev/null || true)
+            if printf '%s' "$INFO" | \
+                grep -qE '"state"[[:space:]]*:[[:space:]]*"ready"'; then
+                echo "I: fresh Klippy host and K2 controllers are stable; continuing with the protected firmware reset"
+            else
+                echo "W: Klippy left ready state during the pre-reset stabilization interval; beginning recovery" >&2
+            fi
+        fi
     fi
 fi
 
@@ -120,8 +138,8 @@ fi
 # On the K2 Plus, Moonraker can report Klipper ready while Creality's motor
 # controller initialization is still producing startup traffic. Do not return
 # control to an installer until that observed 15-20 second window has passed.
-echo "I: Klipper API is ready; waiting 25 seconds for K2 motor initialization"
-sleep 25
+echo "I: Klipper API is ready; waiting ${STABILIZATION_SECONDS} seconds for K2 motor initialization"
+sleep "$STABILIZATION_SECONDS"
 
 INFO=$("$CURL" -fsS --max-time 2 "$API_URL/printer/info" 2>/dev/null || true)
 if ! printf '%s' "$INFO" | \

@@ -177,6 +177,16 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertIn("save_config_restart\\.sh", body)
         self.assertNotIn("gcode.request_restart('firmware_restart')", body)
 
+    def test_save_config_tracks_controller_stabilization_update(self):
+        self.assertIn(
+            "save-config-controller-stabilization-v1",
+            {
+                migration_id
+                for migration_id, component, _detector, _reason in entries()
+                if component == "save-config-restart"
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

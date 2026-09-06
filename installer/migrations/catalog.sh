@@ -45,5 +45,6 @@ updater-kamp-interactive-refresh-v1|kamp-adaptive-purge|is_kamp|KAMP updates now
 main-m191-chamber-circulation-v1|macros|is_macros|M191 now lowers the bed, circulates chamber air, and waits for the original bed temperature after assisted heating
 main-m191-cleanup-response-v1|macros|is_macros|M191 assisted-heating cleanup messages were corrected for the K2 command parser
 save-config-protected-worker-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG now uses the delayed protected restart worker
+save-config-controller-stabilization-v1|save-config-restart|is_save_config_restart|Protected code reload now waits for K2 controller startup before resetting firmware
 EOF
 }

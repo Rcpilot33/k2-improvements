@@ -53,9 +53,11 @@ both the stock PR Touch and Cartographer paths. If the helper reports a failure,
 fully power-cycle the printer before attempting to home.
 
 Installers that replace Klippy Python modules use a separate protected helper:
-it starts a fresh Klippy process, requests the required firmware reset, retries
-once for the K2's observed `key301` startup state, and then performs the same
-stabilization check. Never home between those stages.
+it starts a fresh Klippy process, waits for controller initialization, requests
+the required firmware reset, and then performs the same stabilization check.
+It permits two attempts normally and three on firmware `1.1.3.13`, where two
+consecutive recovery failures have been observed. Never home between those
+stages.
 
 ## I updated the installer. Are the changes already active?
 
