@@ -13,14 +13,8 @@ fi
 
 cd ${HOME}
 
-# clone cartographer plugin
-if [ ! -d cartographer3d-plugin/.git ]; then
-    echo "I: cloning cartographer plugin"
-    if [ -d cartographer3d-plugin ]; then
-        rm -rf cartographer3d-plugin
-    fi
-    git clone https://github.com/Jacob10383/cartographer3d-plugin.git
-fi
+# Install or safely migrate the plugin to the update-manager source.
+sh "${SCRIPT_DIR}/install_plugin.sh" "${HOME}/cartographer3d-plugin"
 
 echo "I: installing python dependencies"
 ~/klippy-env/bin/pip install --disable-pip-version-check typing_extensions

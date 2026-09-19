@@ -77,6 +77,10 @@ apply_overlay "$OVERLAY/gimme-the-jamin.sh"                   "$D/gimme-the-jami
 apply_overlay "$OVERLAY/features/better-root/install.sh"      "$D/features/better-root/install.sh"
 apply_overlay "$OVERLAY/features/better-init/install.sh"      "$D/features/better-init/install.sh"
 apply_overlay "$OVERLAY/features/cartographer/install.sh"     "$D/features/cartographer/install.sh"
+install_overlay "$OVERLAY/features/cartographer/install_plugin.sh" \
+    "$D/features/cartographer/install_plugin.sh"
+install_overlay "$OVERLAY/features/cartographer/update-manager.cfg" \
+    "$D/features/cartographer/update-manager.cfg"
 apply_overlay "$OVERLAY/features/secure-auth/install.sh"      "$D/features/secure-auth/install.sh"
 install_overlay "$OVERLAY/features/macros/overrides/reset_probe_offsets.py" \
     "$D/features/macros/overrides/reset_probe_offsets.py"

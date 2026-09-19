@@ -1,9 +1,29 @@
 # Dependency Preservation Record
 
 This file records fallback copies of external repositories used by K2
-Improvements. These copies are preserved for continuity only. The installer
-and Moonraker update-manager configurations still use their existing sources;
-none of the `Rcpilot33` copies below are active installation sources.
+Improvements. The table below records the original preservation snapshot.
+Moonraker and Fluidd still use their original sources. The Cartographer
+testing exception is described next.
+
+## Cartographer integration testing
+
+On `carto-plugin-update-testing`, the installer and Moonraker both use
+`Rcpilot33/cartographer3d-plugin`, branch `k2-cartographer-upstream-integration`
+(reviewed baseline `213504f`). This is a moving testing branch, not a commit pin.
+Re-run the Cartographer installer after switching K2 Improvements to this branch;
+updating K2 Improvements alone does not migrate the installed plugin checkout.
+The installer accepts a clean, fast-forward migration from Jacob's fork and
+refuses local changes, unknown origins, and divergent history. Existing local
+branches are retained. The installed plugin directory and import shim stay the
+same; USB bridge, K2 patches, touchscreen compatibility, and firmware are unchanged.
+The normal installer ends with its existing Klipper code restart; run it only
+while idle. No MCU firmware flash is part of this change.
+
+Before promotion, validate disconnected startup, reconnect, guarded homing,
+repeated meshes, and print start/cancel on hardware using the plugin's
+`K2_UPSTREAM_INTEGRATION.md` checklist. Do not reset the checkout to roll back:
+preserve it first and deliberately restore the previous plugin source and matching
+Moonraker configuration while idle.
 
 Preservation date: **2026-08-16**
 
