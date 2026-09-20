@@ -500,6 +500,14 @@ def _print_unsupported_device(detected_mcu: Optional[str] = None):
     console.print("  [cyan]•[/cyan] Cartographer V3 / Survey (STM32F042)")
     console.print()
 
+V3_610_CHECKSUMS = {
+    "CartographerV3_6.1.0_USB_full_8kib_offset.bin":
+        "450f618396c837932c83b403a76d1bd912c04af68fdb543eb9fc11f1257847b4",
+    "CartographerV3_6.1.0_USB_lite_8kib_offset.bin":
+        "461cd887cf31aecc0d7ec959d99b6df3901b43e8ad6e326a9a58064a6ca3e262",
+}
+
+
 def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) -> Optional[pathlib.Path]:
     """Display firmware selection menu."""
     script_dir = pathlib.Path(__file__).parent.resolve()
@@ -524,6 +532,10 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
             ("2", "K1 5.1.0 (Lite)", "Fallback for timing issues / conservative setup",
              script_dir / "firmware" / "Survey_Cartographer_K1_USB_8kib_offset.bin"),
             ("3", "Abort", "Exit bootloader mode", None),
+            ("4", "V3 6.1.0 Full", "Opt-in K2 testing; recalibrate Scan and Touch",
+             script_dir / "firmware" / "CartographerV3_6.1.0_USB_full_8kib_offset.bin"),
+            ("5", "V3 6.1.0 Lite", "Opt-in K2 testing; recalibrate Scan and Touch",
+             script_dir / "firmware" / "CartographerV3_6.1.0_USB_lite_8kib_offset.bin"),
         ]
     else:
         _print_unsupported_device(mcu)
@@ -564,8 +576,8 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
     console.print()
     console.print(f"[dim]Default:[/dim] [bold]{default_name}[/bold]", highlight=False)
     choice = Prompt.ask(
-        "Press Enter to flash default, or type 2 or 3 then Enter",
-        choices=["", "1", "2", "3"],
+        "Press Enter to flash default, or type a listed option then Enter",
+        choices=[""] + [option[0] for option in options],
         default="",
         show_choices=False,
         show_default=False
@@ -583,6 +595,10 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
             if not path.is_file():
                 console.print(f"[red]✗[/red] Firmware not found: [yellow]{path.name}[/yellow]")
                 return None
+            expected = V3_610_CHECKSUMS.get(path.name)
+            if expected and hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+                console.print("[red]Firmware checksum mismatch; refusing to flash.[/red]")
+                return None
             clean_name = re.sub(r'\[/?[^\]]+\]', '', name)
             console.print(f"[green]✓[/green] Selected: [bold]{clean_name}[/bold]")
             return path
@@ -599,7 +615,7 @@ def scan_flash_for_version(flasher, mcu_type: str = ""):
     Quick check for Klipper data dictionary at known offsets.
     
     Offsets are ordered by MCU type for faster detection:
-    - V3 (stm32f042x6): 0x4C50 first
+    - V3 (stm32f042x6): 6.1.0 Full/Lite, then 5.1.0
     - V4 (stm32g431xx): 0x5B98 (6.0.0) first, then 0x5B38 (5.1)
     """
     import zlib
@@ -607,7 +623,7 @@ def scan_flash_for_version(flasher, mcu_type: str = ""):
     
     # Order offsets by MCU type for faster detection
     if mcu_type == "stm32f042x6":  # V3
-        offsets = [0x4C50, 0x5B98, 0x5B38]
+        offsets = [0x44F4, 0x4504, 0x4C50, 0x5B98, 0x5B38]
     elif mcu_type == "stm32g431xx":  # V4
         offsets = [0x5B98, 0x5B38, 0x4C50]  # Try 6.0.0 first, then 5.1
     else:

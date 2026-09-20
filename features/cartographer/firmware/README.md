@@ -12,6 +12,30 @@ USB/Katapult firmware flash**. Connect only the probe you intend to flash and
 follow the prompts. The flasher detects V3 or V4 hardware and offers only the
 matching bundled Full and Lite firmware.
 
+### V3 6.1.0 opt-in testing
+
+For V3, options **4 (6.1.0 Full)** and **5 (6.1.0 Lite)** are explicit
+testing choices. Enter still selects 5.1.0 Full; option 3 still aborts.
+V4 choices are unchanged. Keep 5.1.0 available as the known-working rollback.
+This does not change the bundled DFU recovery images.
+
+Before upgrading, back up the printer configuration and calibration models.
+After flashing, use the established K2 protected restart procedure before
+homing, and redo Scan and Touch calibration for the new firmware. Validate
+normal probing, meshing and printing before relying on it for routine use.
+The new firmware has not yet been hardware-validated on this K2 setup.
+
+The V3 6.1.0 USB application images (8 KiB bootloader offset, **not** combined
+DFU images) come from official `Cartographer3D/cartographer_firmware` commit
+`e5c2b17dbe04ec1f747af5d81b2215949a0a9f8e`, directory
+`firmware/v2-v3/survey/6.1.0`. They are bundled for offline flashing and their
+SHA-256 digests are checked before selection returns to the flash operation:
+
+| Image | SHA-256 |
+| --- | --- |
+| `CartographerV3_6.1.0_USB_full_8kib_offset.bin` | `450f618396c837932c83b403a76d1bd912c04af68fdb543eb9fc11f1257847b4` |
+| `CartographerV3_6.1.0_USB_lite_8kib_offset.bin` | `461cd887cf31aecc0d7ec959d99b6df3901b43e8ad6e326a9a58064a6ca3e262` |
+
 ## Bundled DFU recovery
 
 Use DFU recovery only when normal USB/Katapult flashing cannot communicate with
