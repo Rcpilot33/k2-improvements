@@ -185,6 +185,10 @@ print.
 
 The validated button sequence is:
 
+The names below are underlying macro names. With the Fluidd layout extra
+installed, their display aliases include `DEFAULT`, `CARTO_SCAN_CALIBRATE`,
+`CARTO_TOUCH_CALIBRATE`, and `CARTO_LOAD`, as shown in the installer checklist.
+
 1. Press exactly one selector:
 
    ```text
