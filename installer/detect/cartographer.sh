@@ -24,7 +24,7 @@ _detect_carto_version_string() {
 
     local k=/mnt/UDISK/printer_data/logs/klippy.log
     [ -r "$k" ] || return 1
-    grep -oE 'CARTOGRAPHER( K1| V[34])? [0-9]+\.[0-9]+\.[0-9]+' "$k" 2>/dev/null | tail -1
+    grep -oiE 'CARTOGRAPHER( K1| V[34])? [0-9]+\.[0-9]+\.[0-9]+( lite)?' "$k" 2>/dev/null | tail -1
 }
 
 detect_carto_hw() {
@@ -39,5 +39,10 @@ detect_carto_hw() {
 detect_carto_fw() {
     local version=$(_detect_carto_version_string)
     local fw=$(printf '%s\n' "$version" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -1)
-    [ -n "$fw" ] && echo "$fw" || echo "unknown"
+    [ -n "$fw" ] || { echo "unknown"; return; }
+    case "$version" in
+        *[Ll][Ii][Tt][Ee]*|*'CARTOGRAPHER K1 '*) echo "$fw (Lite)" ;;
+        *CARTOGRAPHER*) echo "$fw (Full)" ;;
+        *) echo "$fw" ;;
+    esac
 }

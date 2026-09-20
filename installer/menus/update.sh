@@ -14,6 +14,7 @@ migration_component_label() {
         macros) echo 'Macros (START_PRINT / M191 / bed mesh)' ;;
         save-config-restart) echo 'SAVE_CONFIG restart protection' ;;
         virtual-sdcard-guard) echo 'Virtual SD-card upload guard' ;;
+        memory-diagnostics) echo 'Memory diagnostics' ;;
         abort_homing) echo 'Abort Homing' ;;
         screws_tilt_adjust) echo 'Screws Tilt Adjust' ;;
         kamp-adaptive-purge) echo 'KAMP adaptive purge' ;;
@@ -34,6 +35,7 @@ migration_component_installed() {
         macros) is_macros ;;
         save-config-restart) is_save_config_restart ;;
         virtual-sdcard-guard) is_virtual_sdcard_guard ;;
+        memory-diagnostics) is_memory_diagnostics ;;
         abort_homing) is_abort_homing ;;
         screws_tilt_adjust) is_screws_tilt ;;
         kamp-adaptive-purge) is_kamp ;;
