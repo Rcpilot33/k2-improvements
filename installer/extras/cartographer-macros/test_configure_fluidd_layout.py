@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
 
 import copy
+from pathlib import Path
+import re
 import unittest
 
 import configure_fluidd_layout as layout
 
 
 class FluiddLayoutTests(unittest.TestCase):
+    def test_setup_checklist_uses_fluidd_button_labels(self):
+        workflow = (Path(__file__).resolve().parents[2] / "menus" / "workflows.sh").read_text()
+        checklist = workflow.split("show_cartographer_setup_checklist() {", 1)[1].split(
+            "run_protected_firmware_restart() {", 1
+        )[0]
+        for name, alias, _color in layout.MACRO_LAYOUT:
+            if name.startswith(("A1", "A2")):
+                self.assertIn(alias, checklist)
+        self.assertIsNone(re.search(r"\bA\d{2}\b", checklist))
+
     def test_creates_category_and_all_aliases_without_renaming_macros(self):
         source = {
             "theme": {"isDark": True},
