@@ -31,6 +31,13 @@ D="${1:-/mnt/UDISK/root/k2-improvements}"
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
 OVERLAY="$SCRIPT_DIR/jacob-overlay"
 [ -d "$OVERLAY" ] || { echo "ERROR: overlay dir not found at $OVERLAY"; exit 1; }
+# Refuse an incomplete package before replacing either half of the event pair.
+for patch in mcu.py temperature_mcu.py; do
+    [ -f "$OVERLAY/features/cartographer/patches/$patch" ] || {
+        echo "ERROR: required Cartographer patch missing: $patch" >&2
+        exit 1
+    }
+done
 
 echo "I: applying erondiel portable bug-fixes (overlay) to $D"
 
@@ -81,6 +88,11 @@ install_overlay "$OVERLAY/features/cartographer/install_plugin.sh" \
     "$D/features/cartographer/install_plugin.sh"
 install_overlay "$OVERLAY/features/cartographer/update-manager.cfg" \
     "$D/features/cartographer/update-manager.cfg"
+# Keep the pre-configuration identification event and its ADC subscriber paired.
+install_overlay "$OVERLAY/features/cartographer/patches/mcu.py" \
+    "$D/features/cartographer/patches/mcu.py"
+install_overlay "$OVERLAY/features/cartographer/patches/temperature_mcu.py" \
+    "$D/features/cartographer/patches/temperature_mcu.py"
 apply_overlay "$OVERLAY/features/secure-auth/install.sh"      "$D/features/secure-auth/install.sh"
 install_overlay "$OVERLAY/features/macros/overrides/reset_probe_offsets.py" \
     "$D/features/macros/overrides/reset_probe_offsets.py"

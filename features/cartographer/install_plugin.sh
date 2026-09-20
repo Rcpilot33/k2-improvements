@@ -8,7 +8,7 @@ PLUGIN_BRANCH=$(sed -n 's/^primary_branch: *//p' "$SCRIPT_DIR/update-manager.cfg
 [ -n "$PLUGIN_URL" ] && [ -n "$PLUGIN_BRANCH" ] || exit 1
 
 if [ ! -e "$PLUGIN_DIR" ]; then
-    git clone --branch "$PLUGIN_BRANCH" --single-branch "$PLUGIN_URL" "$PLUGIN_DIR"
+    git clone --branch "$PLUGIN_BRANCH" "$PLUGIN_URL" "$PLUGIN_DIR"
     exit 0
 fi
 
@@ -44,7 +44,7 @@ else
 fi
 git merge --ff-only "$TARGET"
 git remote set-url origin "$PLUGIN_URL"
-git config --replace-all remote.origin.fetch "+refs/heads/$PLUGIN_BRANCH:refs/remotes/origin/$PLUGIN_BRANCH"
+git config --replace-all remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
 git update-ref "refs/remotes/origin/$PLUGIN_BRANCH" "$TARGET"
 git branch --set-upstream-to="origin/$PLUGIN_BRANCH" "$PLUGIN_BRANCH"
 echo "I: Cartographer plugin ready on $PLUGIN_BRANCH at $TARGET"

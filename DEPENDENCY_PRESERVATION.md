@@ -38,12 +38,54 @@ install/restart, Cartographer's bundled SAVE_CONFIG and upload-guard migrations
 are recorded only if their installed-state detectors pass. Missing protections
 remain pending. No calibration values or temperature conversion formulas change.
 
-Hardware verification remains required: start with the probe absent, connect it
-while idle, and check that both coil and MCU readings become live without a
-restart. Also verify connected startup and a subsequent disconnect/reconnect.
-The existing startup warning may remain displayed until restart; it is not a
-live connection indicator. Confirm the two dependency actions clear after the
-successful updater refresh before continuing calibration and motion tests.
+Both native and portable Jacob-overlay installs now carry the matching MCU and
+temperature_mcu patches. The fix concerns MCU ADC temperature initialization;
+coil streaming is a separate path. Overlay parity and repeat application are
+covered by local tests; this is not a claim of end-to-end overlay printer validation.
+Feature/Extras menus explicitly report incomplete migration verification after
+an otherwise successful install, leaving failed dependency actions pending.
+
+### Release gate and branch transitions
+
+The integration branch is a moving TEST target, not a release channel. Do not
+promote this installer configuration to main until a release-only plugin branch
+and its tested commit are selected. Publish/verify that branch first, update the
+native and overlay update-manager configurations together, and ship a refresh
+migration that re-runs the installer and protected host restart. Do not rely on
+a configuration-only pull to activate new plugin Python code.
+
+Fresh and migrated plugin checkouts fetch all origin branches, while tracking
+only the configured primary branch for updates. This avoids hiding a later
+release branch behind a single-branch refspec; it does not automatically migrate
+existing printers until they run the updated installer. Confirm Moonraker reports
+the component valid, on the intended branch, after that migration.
+
+### V3 hardware validation, September 19–20, 2026
+
+User-supplied logs and supervised observations on K2 Plus 1.1.5.5, Cartographer
+V3 firmware 5.1.0, plugin integration through 5ed2ee7:
+
+- Passed disconnected startup, idle reconnect, live MCU/coil temperature
+  recovery, and automatic removal of the stale startup warning after reconnect.
+- Passed Scan/Touch calibration, protected SAVE_CONFIG restart, subsequent model
+  loading, normal homing, Z tilt, and repeated meshes.
+- Passed disconnect/reconnect during ordinary printing: Fluidd 23:07:16 to
+  23:07:32, followed by successful print completion. This did not test active
+  probing disconnection.
+- Passed next-print homing, meshing, Touch home and completion without a Klipper
+  restart. Passed normal cancellation/parking/heater shutdown (user observation),
+  followed by another successful print ending 23:35:17 without a restart.
+- V3 directional mesh striping predates this update. It follows scan direction;
+  repeated spiral meshes reduce it. Root cause and absolute accuracy remain
+  unestablished; do not label it an update regression or claim spiral fixes it.
+
+Still pending: supervised disconnected-operation rejection, full power-cycle
+persistence, broad heated first-layer/longer-print validation, Moonraker update
+manager health, and a real pre-migration/portable-overlay printer install.
+Local Git fixtures exercise both Jacob origin spellings, fast-forward migration,
+tracking repair, future-branch visibility, and refusal to overwrite user changes.
+They do not substitute for those remaining printer checks. No firmware flash or
+deliberate disconnection during an active probe move is required.
 
 Preservation date: **2026-08-16**
 

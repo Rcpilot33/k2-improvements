@@ -1,5 +1,25 @@
 # Validation Status
 
+## Cartographer integration testing (September 2026)
+
+The `carto-plugin-update-testing` installer and
+`k2-cartographer-upstream-integration` plugin remain testing branches, separate
+from the historical firmware matrix below. See
+[the integration hardware record](DEPENDENCY_PRESERVATION.md#v3-hardware-validation-september-1920-2026)
+for completed V3 checks and outstanding release gates. The overall historical
+PASS below must not be read as blanket approval of this integration.
+
+## Local automated tests
+
+Run `python scripts/run_tests.py` from a development checkout. This discovers
+Python unittest suites under bootstrap, features, installer, and scripts, using
+an isolated process per test directory so duplicate module basenames and sibling
+imports do not collide. It continues after failures and exits nonzero if any
+directory fails. Tests requiring unavailable platform tools may report skips;
+review those before claiming full coverage. Git and Bash are needed for installer
+fixtures. Shell-only test scripts and printer hardware checks remain separate.
+Root-level `pytest .` collection is not the supported runner.
+
 ## Firmware validation summary
 
 The current menu/bootstrap redesign completed full install-and-print validation

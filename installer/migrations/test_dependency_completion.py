@@ -12,6 +12,24 @@ BASH = shutil.which("bash") or "C:/Program Files/Git/bin/bash.exe"
 
 @unittest.skipUnless(Path(BASH).exists(), "bash required")
 class DependencyCompletionTests(unittest.TestCase):
+    def test_menu_callers_report_failed_verification(self):
+        for menu in ("features.sh", "extras.sh"):
+            with self.subTest(menu=menu):
+                source = (ROOT / "installer/menus" / menu).read_text()
+                start = source.index('        if command -v migration_mark_component_current',
+                                     source.index('info "running'))
+                end = source.index('\n    else', start)
+                block = source[start:end]
+                script = '''
+name=cartographer
+warn() { printf '%s\\n' "$*"; }
+migration_mark_component_current() { return 1; }
+''' + block
+                result = subprocess.run([BASH, "-c", script], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("update verification is incomplete", result.stdout)
+                self.assertIn("pending actions", result.stdout)
+
     def run_mark(self, failed="", parent="cartographer"):
         with tempfile.TemporaryDirectory(prefix="k2-migration-test-") as directory:
             env = os.environ.copy()

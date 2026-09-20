@@ -84,7 +84,9 @@ install_feature() {
     if HOME="$pwd_home" sh "$script"; then
         info "$name install completed"
         if command -v migration_mark_component_current >/dev/null 2>&1; then
-            migration_mark_component_current "$name"
+            if ! migration_mark_component_current "$name"; then
+                warn "$name installed, but update verification is incomplete; review pending actions in Update installer / apply updates"
+            fi
         fi
     else
         warn "$name install.sh exited non-zero"
