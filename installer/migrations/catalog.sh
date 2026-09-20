@@ -18,6 +18,7 @@ main-safe-z-carto-retreat-v1|cartographer|is_cartographer|Artificial-Z Cartograp
 main-safe-z-backup-retreat-v1|cartographer|is_cartographer|Artificial-Z backup stops now retreat and report completion without waiting for a timeout
 main-safe-z-completion-ack-v1|cartographer|is_cartographer|Artificial-Z recovery now acknowledges the requested move without a second nozzle approach
 main-safe-z-clearance-target-v1|cartographer|is_cartographer|Artificial-Z recovery now stops directly at guarded Z30 when Cartographer does not trigger
+cartographer-reconnect-temperature-v1|cartographer|is_cartographer|Initialize MCU temperature sampling before configuring a probe connected after startup
 main-99f5328-save-config|save-config-restart|is_save_config_restart|SAVE_CONFIG firmware-restart behavior changed
 main-611cde3-save-config-guard|save-config-restart|is_save_config_restart|SAVE_CONFIG protection was expanded to every install path
 main-4b6aa14-abort-restart|abort_homing|is_abort_homing|Abort Homing installation restart handling changed

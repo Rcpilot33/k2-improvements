@@ -25,6 +25,26 @@ repeated meshes, and print start/cancel on hardware using the plugin's
 preserve it first and deliberately restore the previous plugin source and matching
 Moonraker configuration while idle.
 
+### Reconnect and installer follow-up
+
+The K2 MCU patch now emits a per-MCU identification event before reconnect
+configuration is built. The MCU temperature sensor initializes on that event,
+so a probe absent at startup gets ADC sampling configured when it connects.
+Initialization failures abort the reconnect rather than reporting success.
+The existing post-configuration reconnect event used by the plugin is unchanged.
+
+The updater offers a Cartographer refresh for this change. After a successful
+install/restart, Cartographer's bundled SAVE_CONFIG and upload-guard migrations
+are recorded only if their installed-state detectors pass. Missing protections
+remain pending. No calibration values or temperature conversion formulas change.
+
+Hardware verification remains required: start with the probe absent, connect it
+while idle, and check that both coil and MCU readings become live without a
+restart. Also verify connected startup and a subsequent disconnect/reconnect.
+The existing startup warning may remain displayed until restart; it is not a
+live connection indicator. Confirm the two dependency actions clear after the
+successful updater refresh before continuing calibration and motion tests.
+
 Preservation date: **2026-08-16**
 
 ## Preserved repositories

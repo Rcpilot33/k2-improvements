@@ -188,6 +188,15 @@ migration_mark_component_current() {
         migration_catalog | awk -F'|' -v component="$component" '$2 == component { print $1 }'
     } | awk 'NF && !seen[$0]++' > "$temporary"
     migration_write_atomic "$MIGRATION_COMPLETED" "$temporary"
+    # Cartographer installs these protections itself. Record their migrations
+    # only after the parent install/restart succeeded and each detector passes.
+    if [ "$component" = cartographer ]; then
+        local dependency dependency_failed=0
+        for dependency in save-config-restart virtual-sdcard-guard; do
+            migration_mark_component_current "$dependency" || dependency_failed=1
+        done
+        [ "$dependency_failed" -eq 0 ] || return 1
+    fi
 }
 
 migration_print_details() {

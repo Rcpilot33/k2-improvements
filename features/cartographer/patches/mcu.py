@@ -794,6 +794,10 @@ class MCU:
             self.reset_to_initial_state()
             self.non_critical_disconnected = False
             self._get_status_info['non_critical_disconnected'] = False
+            # Sensors need identified constants and live queries before ADC
+            # configuration is built. Do not announce a completed reconnect yet.
+            self._printer.send_event(
+                "non_critical_mcu_%s:identified" % self._name)
             self._connect()
             self._gcode.respond_info(
                 "mcu: '%s' reconnected, loading models..." % (self._name,))
