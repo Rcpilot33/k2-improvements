@@ -62,6 +62,34 @@ the component valid, on the intended branch, after that migration.
 
 ### V3 hardware validation, September 19–20, 2026
 
+September 20 follow-up on plugin `015b5b3`: print startup loaded the existing
+models, completed a 20x20 two-run mesh, and accepted three touch readings of
+0.2307 mm. Mid-print disconnect/reconnect at 08:12:08/08:12:26 was followed by
+print completion. Disconnected startup recovered after the known K2 motor
+initialization restart failure; reconnect at 08:44:58 cleared the warning and
+restored both temperatures. A disconnected G28 completed bottom-switch leveling
+but rejected probe-dependent homing with approximately 30 mm physical clearance
+(operator observation), remained Ready, and homed after reconnect without a
+restart at 08:53:15.
+
+Active mesh disconnection exposed delayed error reporting: the scan continued
+until 08:58:23 and then rejected the aborted sampling session. The opt-in touch
+diagnostic (`bfc459c`) stopped promptly by operator observation when unplugged
+at 09:41:12. `klippy (61).log` showed an error querying the disconnected MCU in
+dispatch cleanup before the diagnostic's intentional shutdown. Log timestamps
+are one hour behind these Fluidd timestamps. Neither test establishes a numeric
+stopping-distance guarantee or full nozzle-contact safety.
+
+The `cartographer-active-disconnect-cleanup-v1` migration refreshes the plugin
+and paired native/portable MCU patch: active homing failure cleans all trigger
+participants and shuts down rather than trusting stale Z coordinates; host
+shutdown skips commands to an already-disconnected non-critical MCU. Mesh
+abort checkpoints stop enqueueing further points but do not cancel already
+queued movement. Software validation and the prior hardware observations must
+not be confused with hardware sign-off of these new fixes. Repeat the bounded
+diagnostic only after refresh and the **protected restart**; plain Klipper Ready
+does not establish safe K2 motor initialization.
+
 User-supplied logs and supervised observations on K2 Plus 1.1.5.5, Cartographer
 V3 firmware 5.1.0, plugin integration through 5ed2ee7:
 

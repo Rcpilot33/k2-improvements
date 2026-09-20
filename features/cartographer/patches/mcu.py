@@ -1164,7 +1164,8 @@ class MCU:
         self._serial.disconnect()
         self._steppersync = None
     def _shutdown(self, force=False):
-        if (self._emergency_stop_cmd is None
+        if (self.non_critical_disconnected
+            or self._emergency_stop_cmd is None
             or (self._is_shutdown and not force)):
             return
         self._emergency_stop_cmd.send()
