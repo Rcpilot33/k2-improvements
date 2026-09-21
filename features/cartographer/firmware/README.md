@@ -16,14 +16,15 @@ matching bundled Full and Lite firmware.
 
 For V3, options **4 (6.1.0 Full)** and **5 (6.1.0 Lite)** are explicit
 testing choices. Enter still selects 5.1.0 Full; option 3 still aborts.
-V4 choices are unchanged. Keep 5.1.0 available as the known-working rollback.
+Keep 5.1.0 available as the known-working V3 rollback.
 This does not change the bundled DFU recovery images.
 
 Before upgrading, back up the printer configuration and calibration models.
 After flashing, use the established K2 protected restart procedure before
 homing, and redo Scan and Touch calibration for the new firmware. Validate
 normal probing, meshing and printing before relying on it for routine use.
-The new firmware has not yet been hardware-validated on this K2 setup.
+V3 Full and Lite have been operator-tested on this K2 setup; this does not
+establish compatibility with every printer configuration.
 
 The V3 6.1.0 USB application images (8 KiB bootloader offset, **not** combined
 DFU images) come from official `Cartographer3D/cartographer_firmware` commit
@@ -35,6 +36,43 @@ SHA-256 digests are checked before selection returns to the flash operation:
 | --- | --- |
 | `CartographerV3_6.1.0_USB_full_8kib_offset.bin` | `450f618396c837932c83b403a76d1bd912c04af68fdb543eb9fc11f1257847b4` |
 | `CartographerV3_6.1.0_USB_lite_8kib_offset.bin` | `461cd887cf31aecc0d7ec959d99b6df3901b43e8ad6e326a9a58064a6ca3e262` |
+
+### V4 6.2.0 opt-in testing
+
+For V4, options **4 (6.2.0 Full)** and **5 (6.2.0 Lite)** are explicit testing
+choices. Enter still selects 6.0.0 Full, option 2 remains 6.0.0 Lite, and option
+3 aborts. V3 choices and all DFU recovery images are unchanged.
+
+Upstream requires plugin 1.6.0 support. Our K2 integration at `8478ed2` already
+contains upstream release `6e11435`, including `CARTOGRAPHER_SENSOR_FREQ_DIVISOR`
+handling, despite its retained `1.5.0+k2.upstream...` version label.
+Before selecting 6.2, refresh the managed Cartographer plugin using the installer
+and let its protected host reload/restart finish.
+
+The flasher checks the SHA-256 of the audited plugin's
+`~/cartographer3d-plugin/src/cartographer/mcu/constants.py` (normalizing CRLF to
+LF): `5d413961b8daa0ae14ed2dbc78688d01c8e5f9421a0b44608c1cc5d1cc47bea1`.
+Missing or different code blocks 6.2 selection. This conservative check covers
+the required frequency conversion, not every aspect of plugin correctness.
+Other plugin locations or future source changes require a fresh audit; the
+version label alone is not accepted as proof of compatibility.
+
+The official USB application images below are pinned to firmware repository
+commit `e5c2b17dbe04ec1f747af5d81b2215949a0a9f8e`, under
+`firmware/v4/firmware/6.2.0`. These are **8 KiB-offset application images**, not
+combined bootloader/DFU images. The flasher verifies their SHA-256 before use.
+
+| Image | SHA-256 |
+| --- | --- |
+| `CartographerV4_6.2.0_USB_full_8kib_offset.bin` | `b0c059dc063ff0f6ae0a4bdaa284073598647c27082d0106771f1a5cf9caf383` |
+| `CartographerV4_6.2.0_USB_lite_8kib_offset.bin` | `45d4e6f8b520ecb5412fadb358e15974012e6b9935236bfe612af1bf63a532c4` |
+
+Back up configuration/models before flashing. Afterward, complete the K2
+protected firmware restart and recalibrate Scan and Touch. V4 6.2 still needs
+hardware validation on this K2 setup; retain 6.0 as the rollback choice.
+Adding these menu choices alone does not require a printer restart or migration.
+The installer update tracker reports the new manual firmware choices when the
+recorded update changes either 6.2 bundle; it never marks the probe as flashed.
 
 ## Bundled DFU recovery
 

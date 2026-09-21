@@ -222,7 +222,27 @@ migration_print_state_summary() {
         IFS='|' read -r old new branch < "$MIGRATION_LAST_PULL"
         printf ' Last update: %s -> %s\n' "${old:-unknown}" "${new:-unknown}"
         printf ' Branch     : %s\n\n' "${branch:-unknown}"
+        migration_print_firmware_notice "$old" "$new"
     fi
+}
+
+# Firmware bundles are installer-only updates, not repair migrations. Report
+# their availability without marking a probe flashed or requesting a restart.
+migration_print_firmware_notice() {
+    local old new changed
+    old="$1"
+    new="$2"
+    [ -n "$old" ] && [ -n "$new" ] && [ "$old" != "$new" ] || return 0
+    changed=$(git -C "$INSTALLER_DIR" diff --name-only "$old" "$new" -- \
+        features/cartographer/firmware/firmware/CartographerV4_6.2.0_USB_full_8kib_offset.bin \
+        features/cartographer/firmware/firmware/CartographerV4_6.2.0_USB_lite_8kib_offset.bin \
+        2>/dev/null) || return 0
+    [ -n "$changed" ] || return 0
+    printf '%s\n' 'New optional firmware: Cartographer V4 6.2.0 Full / Lite.'
+    printf '%s\n' 'Available in Cartographer tools -> Normal USB / Katapult firmware flash.'
+    printf '%s\n' 'Requires the audited plugin support; the flasher checks before selection.'
+    printf '%s\n' 'No automatic flash or printer restart is performed by this installer update.'
+    printf '%s\n\n' 'After an optional flash: protected firmware restart, then Scan and Touch calibration.'
 }
 
 printer_activity_state() {

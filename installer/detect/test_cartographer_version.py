@@ -41,6 +41,8 @@ command() { return 1; }
             ("CARTOGRAPHER 5.1.0", ["V3", "5.1.0 (Full)"]),
             ("CARTOGRAPHER K1 5.1.0", ["V3", "5.1.0 (Lite)"]),
             ("CARTOGRAPHER V4 6.0.0", ["V4", "6.0.0 (Full)"]),
+            ("CARTOGRAPHER v4 6.2.0 Lite", ["V4", "6.2.0 (Lite)"]),
+            ("CARTOGRAPHER v4 6.2.0", ["V4", "6.2.0 (Full)"]),
             ("", ["unknown", "unknown"]),
         ):
             with self.subTest(version=version):

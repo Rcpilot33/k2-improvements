@@ -28,7 +28,7 @@ _detect_carto_version_string() {
 }
 
 detect_carto_hw() {
-    local version=$(_detect_carto_version_string)
+    local version=$(_detect_carto_version_string | tr '[:lower:]' '[:upper:]')
     case "$version" in
         *'CARTOGRAPHER V3'*|*'CARTOGRAPHER K1 5.'*|*'CARTOGRAPHER 5.'*) echo "V3" ;;
         *'CARTOGRAPHER V4'*|*'CARTOGRAPHER 6.'*)                    echo "V4" ;;
