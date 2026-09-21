@@ -11,7 +11,7 @@ SOURCE = Path(__file__).with_name("cartographer.sh")
 
 @unittest.skipUnless(Path(BASH).exists(), "bash required")
 class CartographerVersionTests(unittest.TestCase):
-    def detect(self, version, fallback=False):
+    def detect(self, version, fallback=False, no_tr=False):
         source = SOURCE.read_text()
         if fallback:
             # Use a shell-owned fixture in place of the printer's fixed log path.
@@ -27,11 +27,14 @@ command() { return 1; }
 '''
         else:
             setup = '_detect_carto_version_string() { printf "%s\\n" "$TEST_VERSION"; }\n'
+        if no_tr:
+            setup += '\ntr() { echo "unexpected tr invocation" >&2; return 127; }\n'
         result = subprocess.run(
             [BASH, "-c", source + "\n" + setup + "detect_carto_hw; detect_carto_fw"],
             env=dict(os.environ, TEST_VERSION=version), capture_output=True, text=True,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("unexpected tr invocation", result.stderr)
         return result.stdout.splitlines()
 
     def test_live_versions(self):
@@ -52,6 +55,20 @@ command() { return 1; }
         self.assertEqual(
             self.detect("CARTOGRAPHER V3 6.1.0 lite", fallback=True),
             ["V3", "6.1.0 (Lite)"],
+        )
+
+    def test_hardware_detection_without_tr(self):
+        for hardware in ('V3', 'v3', 'V4', 'v4'):
+            with self.subTest(hardware=hardware):
+                self.assertEqual(
+                    self.detect(f'CARTOGRAPHER {hardware} 6.2.0', no_tr=True),
+                    [hardware.upper(), '6.2.0 (Full)'],
+                )
+
+    def test_lowercase_v4_log_fallback_without_tr(self):
+        self.assertEqual(
+            self.detect('CARTOGRAPHER v4 6.2.0 Lite', fallback=True, no_tr=True),
+            ['V4', '6.2.0 (Lite)'],
         )
 
 

@@ -28,10 +28,12 @@ _detect_carto_version_string() {
 }
 
 detect_carto_hw() {
-    local version=$(_detect_carto_version_string | tr '[:lower:]' '[:upper:]')
+    # Match the firmware's lowercase v directly; do not depend on tr's
+    # character-class conversion support on the printer's BusyBox build.
+    local version=$(_detect_carto_version_string)
     case "$version" in
-        *'CARTOGRAPHER V3'*|*'CARTOGRAPHER K1 5.'*|*'CARTOGRAPHER 5.'*) echo "V3" ;;
-        *'CARTOGRAPHER V4'*|*'CARTOGRAPHER 6.'*)                    echo "V4" ;;
+        *'CARTOGRAPHER '[Vv]3*|*'CARTOGRAPHER K1 5.'*|*'CARTOGRAPHER 5.'*) echo "V3" ;;
+        *'CARTOGRAPHER '[Vv]4*|*'CARTOGRAPHER 6.'*)                    echo "V4" ;;
         *)                                                          echo "unknown" ;;
     esac
 }
