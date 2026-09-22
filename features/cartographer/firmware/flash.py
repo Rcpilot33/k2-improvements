@@ -16,6 +16,7 @@ import struct
 import argparse
 import hashlib
 import pathlib
+import re
 import subprocess
 import time
 from typing import Optional, Union
@@ -515,6 +516,16 @@ V4_620_CHECKSUMS = {
 }
 
 
+def format_firmware_label(version: str) -> str:
+    """Make the firmware's implicit Full/Lite variant explicit in the UI."""
+    label = version.strip()
+    if re.search(r"\blite$", label, re.IGNORECASE):
+        return re.sub(r"\s+lite$", "", label, flags=re.IGNORECASE) + " (Lite)"
+    if re.search(r"\bcartographer\b", label, re.IGNORECASE):
+        return label + " (Full)"
+    return label
+
+
 def v4_620_plugin_supported() -> bool:
     """Fail closed unless the managed plugin has the audited 1.6 divisor code.
 
@@ -577,7 +588,7 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
     if fw_version:
         info_text.append("\n")
         info_text.append("Current Firmware: ", style="dim")
-        info_text.append(fw_version, style="bold")
+        info_text.append(format_firmware_label(fw_version), style="bold")
     
     console.print()
     console.print(Panel(info_text, title="[bold]Connected[/bold]", border_style="green", padding=(0, 1)))
@@ -596,7 +607,6 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
     console.print(table)
     
     # Get default option name (strip Rich markup)
-    import re
     default_name = re.sub(r'\[/?[^\]]+\]', '', options[0][1])
     
     # Two-part beginner-friendly prompt

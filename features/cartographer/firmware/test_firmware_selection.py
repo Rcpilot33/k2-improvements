@@ -3,6 +3,7 @@ import ast
 import hashlib
 from pathlib import Path
 import pathlib
+import re
 import struct
 from typing import Optional
 import unittest
@@ -18,11 +19,11 @@ class FirmwareSelectionTests(unittest.TestCase):
         nodes = [n for n in tree.body if
                  isinstance(n, ast.FunctionDef) and n.name in
                  ('prompt_firmware', 'scan_flash_for_version', '_print_unsupported_device',
-                  'v4_620_plugin_supported')
+                  'v4_620_plugin_supported', 'format_firmware_label')
                  or isinstance(n, ast.Assign) and any(
                      isinstance(t, ast.Name) and t.id in ('V3_610_CHECKSUMS', 'V4_620_CHECKSUMS')
                      for t in n.targets)]
-        self.env = dict(pathlib=pathlib, Optional=Optional, hashlib=hashlib,
+        self.env = dict(pathlib=pathlib, Optional=Optional, hashlib=hashlib, re=re,
                         struct=struct, __file__=str(ROOT / 'flash.py'))
         for name in ('console', 'Text', 'Panel', 'Table', 'box', 'Prompt'):
             self.env[name] = MagicMock()
@@ -96,6 +97,13 @@ class FirmwareSelectionTests(unittest.TestCase):
             self.assertIsNone(self.choose('4', 'stm32g431xx'))
         with patch.object(Path, 'is_file', return_value=False):
             self.assertIsNone(self.choose('5', 'stm32g431xx'))
+
+    def test_current_firmware_variant_label_is_explicit(self):
+        formatter = self.env['format_firmware_label']
+        self.assertEqual(formatter('CARTOGRAPHER v4 6.2.0'),
+                         'CARTOGRAPHER v4 6.2.0 (Full)')
+        self.assertEqual(formatter('CARTOGRAPHER v4 6.2.0 Lite'),
+                         'CARTOGRAPHER v4 6.2.0 (Lite)')
 
 
 if __name__ == '__main__':
