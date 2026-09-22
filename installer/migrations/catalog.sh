@@ -5,6 +5,7 @@
 migration_catalog() {
     cat <<'EOF'
 cartographer-current-mcu-api-v1|cartographer|is_cartographer|Refresh SAFE_MOVE_Z and Z-homing connection checks for the current Cartographer MCU interface, then reload through the protected restart
+cartographer-safe-move-trigger-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer so an unexpected SAFE_MOVE_Z trigger finalizes the K2 motor stop before disarming probe homing, then reload through the protected restart
 cartographer-active-disconnect-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer active-probe disconnect cleanup and mesh abort checkpoints, then reload through the protected restart
 cartographer-integration-review-v1|cartographer|is_cartographer|Refresh Cartographer integration warning cleanup and branch discovery, then reload through the protected restart
 main-451901d-cartographer-temperatures|cartographer|is_cartographer|Cartographer touch-home temperature diagnostics changed
