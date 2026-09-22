@@ -872,7 +872,10 @@ def _main_inner(args):
             flasher.finish()
             console.print("[green]✓[/green] Device returned to normal mode")
             wait_for_exit()
-            return 0
+            # Let the installer distinguish a clean cancellation from a
+            # completed flash.  A cancelled flash must not trigger the
+            # protected firmware restart used to load newly flashed code.
+            return 2
         
         if not fw_path:
             return 1

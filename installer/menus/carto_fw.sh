@@ -197,17 +197,26 @@ carto_fw_launch() {
     info "running $flash_py"
     ensure_path
 
-    if python3 "$flash_py"; then
+    python3 "$flash_py"
+    flash_status=$?
+
+    if [ "$flash_status" -eq 0 ]; then
         printf '\n%s\n' "$(c_green 'flash.py exited cleanly.')"
         printf '\n'
         printf 'Verify the probe returned to normal USB runtime mode:\n\n'
         printf '  lsusb | grep -i cartographer\n\n'
         printf 'If the probe does not reappear, unplug/replug the Cartographer USB or power-cycle the printer.\n\n'
-        printf 'K2 Plus restart note:\n'
-        printf 'Protected SAVE_CONFIG completes its stock restart, waits for K2 motor readiness,\n'
-        printf 'then requests one guarded firmware restart.\n'
-        printf 'Python-code installers add a guarded host reload first. Power-cycle before\n'
-        printf 'G28 if the protected sequence fails.\n\n'
+        printf '%s\n' '--- Protected restart after Cartographer flash ---'
+        printf 'Reloading Klipper configuration and the newly flashed Cartographer firmware.\n\n'
+        if sh "$INSTALLER_DIR/scripts/firmware_restart.sh"; then
+            printf '\n%s\n' "$(c_green 'Protected firmware restart completed successfully.')"
+            printf 'Reopen Cartographer tools to verify the new firmware version, then recalibrate.\n\n'
+        else
+            printf '\n%s\n' "$(c_red 'Protected firmware restart failed.')"
+            printf 'Power-cycle the printer before G28, calibration, or attempting a print.\n\n'
+        fi
+    elif [ "$flash_status" -eq 2 ]; then
+        printf '\n%s\n\n' "$(c_yellow 'Firmware flashing cancelled; no protected restart was requested.')"
     else
         warn "flash.py exited non-zero"
         printf '\n'
