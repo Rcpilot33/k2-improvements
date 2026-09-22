@@ -74,10 +74,6 @@ class AuditRegressionTests(unittest.TestCase):
         delete_camera = (ROOT / "scripts/delete-camera").read_text(
             encoding="utf-8"
         )
-        jacob_cartographer = (
-            ROOT
-            / "installer/scripts/jacob-overlay/features/cartographer/install.sh"
-        ).read_text(encoding="utf-8")
         combined = "\n".join(
             (
                 moonraker,
@@ -85,7 +81,6 @@ class AuditRegressionTests(unittest.TestCase):
                 cartographer,
                 toggle,
                 delete_camera,
-                jacob_cartographer,
             )
         )
         self.assertNotIn("type -p", combined)
@@ -96,7 +91,6 @@ class AuditRegressionTests(unittest.TestCase):
             path.read_text(encoding="utf-8")
             for path in (
                 ROOT / "installer/lib/common.sh",
-                ROOT / "installer/scripts/patch-jacob-fixes.sh",
                 ROOT / "installer/extras/global-touch-offsets/install.sh",
                 ROOT / "installer/extras/material-z-offsets/install.sh",
             )

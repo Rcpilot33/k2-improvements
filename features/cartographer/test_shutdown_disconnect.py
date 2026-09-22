@@ -8,10 +8,7 @@ from unittest.mock import Mock
 class ShutdownDisconnectTests(unittest.TestCase):
     def test_disconnected_shutdown_skips_serial_but_connected_shutdown_is_preserved(self):
         root = Path(__file__).resolve().parents[2]
-        for path in (
-            root / "features/cartographer/patches/mcu.py",
-            root / "installer/scripts/jacob-overlay/features/cartographer/patches/mcu.py",
-        ):
+        for path in (root / "features/cartographer/patches/mcu.py",):
             tree = ast.parse(path.read_text())
             cls = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "MCU")
             method = next(node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name == "_shutdown")

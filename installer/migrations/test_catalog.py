@@ -62,6 +62,18 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_current_cartographer_mcu_api_fix_is_offered_once(self):
+        update_id = "cartographer-current-mcu-api-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+        self.assertEqual(recommended({"macros"}, previously_completed), set())
+        self.assertEqual(recommended({"cartographer"}, catalog_ids), set())
+
     def test_ids_are_unique_and_entries_are_complete(self):
         catalog = entries()
         self.assertGreater(len(catalog), 20)

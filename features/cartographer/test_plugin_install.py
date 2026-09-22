@@ -119,43 +119,5 @@ class PluginInstallTests(unittest.TestCase):
         self.install(False)
         self.assertEqual(self.git("rev-parse", BRANCH, cwd=self.dest).stdout, before)
 
-    def test_overlay_matches_active_source(self):
-        overlay = ROOT / "installer/scripts/jacob-overlay/features/cartographer"
-        for name in ("install_plugin.sh", "update-manager.cfg", "patches/mcu.py", "patches/temperature_mcu.py"):
-            self.assertEqual((FEATURE / name).read_text(), (overlay / name).read_text())
-
-    def test_portable_overlay_installs_patch_pair_and_is_idempotent(self):
-        checkout = self.base / "jacob-checkout"
-        patches = checkout / "features/cartographer/patches"
-        patches.mkdir(parents=True)
-        for name in ("mcu.py", "temperature_mcu.py"):
-            (patches / name).write_text("old patch\n")
-        script = ROOT / "installer/scripts/patch-jacob-fixes.sh"
-        for _ in range(2):
-            result = subprocess.run([BASH, str(script), checkout.as_posix()],
-                                    env=self.env, capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        for name in ("mcu.py", "temperature_mcu.py"):
-            self.assertEqual((patches / name).read_text(), (FEATURE / "patches" / name).read_text())
-            self.assertEqual((patches / (name + ".before-erondiel-overlay")).read_text(), "old patch\n")
-
-    def test_incomplete_overlay_refuses_before_changing_checkout(self):
-        package = self.base / "portable"
-        pair = package / "jacob-overlay/features/cartographer/patches"
-        pair.mkdir(parents=True)
-        (pair / "mcu.py").write_text("new patch\n")
-        script = package / "patch-jacob-fixes.sh"
-        shutil.copyfile(ROOT / "installer/scripts/patch-jacob-fixes.sh", script)
-        checkout = self.base / "jacob-checkout"
-        target = checkout / "features/cartographer/patches/mcu.py"
-        target.parent.mkdir(parents=True)
-        target.write_text("old patch\n")
-        result = subprocess.run([BASH, str(script), checkout.as_posix()],
-                                env=self.env, capture_output=True, text=True)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("temperature_mcu.py", result.stderr)
-        self.assertEqual(target.read_text(), "old patch\n")
-
-
 if __name__ == "__main__":
     unittest.main()
