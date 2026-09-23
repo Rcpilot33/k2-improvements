@@ -98,6 +98,7 @@ cartographer-prtouch-config-finalization-v2|cartographer|is_cartographer|Cartogr
 case-fan-preparation-target-v4|macros|is_macros|Pre-print now releases Creality's direct case-fan request and restores the requested chamber-fan target
 chamber-fan-start-print-target-v5|macros|is_macros|START_PRINT now restores the chamber-fan ceiling as soon as the requested chamber temperature is known
 case-fan-immediate-start-release-v5|macros|is_macros|START_PRINT now explicitly releases Creality's direct case-fan request immediately after BOX_START_PRINT and rechecks it after nozzle cleaning
+case-fan-pre-file-release-v6|macros|is_macros|Creality's pre-file case-fan request is now released before native nozzle-clean homing begins
 prtouch-safe-xy-clearance-v1|macros|is_macros|Stock PR Touch now establishes Z30 clearance before the post-recovery XY homing move
 prtouch-safe-xy-one-shot-v2|macros|is_macros|Stock PR Touch Z30 clearance now runs only on the first Z home after SAFE_MOVE_Z
 prtouch-safe-xy-artificial-gate-v3|macros|is_macros|Stock PR Touch Z30 clearance now runs only after artificial-coordinate SAFE_MOVE_Z recovery

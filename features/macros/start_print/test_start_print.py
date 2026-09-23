@@ -21,8 +21,12 @@ class StartPrintConfigTests(unittest.TestCase):
         self.assertIn(
             "rename_existing: _K2_ORIGINAL_BOX_NOZZLE_CLEAN", section
         )
-        self.assertIn("_K2_ORIGINAL_BOX_NOZZLE_CLEAN {rawparams}", section)
-        self.assertIn("_RELEASE_PREPRINT_CASE_FAN", section)
+        original = section.index("_K2_ORIGINAL_BOX_NOZZLE_CLEAN {rawparams}")
+        release_before = section.index("_RELEASE_PREPRINT_CASE_FAN")
+        release_after = section.index("_RELEASE_PREPRINT_CASE_FAN", original)
+        self.assertLess(release_before, original)
+        self.assertLess(original, release_after)
+        self.assertEqual(section.count("_RELEASE_PREPRINT_CASE_FAN"), 2)
 
     def test_case_fan_release_runs_immediately_after_box_start_print(self):
         section = self.config.split(
@@ -70,6 +74,7 @@ class StartPrintConfigTests(unittest.TestCase):
     def test_case_fan_is_not_continuously_enforced(self):
         self.assertEqual(self.config.count("M107 P1"), 1)
         self.assertNotIn("[delayed_gcode", self.config)
+        self.assertNotIn("[gcode_macro SET_CHAMBER_FAN]", self.config)
 
     def test_active_chamber_wait_uses_creality_35c_boundary(self):
         self.assertIn("{% if CHAMBER_TEMP > 35 %}", self.config)
