@@ -26,7 +26,8 @@ migration_print_firmware_notice old "$NEW"
     def test_changed_bundle_reports_manual_action_only(self):
         result = self.run_notice()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("V4 6.2.0 Full / Lite", result.stdout)
+        self.assertIn("V4 6.2.0 and V3 6.1.0 Full / Lite", result.stdout)
+        self.assertIn("V4 6.0.0 and V3 5.1.0", result.stdout)
         self.assertIn("No automatic flash or printer restart", result.stdout)
         self.assertIn("Scan and Touch calibration", result.stdout)
 

@@ -551,29 +551,29 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
         device_name = "Cartographer V4"
         device_chip = "STM32G431"
         options = [
-            ("1", "V4 6.0.0 Full", "Recommended for K2 (2x sampling rate)",
-             script_dir / "firmware" / "CartographerV4_6.0.0_USB_full_8kib_offset.bin"),
-            ("2", "V4 6.0.0 Lite", "Fallback for timing issues / conservative setup",
-             script_dir / "firmware" / "CartographerV4_6.0.0_USB_lite_8kib_offset.bin"),
-            ("3", "Abort", "Exit bootloader mode", None),
-            ("4", "V4 6.2.0 Full", "Opt-in K2 testing; requires compatible plugin; recalibrate",
+            ("1", "V4 6.2.0 Full", "Recommended for K2 (2x sampling rate); recalibrate",
              script_dir / "firmware" / "CartographerV4_6.2.0_USB_full_8kib_offset.bin"),
-            ("5", "V4 6.2.0 Lite", "Opt-in K2 testing; requires compatible plugin; recalibrate",
+            ("2", "V4 6.2.0 Lite", "Current conservative option; recalibrate",
              script_dir / "firmware" / "CartographerV4_6.2.0_USB_lite_8kib_offset.bin"),
+            ("3", "Abort", "Exit bootloader mode", None),
+            ("4", "V4 6.0.0 Full", "Legacy rollback (2x sampling rate); recalibrate",
+             script_dir / "firmware" / "CartographerV4_6.0.0_USB_full_8kib_offset.bin"),
+            ("5", "V4 6.0.0 Lite", "Legacy conservative rollback; recalibrate",
+             script_dir / "firmware" / "CartographerV4_6.0.0_USB_lite_8kib_offset.bin"),
         ]
     elif mcu == "stm32f042x6":
         device_name = "Cartographer V3 / Survey"
         device_chip = "STM32F042"
         options = [
-            ("1", "5.1.0 (Full)", "Recommended for K2 (2x sampling rate)",
-             script_dir / "firmware" / "Survey_Cartographer_USB_8kib_offset.bin"),
-            ("2", "K1 5.1.0 (Lite)", "Fallback for timing issues / conservative setup",
-             script_dir / "firmware" / "Survey_Cartographer_K1_USB_8kib_offset.bin"),
-            ("3", "Abort", "Exit bootloader mode", None),
-            ("4", "V3 6.1.0 Full", "Opt-in K2 testing; recalibrate Scan and Touch",
+            ("1", "V3 6.1.0 Full", "Recommended for K2 (2x sampling rate); recalibrate",
              script_dir / "firmware" / "CartographerV3_6.1.0_USB_full_8kib_offset.bin"),
-            ("5", "V3 6.1.0 Lite", "Opt-in K2 testing; recalibrate Scan and Touch",
+            ("2", "V3 6.1.0 Lite", "Current conservative option; recalibrate",
              script_dir / "firmware" / "CartographerV3_6.1.0_USB_lite_8kib_offset.bin"),
+            ("3", "Abort", "Exit bootloader mode", None),
+            ("4", "V3 5.1.0 Full", "Legacy rollback (2x sampling rate); recalibrate",
+             script_dir / "firmware" / "Survey_Cartographer_USB_8kib_offset.bin"),
+            ("5", "V3 5.1.0 Lite", "Legacy conservative rollback; recalibrate",
+             script_dir / "firmware" / "Survey_Cartographer_K1_USB_8kib_offset.bin"),
         ]
     else:
         _print_unsupported_device(mcu)
