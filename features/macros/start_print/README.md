@@ -13,10 +13,9 @@ Replaces the stock start macro with a temperature-aware workflow that:
 - levels the gantry and prepares the correct bed mesh; and
 - handles either Cartographer or the stock probe path.
 
-On all firmware, the `SET_CHAMBER_FAN` wrapper releases any nonzero direct
-case-fan request before the heated-bed deformation-calibration preflight begins
-homing. The `BOX_NOZZLE_CLEAN` wrapper performs the same release before native
-cleaning/homing and checks again afterward. `START_PRINT` also checks after
+On all firmware, the `BOX_NOZZLE_CLEAN` wrapper immediately releases any
+nonzero direct case-fan request before entering Creality's native cleaning and
+homing routine. It checks again afterward. `START_PRINT` also checks after
 `BOX_START_PRINT`, then restores the requested temperature-based
 chamber policy. The first nozzle-clean repeats the state-based release in case
 Creality reasserted the direct request; an already-zero request remains a no-op.
