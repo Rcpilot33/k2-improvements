@@ -6,6 +6,7 @@ migration_catalog() {
     cat <<'EOF'
 cartographer-z-rehome-preposition-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a disconnected Cartographer blocks the fast Z10 pre-positioning move on repeated Z homing
 cartographer-scan-model-homing-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a missing Cartographer scan model stops scanner-controlled Z homing before motion
+cartographer-mesh-defaults-override-v1|cartographer|is_cartographer|Set durable Cartographer defaults to a 150 mm/s, one-run spiral mesh for reliable Full and Lite sampling
 cartographer-current-mcu-api-v1|cartographer|is_cartographer|Refresh SAFE_MOVE_Z and Z-homing connection checks for the current Cartographer MCU interface, then reload through the protected restart
 cartographer-safe-move-trigger-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer so an unexpected SAFE_MOVE_Z trigger finalizes the K2 motor stop before disarming probe homing, then reload through the protected restart
 cartographer-active-disconnect-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer active-probe disconnect cleanup and mesh abort checkpoints, then reload through the protected restart
@@ -85,6 +86,7 @@ global-touch-offsets-category-v3|global-touch-offsets|is_global_touch_offsets|Gl
 global-touch-offsets-shared-ui-v4|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets now shares one safe Fluidd overlay with the material editor
 material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor and automatic material registration are available
 material-z-offsets-start-print-bridge-v2|material-z-offsets|is_material_z_offsets|Material Z Offsets now refreshes and verifies its START_PRINT handoff
+material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets|Newly discovered materials now start with a zero Z offset instead of inheriting the former 0.050 mm seed
 macros-preserve-carto-surface-wrapper-v1|macros|is_macros|Macro repairs now preserve an installed Cartographer surface-selection wrapper
 case-fan-runtime-state-v2|macros|is_macros|The guarded pre-print case-fan release now applies independently of firmware version
 case-fan-any-direct-request-v3|macros|is_macros|Pre-print now releases any nonzero direct case-fan request while preserving chamber cooling

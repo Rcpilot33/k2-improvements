@@ -67,12 +67,12 @@ python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
 sh "${SCRIPT_DIR}/install_prtouch_version_compat.sh" --no-restart
 
 # A conversion from the no-Cartographer path already has the shared
-# overrides.cfg. Add the Cartographer-only touch default without replacing
-# any existing user value. On a direct install, the macros installer repeats
-# this after it creates overrides.cfg.
+# overrides.cfg. Add and organize the Cartographer-only settings without
+# replacing existing user values. On a direct install, the macros installer
+# repeats this after it creates overrides.cfg.
 python3 "${SCRIPT_DIR}/../macros/overrides/cleanup_managed_overrides.py" \
     ~/printer_data/config/custom/overrides.cfg
-sh "${SCRIPT_DIR}/../macros/overrides/enable_cartographer_touch.sh" \
+python3 "${SCRIPT_DIR}/../macros/overrides/ensure_cartographer_overrides.py" \
     ~/printer_data/config/custom/overrides.cfg
 
 if [ "$CARTOGRAPHER_WAS_CONFIGURED" -eq 0 ]; then

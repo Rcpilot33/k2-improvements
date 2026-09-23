@@ -157,9 +157,9 @@ class StartPrintConfigTests(unittest.TestCase):
         self.assertIn('K2_MATERIAL_Z_APPLY MATERIAL="{MATERIAL}"', self.config)
         self.assertEqual(self.config.count("SET_GCODE_OFFSET Z={OFFSET}"), 1)
 
-    def test_material_defaults_start_at_point_zero_five(self):
+    def test_material_defaults_start_at_zero(self):
         for material in ("PLA", "PETG", "ABS", "ASA", "DEFAULT"):
-            self.assertIn("variable_offset_%s: 0.05" % material, self.config)
+            self.assertIn("variable_offset_%s: 0.00" % material, self.config)
 
     def test_macro_repair_preserves_plate_surface_wrapper(self):
         installer = MACROS_INSTALLER.read_text(encoding="utf-8")

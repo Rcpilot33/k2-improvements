@@ -72,6 +72,26 @@ class MigrationCatalogTests(unittest.TestCase):
             {"cartographer"},
         )
 
+    def test_cartographer_mesh_defaults_override_is_offered_once(self):
+        update_id = "cartographer-mesh-defaults-override-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+
+    def test_material_editor_zero_seed_is_offered_once(self):
+        update_id = "material-z-offsets-zero-new-material-v3"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"material-z-offsets"}, previously_completed),
+            {"material-z-offsets"},
+        )
+
     def test_deformation_preflight_case_fan_fix_is_offered_once(self):
         update_id = "case-fan-deformation-preflight-v7"
         catalog_ids = {entry[0] for entry in entries()}

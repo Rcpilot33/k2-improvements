@@ -134,14 +134,14 @@ class MaterialEditorTests(unittest.TestCase):
 
     def test_rewriter_places_all_offsets_at_section_top(self):
         result = MODULE.rewrite_material_offsets(BASE_CONFIG, [
-            ("PLA", -0.02), ("PETG", 0.08), ("TPU_95A", 0.05), ("DEFAULT", 0.04)
+            ("PLA", -0.02), ("PETG", 0.08), ("TPU_95A", 0.0), ("DEFAULT", 0.04)
         ])
         section = result.split("[gcode_macro _START_PRINT_VARS]", 1)[1].split("[bed_mesh]", 1)[0]
         lines = [line for line in section.strip().splitlines() if line]
         self.assertEqual(lines[:4], [
             "variable_offset_PLA: -0.020",
             "variable_offset_PETG: 0.080",
-            "variable_offset_TPU_95A: 0.050",
+            "variable_offset_TPU_95A: 0.000",
             "variable_offset_DEFAULT: 0.040",
         ])
         self.assertIn("variable_heat_soak: 4", section)
@@ -188,7 +188,7 @@ class MaterialEditorTests(unittest.TestCase):
         editor.cmd_apply(command)
         text = self.path.read_text(encoding="utf-8")
         self.assertLess(text.index("variable_offset_PETG_CF"), text.index("variable_offset_DEFAULT"))
-        self.assertIn("variable_offset_PETG_CF: 0.050", text)
+        self.assertIn("variable_offset_PETG_CF: 0.000", text)
         self.assertEqual(printer.objects["gcode"].scripts, ["SET_GCODE_OFFSET Z=0.050"])
         self.assertIn("activate after Save & Restart", command.info[0])
 

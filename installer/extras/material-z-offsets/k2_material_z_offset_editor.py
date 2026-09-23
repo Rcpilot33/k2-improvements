@@ -16,7 +16,7 @@ OFFSET_RE = re.compile(
 )
 SECTION_RE = re.compile(r"^[ \t]*\[([^]]+)\][ \t]*(?:#.*)?(?:\r?\n)?$")
 MATERIAL_RE = re.compile(r"[^A-Za-z0-9]+")
-DEFAULT_NEW_OFFSET = 0.05
+DEFAULT_NEW_OFFSET = 0.0
 
 
 def format_offset(value):
