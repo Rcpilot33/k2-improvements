@@ -101,6 +101,11 @@ class K2M141Guard:
         )
         if fan == 1 and speed > 0.0 and within_pre_file_window:
             self.pre_file_case_fan_deadline = 0.0
+            # Creality's M141 handler may have already driven fan1 high when
+            # chamber_fan was active before it changed the target to 30 C.
+            # Clear that inherited output as part of the same confirmed
+            # pre-file sequence, then discard the redundant M106 request.
+            self.gcode.run_script_from_command("SET_PIN PIN=fan1 VALUE=0")
             gcmd.respond_info(
                 "[CASE_FAN]: Suppressed Creality pre-file case-fan override"
             )

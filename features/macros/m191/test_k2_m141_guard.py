@@ -175,7 +175,14 @@ class M141GuardTests(unittest.TestCase):
 
         guard.cmd_M106(command)
 
-        self.assertEqual(gcode.calls, [("original", 30.0)])
+        self.assertEqual(
+            gcode.calls,
+            [
+                ("original", 30.0),
+                ("restore", "SET_PIN PIN=fan1 VALUE=0"),
+            ],
+        )
+        self.assertEqual(gcode.scripts, ["SET_PIN PIN=fan1 VALUE=0"])
         self.assertIn("Suppressed Creality pre-file", command.responses[0])
         self.assertEqual(guard.pre_file_case_fan_deadline, 0.0)
 
