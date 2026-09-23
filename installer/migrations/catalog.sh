@@ -4,6 +4,7 @@
 
 migration_catalog() {
     cat <<'EOF'
+cartographer-z-rehome-preposition-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a disconnected Cartographer blocks the fast Z10 pre-positioning move on repeated Z homing
 cartographer-scan-model-homing-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a missing Cartographer scan model stops scanner-controlled Z homing before motion
 cartographer-current-mcu-api-v1|cartographer|is_cartographer|Refresh SAFE_MOVE_Z and Z-homing connection checks for the current Cartographer MCU interface, then reload through the protected restart
 cartographer-safe-move-trigger-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer so an unexpected SAFE_MOVE_Z trigger finalizes the K2 motor stop before disarming probe homing, then reload through the protected restart

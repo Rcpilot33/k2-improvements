@@ -516,15 +516,20 @@ class PrinterHoming:
                                     self.write_real_zmax(self.z_move+homing_state.out_z_all)
                                 gcode.run_script_from_command("SET_Z_LIMIT")
                                 continue
+                            # Photoelectric leveling is already complete, so
+                            # fail closed before the stock fast Z10
+                            # pre-positioning move as well as before
+                            # scanner-controlled homing.  Otherwise a second
+                            # G28 Z can move the bed at 30mm/s after the
+                            # Cartographer has disconnected.
+                            self._check_scanner_model_ready()
+                            self._check_scanner_connected()
                             curtime = self.printer.get_reactor().monotonic()
                             gcode_move = self.printer.lookup_object('gcode_move')
                             if 'z' in toolhead.get_status(curtime)['homed_axes'] and z_align.is_already_zodwn==True and \
                               gcode_move.get_status(curtime)['position'][2] > 10:
                                 gcmd = 'G1 F%d Z%.3f' % (30 * 60, 10)
                                 self.run_gcmd(gcmd, wait=True)
-                            # 不做光电找平 - Check scanner before kin.home
-                            self._check_scanner_model_ready()
-                            self._check_scanner_connected()
                             kin.home(homing_state)
                             gcode.run_script_from_command("SET_Z_LIMIT")
                         else:
