@@ -111,6 +111,32 @@ class CartographerOverridesTests(unittest.TestCase):
         )
         self.assertIn("variable_purge_height: 0.4", with_kamp)
 
+    def test_managed_kamp_heading_moves_with_its_section(self):
+        original = (
+            "[cartographer scan]\n"
+            "mesh_runs: 1\n"
+            "mesh_path: spiral\n\n"
+            "# User-selected KAMP settings. Preserved during KAMP reinstalls.\n\n"
+            "[gcode_macro _M191_VARS]\n"
+            "gcode:\n\n"
+            "[gcode_macro _KAMP_Settings]\n"
+            "variable_purge_height: 0.4\n"
+            "gcode:\n"
+        )
+        updated, changed = MODULE.ensure_defaults(original)
+
+        self.assertTrue(changed)
+        heading = updated.index(MODULE.KAMP_HEADING)
+        kamp = updated.index("[gcode_macro _KAMP_Settings]")
+        m191 = updated.index("[gcode_macro _M191_VARS]")
+        self.assertLess(m191, heading)
+        self.assertLess(heading, kamp)
+        self.assertEqual(updated.count(MODULE.KAMP_HEADING), 1)
+        self.assertIn(
+            MODULE.KAMP_HEADING + "\n[gcode_macro _KAMP_Settings]",
+            updated,
+        )
+
     def test_preserves_existing_user_choices(self):
         original = (
             "[bed_mesh]\nspeed: 200 # user choice\n\n"
@@ -119,11 +145,33 @@ class CartographerOverridesTests(unittest.TestCase):
         )
         updated, _ = MODULE.ensure_defaults(original)
 
-        self.assertIn("speed: 200 # user choice", updated)
+        self.assertIn("speed: 200", updated)
+        self.assertIn(
+            "# 150 recommended for Lite firmware; 200 recommended for Full firmware",
+            updated,
+        )
         self.assertIn("max_noisy_samples: 0", updated)
         self.assertIn("mesh_runs: 3", updated)
         self.assertIn("mesh_path: hilbert", updated)
         self.assertNotIn("speed: 150", updated)
+
+    def test_normalizes_bed_mesh_comments_without_changing_values(self):
+        original = (
+            "[bed_mesh]\n"
+            "probe_count:50,50          #50,50 is a good starting point if using carto\n"
+            "speed: 200       \x00#150 recommended for lite firmware\n"
+        )
+        updated, changed = MODULE.ensure_defaults(original)
+
+        self.assertTrue(changed)
+        self.assertIn("probe_count: 50,50", updated)
+        self.assertIn("# 50,50 is a good starting point with Cartographer", updated)
+        self.assertIn("speed: 200", updated)
+        self.assertIn(
+            "# 150 recommended for Lite firmware; 200 recommended for Full firmware",
+            updated,
+        )
+        self.assertNotIn("\x00", updated)
 
     def test_preserves_unknown_sections_and_content(self):
         original = (

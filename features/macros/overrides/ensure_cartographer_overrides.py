@@ -11,6 +11,14 @@ from typing import List, Optional, Tuple
 
 SECTION_RE = re.compile(r"^[ \t]*\[([^]]+)\][ \t]*(?:#.*)?$", re.I)
 OPTION_RE_TEMPLATE = r"^[ \t]*%s[ \t]*:"
+PROBE_COUNT_LINE_RE = re.compile(
+    r"^[ \t]*probe_count[ \t]*:[ \t]*([0-9]+[ \t]*,[ \t]*[0-9]+).*$",
+    re.I,
+)
+SPEED_LINE_RE = re.compile(
+    r"^[ \t]*speed[ \t]*:[ \t]*([0-9]+(?:\.[0-9]+)?).*$",
+    re.I,
+)
 
 BED_MESH = "bed_mesh"
 START_PRINT = "gcode_macro _START_PRINT_VARS"
@@ -18,6 +26,7 @@ CARTOGRAPHER_TOUCH = "cartographer touch"
 CARTOGRAPHER_SCAN = "cartographer scan"
 M191 = "gcode_macro _M191_VARS"
 KAMP = "gcode_macro _KAMP_Settings"
+KAMP_HEADING = "# User-selected KAMP settings. Preserved during KAMP reinstalls."
 
 DISPLAY_ORDER = (
     "virtual_sdcard",
@@ -94,13 +103,58 @@ def _ensure_section(blocks: List[str], name: str, newline: str) -> int:
     return len(blocks) - 1
 
 
+def _normalize_bed_mesh_presentation(block: str) -> str:
+    newline = "\r\n" if "\r\n" in block else "\n"
+    rendered = []
+    for raw in block.splitlines(keepends=True):
+        body = raw.rstrip("\r\n")
+        probe_count = PROBE_COUNT_LINE_RE.match(body)
+        if probe_count:
+            value = re.sub(r"[ \t]*,[ \t]*", ",", probe_count.group(1))
+            rendered.append(
+                "probe_count: {:<24} # 50,50 is a good starting point with Cartographer{}".format(
+                    value, newline
+                )
+            )
+            continue
+        speed = SPEED_LINE_RE.match(body)
+        if speed:
+            rendered.append(
+                "speed: {:<30} # 150 recommended for Lite firmware; 200 recommended for Full firmware{}".format(
+                    speed.group(1), newline
+                )
+            )
+            continue
+        rendered.append(raw)
+    return "".join(rendered)
+
+
 def _organize(preamble: str, blocks: List[str], newline: str) -> str:
+    # configure_kamp_settings.py writes this managed heading immediately before
+    # the KAMP section. Section parsing normally associates inter-section
+    # comments with the preceding block, so detach the known heading first and
+    # render it with KAMP after the blocks are reordered.
+    kamp_heading_present = any(KAMP_HEADING in block for block in blocks)
+    if kamp_heading_present:
+        cleaned = []
+        for block in blocks:
+            lines = [
+                line
+                for line in block.splitlines(keepends=True)
+                if line.rstrip("\r\n") != KAMP_HEADING
+            ]
+            cleaned.append("".join(lines))
+        blocks = cleaned
+
     ordered = []
     used = set()
     for desired in DISPLAY_ORDER:
         index = _find(blocks, desired)
         if index is not None:
-            ordered.append(blocks[index].strip("\r\n"))
+            rendered = blocks[index].strip("\r\n")
+            if desired == KAMP and kamp_heading_present:
+                rendered = KAMP_HEADING + newline + rendered
+            ordered.append(rendered)
             used.add(index)
     ordered.extend(
         block.strip("\r\n")
@@ -126,6 +180,7 @@ def ensure_defaults(contents: str) -> Tuple[str, bool]:
             "speed: 150                         # Lite firmware: 150 recommended; Full firmware: 200 recommended",
             after="probe_count",
         )
+    blocks[bed_index] = _normalize_bed_mesh_presentation(blocks[bed_index])
 
     touch_index = _ensure_section(blocks, CARTOGRAPHER_TOUCH, newline)
     if not _has_option(blocks[touch_index], "max_noisy_samples"):
