@@ -62,6 +62,16 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_missing_scan_model_homing_guard_is_offered_once(self):
+        update_id = "cartographer-scan-model-homing-guard-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+
     def test_deformation_preflight_case_fan_fix_is_offered_once(self):
         update_id = "case-fan-deformation-preflight-v7"
         catalog_ids = {entry[0] for entry in entries()}
