@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import ast
 import pathlib
 import tempfile
 import unittest
@@ -15,6 +16,28 @@ SPEC.loader.exec_module(MODULE)
 
 
 class CartographerOverridesTests(unittest.TestCase):
+    def test_annotations_are_compatible_with_printer_python_39(self):
+        tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8"))
+        annotations = []
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                annotations.extend(
+                    argument.annotation
+                    for argument in node.args.args + node.args.kwonlyargs
+                    if argument.annotation is not None
+                )
+                if node.returns is not None:
+                    annotations.append(node.returns)
+
+        self.assertFalse(
+            any(
+                isinstance(child, ast.BinOp) and isinstance(child.op, ast.BitOr)
+                for annotation in annotations
+                for child in ast.walk(annotation)
+            ),
+            "Python 3.10 union annotations are not supported by printer Python 3.9",
+        )
+
     def test_shared_template_has_no_cartographer_only_settings(self):
         text = OVERRIDES_PATH.read_text(encoding="utf-8")
 

@@ -6,6 +6,7 @@ import re
 import stat
 import sys
 import tempfile
+from typing import List, Optional, Tuple
 
 
 SECTION_RE = re.compile(r"^[ \t]*\[([^]]+)\][ \t]*(?:#.*)?$", re.I)
@@ -35,7 +36,7 @@ def _section_name(block: str) -> str:
     return match.group(1).strip()
 
 
-def _split(contents: str) -> tuple[str, list[str]]:
+def _split(contents: str) -> Tuple[str, List[str]]:
     lines = contents.splitlines(keepends=True)
     starts = [
         index
@@ -53,7 +54,7 @@ def _split(contents: str) -> tuple[str, list[str]]:
     return preamble, blocks
 
 
-def _find(blocks: list[str], name: str) -> int | None:
+def _find(blocks: List[str], name: str) -> Optional[int]:
     matches = [
         index
         for index, block in enumerate(blocks)
@@ -69,7 +70,7 @@ def _has_option(block: str, option: str) -> bool:
     return any(option_re.match(line) for line in block.splitlines()[1:])
 
 
-def _add_option(block: str, line: str, after: str | None = None) -> str:
+def _add_option(block: str, line: str, after: Optional[str] = None) -> str:
     newline = "\r\n" if "\r\n" in block else "\n"
     lines = block.splitlines(keepends=True)
     insertion = 1
@@ -83,7 +84,7 @@ def _add_option(block: str, line: str, after: str | None = None) -> str:
     return "".join(lines)
 
 
-def _ensure_section(blocks: list[str], name: str, newline: str) -> int:
+def _ensure_section(blocks: List[str], name: str, newline: str) -> int:
     index = _find(blocks, name)
     if index is not None:
         return index
@@ -91,7 +92,7 @@ def _ensure_section(blocks: list[str], name: str, newline: str) -> int:
     return len(blocks) - 1
 
 
-def _organize(preamble: str, blocks: list[str], newline: str) -> str:
+def _organize(preamble: str, blocks: List[str], newline: str) -> str:
     ordered = []
     used = set()
     for desired in DISPLAY_ORDER:
@@ -112,7 +113,7 @@ def _organize(preamble: str, blocks: list[str], newline: str) -> str:
     return rendered + newline
 
 
-def ensure_defaults(contents: str) -> tuple[str, bool]:
+def ensure_defaults(contents: str) -> Tuple[str, bool]:
     newline = "\r\n" if "\r\n" in contents else "\n"
     preamble, blocks = _split(contents)
 
