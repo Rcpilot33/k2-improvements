@@ -53,8 +53,9 @@ class LegacyMcu:
 
 
 class Scanner:
-    def __init__(self, mcu):
+    def __init__(self, mcu, scan_ready=True):
         self.mcu = mcu
+        self.scan_mode = types.SimpleNamespace(is_ready=scan_ready)
 
 
 class HomingScannerCompatibilityTests(unittest.TestCase):
@@ -85,6 +86,20 @@ class HomingScannerCompatibilityTests(unittest.TestCase):
     def test_unknown_cartographer_interface_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "disconnected"):
             self.make_homing(object())._check_scanner_connected()
+
+    def test_missing_scan_model_stops_homing(self):
+        with self.assertRaisesRegex(RuntimeError, "scan model is not loaded"):
+            self.make_homing(
+                Scanner(CurrentMcu(False), scan_ready=False)
+            )._check_scanner_model_ready()
+
+    def test_loaded_scan_model_allows_homing(self):
+        self.make_homing(
+            Scanner(CurrentMcu(False), scan_ready=True)
+        )._check_scanner_model_ready()
+
+    def test_no_cartographer_allows_other_probe_model_check(self):
+        self.make_homing(None)._check_scanner_model_ready()
 
 
 if __name__ == "__main__":

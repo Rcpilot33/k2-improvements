@@ -360,6 +360,21 @@ class PrinterHoming:
             raise self.printer.command_error(
                 "Scanner MCU is disconnected - cannot complete Z homing. "
                 "Photoelectric leveling is preserved. Reconnect scanner and retry G28 Z.")
+
+    def _check_scanner_model_ready(self):
+        """Reject Cartographer Z homing before motion when no scan model is loaded."""
+        scanner = self.printer.lookup_object('cartographer', None)
+        if scanner is None:
+            return
+
+        # Current Cartographer versions expose model readiness through
+        # scan_mode.is_ready.  Older plugin layouts retain their own homing
+        # guard, so only reject an explicitly unready current interface.
+        scan_mode = getattr(scanner, 'scan_mode', None)
+        if scan_mode is not None and not getattr(scan_mode, 'is_ready', True):
+            raise self.printer.command_error(
+                "Cartographer scan model is not loaded - calibrate or load a "
+                "scan model before G28 Z.")
     def manual_home(self, toolhead, endstops, pos, speed,
                     triggered, check_triggered):
         hmove = HomingMove(self.printer, endstops, toolhead)
@@ -467,7 +482,10 @@ class PrinterHoming:
                                 # Mark photoelectric leveling as done BEFORE scanner check
                                 # This preserves the leveling work even if scanner is disconnected
                                 z_align.is_already_zodwn = True
-                                # Check scanner before kin.home - photoelectric leveling is done
+                                # Photoelectric preparation is complete.  Reject
+                                # scanner-controlled Z homing before it can move
+                                # if firmware validation removed the scan model.
+                                self._check_scanner_model_ready()
                                 self._check_scanner_connected()
                                 kin.home(homing_state)
                                 gcode.respond_info("za1:%s za2:%s z_max:%s"%(self.z_move,homing_state.out_z_all,(self.z_move+homing_state.out_z_all)))
@@ -489,6 +507,7 @@ class PrinterHoming:
                                 # Mark photoelectric leveling as done BEFORE scanner check
                                 z_align.is_already_zodwn = True
                                 # Check scanner before kin.home - photoelectric leveling is done
+                                self._check_scanner_model_ready()
                                 self._check_scanner_connected()
                                 kin.home(homing_state)
                                 gcode.respond_info("za1:%s za2:%s z_max:%s"%(self.z_move,homing_state.out_z_all,(self.z_move+homing_state.out_z_all)))
@@ -504,11 +523,13 @@ class PrinterHoming:
                                 gcmd = 'G1 F%d Z%.3f' % (30 * 60, 10)
                                 self.run_gcmd(gcmd, wait=True)
                             # 不做光电找平 - Check scanner before kin.home
+                            self._check_scanner_model_ready()
                             self._check_scanner_connected()
                             kin.home(homing_state)
                             gcode.run_script_from_command("SET_Z_LIMIT")
                         else:
                             # Check scanner before kin.home (no z_align section)
+                            self._check_scanner_model_ready()
                             self._check_scanner_connected()
                             kin.home(homing_state)
         except self.printer.command_error as err:
