@@ -82,6 +82,16 @@ class MigrationCatalogTests(unittest.TestCase):
             {"cartographer"},
         )
 
+    def test_optional_kamp_override_order_is_offered_once(self):
+        update_id = "cartographer-optional-kamp-order-v2"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+
     def test_material_editor_zero_seed_is_offered_once(self):
         update_id = "material-z-offsets-zero-new-material-v3"
         catalog_ids = {entry[0] for entry in entries()}

@@ -42,6 +42,8 @@ class CartographerOverridesTests(unittest.TestCase):
         text = OVERRIDES_PATH.read_text(encoding="utf-8")
 
         self.assertIn("probe_count: 19, 19", text)
+        self.assertIn("[gcode_macro _M191_VARS]", text)
+        self.assertNotIn("[gcode_macro _KAMP_Settings]", text)
         self.assertNotIn("speed: 150", text)
         self.assertNotIn("[cartographer ", text)
         for material in ("PLA", "PETG", "ABS", "ASA", "DEFAULT"):
@@ -62,6 +64,7 @@ class CartographerOverridesTests(unittest.TestCase):
         self.assertIn("max_noisy_samples: 2", updated)
         self.assertIn("mesh_runs: 1", updated)
         self.assertIn("mesh_path: spiral", updated)
+        self.assertNotIn("[gcode_macro _KAMP_Settings]", updated)
         self.assertLess(updated.index("probe_count: 50,50"), updated.index("speed: 150"))
 
     def test_orders_user_sections_like_settings_panel(self):
@@ -89,6 +92,24 @@ class CartographerOverridesTests(unittest.TestCase):
                 "gcode_macro _KAMP_Settings",
             ],
         )
+
+    def test_optional_kamp_section_is_ordered_but_never_created(self):
+        without_kamp, _ = MODULE.ensure_defaults(
+            "[gcode_macro _M191_VARS]\ngcode:\n"
+        )
+        self.assertNotIn("[gcode_macro _KAMP_Settings]", without_kamp)
+
+        with_kamp, _ = MODULE.ensure_defaults(
+            "[gcode_macro _KAMP_Settings]\n"
+            "variable_purge_height: 0.4\n"
+            "gcode:\n\n"
+            "[gcode_macro _M191_VARS]\ngcode:\n"
+        )
+        self.assertLess(
+            with_kamp.index("[gcode_macro _M191_VARS]"),
+            with_kamp.index("[gcode_macro _KAMP_Settings]"),
+        )
+        self.assertIn("variable_purge_height: 0.4", with_kamp)
 
     def test_preserves_existing_user_choices(self):
         original = (

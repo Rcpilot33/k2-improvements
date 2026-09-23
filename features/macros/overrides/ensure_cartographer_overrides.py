@@ -17,6 +17,7 @@ START_PRINT = "gcode_macro _START_PRINT_VARS"
 CARTOGRAPHER_TOUCH = "cartographer touch"
 CARTOGRAPHER_SCAN = "cartographer scan"
 M191 = "gcode_macro _M191_VARS"
+KAMP = "gcode_macro _KAMP_Settings"
 
 DISPLAY_ORDER = (
     "virtual_sdcard",
@@ -25,6 +26,7 @@ DISPLAY_ORDER = (
     CARTOGRAPHER_TOUCH,
     CARTOGRAPHER_SCAN,
     M191,
+    KAMP,
 )
 
 

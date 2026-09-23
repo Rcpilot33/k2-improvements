@@ -30,6 +30,12 @@ stock `max_noisy_samples: 2` value. That Cartographer-only section is absent
 from a stock PR Touch installation, and existing user-selected values are
 preserved on reinstall.
 
+M191 is part of the core macro bundle, so its `_M191_VARS` settings are present
+in the shared overrides template. KAMP remains an optional extra: the core
+installer and Cartographer settings organizer never create `_KAMP_Settings`.
+When KAMP is installed, its installer creates that section and the organizer
+keeps it after the M191 settings without replacing user-selected values.
+
 On firmware `1.1.3.13`, installation also enables a compatibility definition
 for the missing `SET_TEMPERATURE_FAN_SWITCH` command still called by Creality's
 stock macros. It is a no-op because those macros already set the chamber-fan
