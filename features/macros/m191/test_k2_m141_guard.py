@@ -23,29 +23,48 @@ class FakeStatus:
 
 
 class FakeReactor:
+    def __init__(self):
+        self.now = 123.0
+
     def monotonic(self):
-        return 123.0
+        return self.now
 
 
 class FakeCommand:
-    def __init__(self, target=None):
+    def __init__(self, target=None, fan=None, speed=None):
         self.target = target
+        self.fan = fan
+        self.speed = speed
+        self.responses = []
 
     def get_float(self, name, default=None):
-        return self.target if name == "S" else default
+        if name != "S":
+            return default
+        if self.speed is not None:
+            return self.speed
+        return self.target
+
+    def get_int(self, name, default=None):
+        return self.fan if name == "P" and self.fan is not None else default
 
     def error(self, message):
         return RuntimeError(message)
+
+    def respond_info(self, message):
+        self.responses.append(message)
 
 
 class FakeGcode:
     def __init__(self):
         self.calls = []
         self.scripts = []
-        self.handlers = {"M141": self.original}
+        self.handlers = {"M141": self.original, "M106": self.original_m106}
 
     def original(self, gcmd):
         self.calls.append(("original", gcmd.target))
+
+    def original_m106(self, gcmd):
+        self.calls.append(("original_m106", gcmd.fan, gcmd.speed))
 
     def register_command(self, name, handler, desc=None):
         if handler is None:
@@ -149,6 +168,58 @@ class M141GuardTests(unittest.TestCase):
 
         self.assertEqual(gcode.calls, [("original", None)])
 
+    def test_idle_deformation_sequence_suppresses_case_fan_request(self):
+        guard, gcode = self.make_guard(state="standby")
+        guard.cmd_M141(FakeCommand(30.0))
+        command = FakeCommand(fan=1, speed=255.0)
+
+        guard.cmd_M106(command)
+
+        self.assertEqual(gcode.calls, [("original", 30.0)])
+        self.assertIn("Suppressed Creality pre-file", command.responses[0])
+        self.assertEqual(guard.pre_file_case_fan_deadline, 0.0)
+
+    def test_deformation_window_expires_before_later_manual_case_fan(self):
+        guard, gcode = self.make_guard(state="standby")
+        guard.cmd_M141(FakeCommand(30.0))
+        guard.reactor.now += guard.PREFILE_CASE_FAN_WINDOW + 0.1
+
+        guard.cmd_M106(FakeCommand(fan=1, speed=255.0))
+
+        self.assertEqual(
+            gcode.calls,
+            [("original", 30.0), ("original_m106", 1, 255.0)],
+        )
+
+    def test_non_case_fan_command_passes_through_during_window(self):
+        guard, gcode = self.make_guard(state="standby")
+        guard.cmd_M141(FakeCommand(30.0))
+
+        guard.cmd_M106(FakeCommand(fan=0, speed=255.0))
+
+        self.assertEqual(
+            gcode.calls,
+            [("original", 30.0), ("original_m106", 0, 255.0)],
+        )
+
+    def test_printing_m141_does_not_arm_case_fan_suppression(self):
+        guard, gcode = self.make_guard(state="printing")
+        guard.cmd_M141(FakeCommand(30.0))
+
+        guard.cmd_M106(FakeCommand(fan=1, speed=255.0))
+
+        self.assertEqual(
+            gcode.calls,
+            [("original", 30.0), ("original_m106", 1, 255.0)],
+        )
+
+    def test_case_fan_command_without_deformation_marker_passes_through(self):
+        guard, gcode = self.make_guard(state="standby")
+
+        guard.cmd_M106(FakeCommand(fan=1, speed=255.0))
+
+        self.assertEqual(gcode.calls, [("original_m106", 1, 255.0)])
+
     def test_invalid_margin_stops_before_original_handler(self):
         guard, gcode = self.make_guard(margin=11.0)
 
@@ -168,12 +239,28 @@ class M141GuardTests(unittest.TestCase):
         guard = MODULE.K2M141Guard(FakeConfig(printer))
 
         self.assertIsNone(guard.original_m141)
+        self.assertIsNone(guard.original_m106)
         self.assertEqual(printer.gcode.handlers["M141"], printer.gcode.original)
+        self.assertEqual(
+            printer.gcode.handlers["M106"], printer.gcode.original_m106
+        )
 
         printer.events["klippy:ready"]()
 
         self.assertIsNotNone(guard.original_m141)
+        self.assertIsNotNone(guard.original_m106)
         self.assertEqual(printer.gcode.handlers["M141"], guard.cmd_M141)
+        self.assertEqual(printer.gcode.handlers["M106"], guard.cmd_M106)
+
+    def test_missing_m106_restores_m141_before_reporting_config_error(self):
+        printer = FakePrinter()
+        del printer.gcode.handlers["M106"]
+        MODULE.K2M141Guard(FakeConfig(printer))
+
+        with self.assertRaisesRegex(RuntimeError, "original fan handlers"):
+            printer.events["klippy:ready"]()
+
+        self.assertEqual(printer.gcode.handlers["M141"], printer.gcode.original)
 
 
 if __name__ == "__main__":

@@ -108,5 +108,6 @@ m141-print-target-preserve-v1|macros|is_macros|Layer-time chamber commands now p
 m141-command-interceptor-v2|macros|is_macros|The chamber-fan target guard now wraps Creality's macro through a compatible Klippy command interceptor
 m191-circulation-cycle-v3|macros|is_macros|Bed assist now cycles low and high circulation speeds, actively cools the restored bed, and heat soaks at final print temperatures
 m191-chamber-temperature-report-v1|macros|is_macros|M191 waits now report the exact chamber temperature and requested target
+case-fan-deformation-preflight-v7|macros|is_macros|Heated-bed deformation calibration no longer leaves Creality's direct pre-file case-fan request active
 EOF
 }

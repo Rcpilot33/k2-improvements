@@ -33,9 +33,9 @@ rm -f "$KLIPPER_EXTRAS/k2_m191_circulation.pyc" \
 "$PYTHON" ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
     "$CUSTOM/main.cfg" m191_settings.cfg
 
-# Creality's M141 is itself a gcode_macro, so Klipper cannot wrap it with a
-# second macro's rename_existing option. Install a small command interceptor
-# that retains and delegates to the original handler instead.
+# Creality's M141 and M106 are themselves gcode_macros, so Klipper cannot wrap
+# them with another macro's rename_existing option. Install a small command
+# interceptor that retains and delegates to both original handlers instead.
 ln -sfn "$SCRIPT_DIR/k2_m141_guard.py" \
     "$KLIPPER_EXTRAS/k2_m141_guard.py"
 ln -sfn "$SCRIPT_DIR/k2_m141_guard.cfg" "$CUSTOM/k2_m141_guard.cfg"

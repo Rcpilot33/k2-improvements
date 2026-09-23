@@ -23,6 +23,13 @@ This avoids depending on two Klipper objects that share the physical PA0 fan pin
 to overwrite each other. The guard has been validated on firmware `1.1.3.13`,
 `1.1.5.2`, and `1.1.5.5`.
 
+Creality's heated-bed deformation calibration runs before the G-code file and
+explicitly sends `M141 S30` followed by `M106 P1 S255`. The installed Klippy
+command guard recognizes only that short idle pre-file sequence and suppresses
+the direct case-fan request before it reaches the pin. Other `M106` commands,
+including case-fan changes outside the two-second handoff, continue to use
+Creality's original handler.
+
 On the stock PR Touch path, the installer also guards the first `_HOME_Z` after
 an artificial-coordinate `SAFE_MOVE_Z`. The guard recognizes that recovery
 before motion from the Z=position_max relabel, its requested Z20 endpoint, and
