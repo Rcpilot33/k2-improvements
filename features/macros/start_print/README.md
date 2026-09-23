@@ -13,11 +13,12 @@ Replaces the stock start macro with a temperature-aware workflow that:
 - levels the gantry and prepares the correct bed mesh; and
 - handles either Cartographer or the stock probe path.
 
-On all firmware, the first nozzle-clean releases any nonzero direct case-fan
-request left active before printing on both the stock-probe and Cartographer
-paths. The release is skipped while chamber-temperature control requests
-cooling, and later nozzle cleans and ordinary homing do not repeatedly change
-the fan. This state-based guard has been validated on firmware `1.1.3.13`,
+On all firmware, `START_PRINT` immediately releases any nonzero direct case-fan
+request left by `BOX_START_PRINT`, then restores the requested temperature-based
+chamber policy. The first nozzle-clean repeats the state-based release in case
+Creality reasserted the direct request; an already-zero request remains a no-op.
+This avoids depending on two Klipper objects that share the physical PA0 fan pin
+to overwrite each other. The guard has been validated on firmware `1.1.3.13`,
 `1.1.5.2`, and `1.1.5.5`.
 
 On the stock PR Touch path, the installer also guards the first `_HOME_Z` after

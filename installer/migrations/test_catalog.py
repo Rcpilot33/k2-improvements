@@ -387,6 +387,16 @@ class MigrationCatalogTests(unittest.TestCase):
             },
         )
 
+    def test_macros_track_immediate_case_fan_release(self):
+        self.assertIn(
+            "case-fan-immediate-start-release-v5",
+            {
+                migration_id
+                for migration_id, component, _detector, _reason in entries()
+                if component == "macros"
+            },
+        )
+
     def test_macros_track_prtouch_safe_xy_cleanup_pass_through(self):
         self.assertIn(
             "prtouch-safe-xy-cleanup-pass-through-v4",
