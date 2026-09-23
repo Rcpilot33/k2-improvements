@@ -11,6 +11,7 @@ class K2M141Guard:
         self.original_m141 = None
         self.original_m106 = None
         self.pre_file_case_fan_deadline = 0.0
+        self.pre_file_chamber_fan_target = None
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
 
     def _handle_ready(self):
@@ -72,6 +73,15 @@ class K2M141Guard:
         # Arm only that short, idle pre-file handoff; slicer and manual fan
         # commands outside the window continue to use Creality's handler.
         if target == 30.0 and print_state not in ("printing", "paused"):
+            chamber_fan = self.printer.lookup_object(
+                "temperature_fan chamber_fan"
+            )
+            chamber_fan_status = chamber_fan.get_status(
+                self.reactor.monotonic()
+            )
+            self.pre_file_chamber_fan_target = float(
+                chamber_fan_status["target"]
+            )
             self.pre_file_case_fan_deadline = (
                 self.reactor.monotonic() + self.PREFILE_CASE_FAN_WINDOW
             )
@@ -101,13 +111,20 @@ class K2M141Guard:
         )
         if fan == 1 and speed > 0.0 and within_pre_file_window:
             self.pre_file_case_fan_deadline = 0.0
-            # Creality's M141 handler may have already driven fan1 high when
-            # chamber_fan was active before it changed the target to 30 C.
-            # Clear that inherited output as part of the same confirmed
-            # pre-file sequence, then discard the redundant M106 request.
+            chamber_fan_target = self.pre_file_chamber_fan_target
+            self.pre_file_chamber_fan_target = None
+            # M141 S30 changes the thermostat target before Creality sends its
+            # direct case-fan request. Restore the prior target first so the
+            # temperature controller cannot reassert PA0 after the pin clear.
+            self.gcode.run_script_from_command(
+                "SET_TEMPERATURE_FAN_TARGET "
+                "TEMPERATURE_FAN=chamber_fan TARGET=%.6f"
+                % chamber_fan_target
+            )
             self.gcode.run_script_from_command("SET_PIN PIN=fan1 VALUE=0")
             gcmd.respond_info(
-                "[CASE_FAN]: Suppressed Creality pre-file case-fan override"
+                "[CASE_FAN]: Suppressed Creality pre-file case-fan override; "
+                "restored chamber-fan target %.1f C" % chamber_fan_target
             )
             return
         self.original_m106(gcmd)

@@ -79,12 +79,15 @@ class FakeGcode:
 
 
 class FakePrinter:
-    def __init__(self, state="printing", margin=2.0):
+    def __init__(self, state="printing", margin=2.0, chamber_fan_target=35.0):
         self.gcode = FakeGcode()
         self.objects = {
             "gcode": self.gcode,
             "print_stats": FakeStatus(state=state),
             "gcode_macro _M191_VARS": FakeStatus(chamber_fan_margin=margin),
+            "temperature_fan chamber_fan": FakeStatus(
+                target=chamber_fan_target
+            ),
         }
         self.reactor = FakeReactor()
         self.events = {}
@@ -114,8 +117,14 @@ class FakeConfig:
 
 
 class M141GuardTests(unittest.TestCase):
-    def make_guard(self, state="printing", margin=2.0):
-        printer = FakePrinter(state=state, margin=margin)
+    def make_guard(
+        self, state="printing", margin=2.0, chamber_fan_target=35.0
+    ):
+        printer = FakePrinter(
+            state=state,
+            margin=margin,
+            chamber_fan_target=chamber_fan_target,
+        )
         guard = MODULE.K2M141Guard(FakeConfig(printer))
         printer.events["klippy:ready"]()
         return guard, printer.gcode
@@ -169,7 +178,9 @@ class M141GuardTests(unittest.TestCase):
         self.assertEqual(gcode.calls, [("original", None)])
 
     def test_idle_deformation_sequence_suppresses_case_fan_request(self):
-        guard, gcode = self.make_guard(state="standby")
+        guard, gcode = self.make_guard(
+            state="standby", chamber_fan_target=0.0
+        )
         guard.cmd_M141(FakeCommand(30.0))
         command = FakeCommand(fan=1, speed=255.0)
 
@@ -179,12 +190,42 @@ class M141GuardTests(unittest.TestCase):
             gcode.calls,
             [
                 ("original", 30.0),
+                (
+                    "restore",
+                    "SET_TEMPERATURE_FAN_TARGET "
+                    "TEMPERATURE_FAN=chamber_fan TARGET=0.000000",
+                ),
                 ("restore", "SET_PIN PIN=fan1 VALUE=0"),
             ],
         )
-        self.assertEqual(gcode.scripts, ["SET_PIN PIN=fan1 VALUE=0"])
+        self.assertEqual(
+            gcode.scripts,
+            [
+                "SET_TEMPERATURE_FAN_TARGET "
+                "TEMPERATURE_FAN=chamber_fan TARGET=0.000000",
+                "SET_PIN PIN=fan1 VALUE=0",
+            ],
+        )
         self.assertIn("Suppressed Creality pre-file", command.responses[0])
+        self.assertIn("restored chamber-fan target 0.0 C", command.responses[0])
         self.assertEqual(guard.pre_file_case_fan_deadline, 0.0)
+
+    def test_deformation_sequence_restores_existing_cooling_target(self):
+        guard, gcode = self.make_guard(
+            state="standby", chamber_fan_target=37.0
+        )
+        guard.cmd_M141(FakeCommand(30.0))
+
+        guard.cmd_M106(FakeCommand(fan=1, speed=255.0))
+
+        self.assertEqual(
+            gcode.scripts,
+            [
+                "SET_TEMPERATURE_FAN_TARGET "
+                "TEMPERATURE_FAN=chamber_fan TARGET=37.000000",
+                "SET_PIN PIN=fan1 VALUE=0",
+            ],
+        )
 
     def test_deformation_window_expires_before_later_manual_case_fan(self):
         guard, gcode = self.make_guard(state="standby")
