@@ -10,6 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 FEATURE = ROOT / "features/cartographer"
 BRANCH = "main"
+INTEGRATION_BRANCH = "k2-cartographer-upstream-integration"
 URL = "https://github.com/Rcpilot33/cartographer3d-plugin.git"
 BASH = shutil.which("bash") or "C:/Program Files/Git/bin/bash.exe"
 
@@ -34,6 +35,9 @@ class PluginInstallTests(unittest.TestCase):
         self.old = self.git("rev-parse", "HEAD").stdout.strip()
         self.git("branch", "legacy-main")
         self.git("commit", "--allow-empty", "-m", "integration")
+        self.integration = self.git("rev-parse", "HEAD").stdout.strip()
+        self.git("branch", INTEGRATION_BRANCH)
+        self.git("commit", "--allow-empty", "-m", "release")
         self.target = self.git("rev-parse", "HEAD").stdout.strip()
         self.git("config", "--global", "protocol.file.allow", "always")
         self.git("config", "--global", "url." + self.source.as_uri() + ".insteadOf", URL)
@@ -47,6 +51,11 @@ class PluginInstallTests(unittest.TestCase):
         self.git("branch", "-m", "main", cwd=self.dest)
         self.git("remote", "set-url", "origin",
                  "https://github.com/Jacob10383/cartographer3d-plugin.git", cwd=self.dest)
+
+    def existing_integration(self):
+        self.git("clone", "--branch", INTEGRATION_BRANCH, str(self.source), str(self.dest))
+        self.git("branch", "main", self.old, cwd=self.dest)
+        self.git("remote", "set-url", "origin", URL, cwd=self.dest)
 
     def install(self, success=True):
         result = subprocess.run([BASH, str(FEATURE / "install_plugin.sh"), self.dest.as_posix()],
@@ -85,6 +94,13 @@ class PluginInstallTests(unittest.TestCase):
                          "origin/" + BRANCH)
         self.assertEqual(self.git("remote", "get-url", "origin", cwd=self.dest).stdout.strip(),
                          self.source.as_uri())
+
+    def test_integration_branch_migrates_to_main(self):
+        self.existing_integration()
+        self.install()
+        self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.dest).stdout.strip(), self.target)
+        self.assertEqual(self.git("rev-parse", INTEGRATION_BRANCH, cwd=self.dest).stdout.strip(), self.integration)
+        self.assertEqual(self.git("rev-parse", "--abbrev-ref", "HEAD", cwd=self.dest).stdout.strip(), BRANCH)
 
     def test_dirty_checkout_is_preserved(self):
         self.existing()
