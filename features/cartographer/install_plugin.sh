@@ -12,13 +12,15 @@ if [ ! -e "$PLUGIN_DIR" ]; then
     exit 0
 fi
 
-# Never remove an existing directory, discard edits, or reset local commits.
+# Never remove an existing directory, discard tracked edits, or reset local
+# commits. Runtime Python 2 bytecode and other untracked files are retained by
+# the fast-forward; Git will stop safely if one would collide with a target.
 [ -d "$PLUGIN_DIR/.git" ] || {
     echo "E: $PLUGIN_DIR is not a plugin Git checkout; move it aside manually." >&2
     exit 1
 }
 cd "$PLUGIN_DIR"
-[ -z "$(git status --porcelain)" ] || {
+[ -z "$(git status --porcelain --untracked-files=no)" ] || {
     echo "E: Cartographer has local changes; preserve them before reinstalling." >&2
     exit 1
 }

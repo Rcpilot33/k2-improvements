@@ -28,7 +28,9 @@ class PluginInstallTests(unittest.TestCase):
         self.git("config", "user.email", "test@example.invalid")
         self.git("config", "user.name", "Plugin test")
         self.git("config", "core.hooksPath", str(self.base / "no-hooks"))
-        self.git("commit", "--allow-empty", "-m", "base")
+        (self.source / "plugin.py").write_text("BASE = True\n", encoding="utf-8")
+        self.git("add", "plugin.py")
+        self.git("commit", "-m", "base")
         self.old = self.git("rev-parse", "HEAD").stdout.strip()
         self.git("checkout", "-b", BRANCH)
         self.git("commit", "--allow-empty", "-m", "integration")
@@ -85,10 +87,24 @@ class PluginInstallTests(unittest.TestCase):
 
     def test_dirty_checkout_is_preserved(self):
         self.existing()
-        (self.dest / "local.cfg").write_text("preserve me", encoding="utf-8")
+        (self.dest / "plugin.py").write_text("LOCAL = True\n", encoding="utf-8")
         self.install(False)
-        self.assertEqual((self.dest / "local.cfg").read_text(), "preserve me")
+        self.assertEqual((self.dest / "plugin.py").read_text(), "LOCAL = True\n")
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.dest).stdout.strip(), self.old)
+
+    def test_untracked_runtime_files_are_preserved_during_migration(self):
+        self.existing()
+        runtime = self.dest / "src" / "cartographer" / "runtime.pyc"
+        runtime.parent.mkdir(parents=True)
+        runtime.write_bytes(b"python 2 bytecode fixture")
+        stray = self.dest / "how-current"
+        stray.write_text("operator artifact\n", encoding="utf-8")
+
+        self.install()
+
+        self.assertEqual(runtime.read_bytes(), b"python 2 bytecode fixture")
+        self.assertEqual(stray.read_text(encoding="utf-8"), "operator artifact\n")
+        self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.dest).stdout.strip(), self.target)
 
     def test_divergent_commit_is_preserved(self):
         self.existing()
