@@ -241,6 +241,32 @@ class MigrationCatalogTests(unittest.TestCase):
             set(),
         )
 
+    def test_plugin_main_promotion_reopens_only_installed_cartographer_once(self):
+        migration_id = "cartographer-plugin-main-promotion-v1"
+        cartographer_ids = {
+            item_id
+            for item_id, component, _detector, _reason in entries()
+            if component == "cartographer"
+        }
+        completed_before_promotion = cartographer_ids - {migration_id}
+
+        self.assertIn(migration_id, cartographer_ids)
+        self.assertEqual(
+            recommended(
+                {"cartographer"},
+                completed=completed_before_promotion,
+            ),
+            {"cartographer"},
+        )
+        self.assertEqual(
+            recommended(set(), completed=completed_before_promotion),
+            set(),
+        )
+        self.assertEqual(
+            recommended({"cartographer"}, completed=cartographer_ids),
+            set(),
+        )
+
     def test_post_restart_fluidd_repairs_are_tracked_per_installed_component(self):
         expected = {
             "cartographer-fluidd-post-restart-layout-v2": "cartographer",

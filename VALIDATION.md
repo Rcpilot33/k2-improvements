@@ -3,8 +3,10 @@
 ## Cartographer integration testing (September 2026)
 
 The `integration-testing` installer now tracks the released Cartographer plugin
-`main` branch. This installer path remains under integration testing, separate
-from the historical firmware matrix below. See
+`main` branch. Its one-time update migration must offer and complete the
+Cartographer action on an existing integration-branch install. This installer
+path remains under integration testing, separate from the historical firmware
+matrix below. See
 [the integration hardware record](DEPENDENCY_PRESERVATION.md#v3-hardware-validation-september-1920-2026)
 for completed V3 checks and outstanding release gates. The overall historical
 PASS below must not be read as blanket approval of this integration.

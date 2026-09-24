@@ -12,8 +12,9 @@ On `integration-testing`, the installer and Moonraker both use
 runtime baseline is `v1.10.1b1+k2.1` at `d53f03c`; the current plugin `main`
 adds only fork workflow guards at `83fc8eb`. This is a moving branch, not a
 commit pin.
-Re-run the Cartographer installer after switching K2 Improvements to this branch;
-updating K2 Improvements alone does not migrate the installed plugin checkout.
+The `cartographer-plugin-main-promotion-v1` update migration schedules a one-time
+Cartographer refresh after switching K2 Improvements to this branch; applying
+that recommended action migrates the installed plugin checkout.
 The installer accepts a clean, fast-forward migration from Jacob's fork and
 refuses local changes, unknown origins, and divergent history. Existing local
 branches are retained. The installed plugin directory and import shim stay the
@@ -52,9 +53,9 @@ an otherwise successful install, leaving failed dependency actions pending.
 The plugin release gate was completed with `v1.10.1b1+k2.1` at `d53f03c`, and
 the plugin's `main` branch is now the selected update channel. The
 k2-improvements `integration-testing` branch remains the installer TEST target
-until the normal update flow re-runs the Cartographer installer and protected
-host restart on hardware. Do not rely on a configuration-only pull to activate
-new plugin Python code.
+until the normal update flow applies the pending Cartographer action and protected
+host restart on hardware. Do not rely on the initial installer pull alone to
+activate new plugin Python code.
 
 Fresh and migrated plugin checkouts fetch all origin branches, while tracking
 only the configured primary branch for updates. This avoids hiding a later
