@@ -8,6 +8,7 @@ cartographer-z-rehome-preposition-guard-v1|cartographer|is_cartographer|Refresh 
 cartographer-scan-model-homing-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a missing Cartographer scan model stops scanner-controlled Z homing before motion
 cartographer-mesh-defaults-override-v1|cartographer|is_cartographer|Set durable Cartographer defaults to a 150 mm/s, one-run spiral mesh for reliable Full and Lite sampling
 cartographer-optional-kamp-order-v2|cartographer|is_cartographer|Keep optional KAMP settings after core M191 settings without creating KAMP settings on printers where the extra is absent
+cartographer-fluidd-namespace-bootstrap-v1|cartographer|is_cartographer|Create the Fluidd database namespace when a wiped printer has not initialized it before Cartographer macro layout setup
 cartographer-current-mcu-api-v1|cartographer|is_cartographer|Refresh SAFE_MOVE_Z and Z-homing connection checks for the current Cartographer MCU interface, then reload through the protected restart
 cartographer-safe-move-trigger-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer so an unexpected SAFE_MOVE_Z trigger finalizes the K2 motor stop before disarming probe homing, then reload through the protected restart
 cartographer-active-disconnect-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer active-probe disconnect cleanup and mesh abort checkpoints, then reload through the protected restart
@@ -58,6 +59,7 @@ main-b0c7efe-plate-aware-v2|plate-aware-mesh|is_plate_aware_mesh|Plate-aware mes
 updater-kamp-interactive-refresh-v1|kamp-adaptive-purge|is_kamp|KAMP updates now offer settings and firmware-retraction questions before the shared protected restart
 main-m191-chamber-circulation-v1|macros|is_macros|M191 now lowers the bed, circulates chamber air, and waits for the original bed temperature after assisted heating
 main-m191-cleanup-response-v1|macros|is_macros|M191 assisted-heating cleanup messages were corrected for the K2 command parser
+macros-fluidd-namespace-bootstrap-v1|macros|is_macros|Create the Fluidd database namespace when a wiped printer has not initialized it before Bed Assist layout setup
 installer-protected-motor-ready-v1|save-config-restart|is_save_config_restart|Installer code reload now requires K2 motor readiness before one firmware reset
 save-config-stock-then-firmware-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG now completes its stock restart before one guarded firmware reset
 save-config-stock-restart-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG restored to its stock host restart with no wrapper or firmware reset
@@ -85,9 +87,11 @@ global-touch-offsets-live-editor-v1|global-touch-offsets|is_global_touch_offsets
 global-touch-offsets-camera-resolver-v2|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets restores Creality camera support
 global-touch-offsets-category-v3|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets moves its macro into the Z Offsets category
 global-touch-offsets-shared-ui-v4|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets now shares one safe Fluidd overlay with the material editor
+global-touch-offsets-fluidd-namespace-bootstrap-v1|global-touch-offsets|is_global_touch_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Global Touch Offset layout setup
 material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor and automatic material registration are available
 material-z-offsets-start-print-bridge-v2|material-z-offsets|is_material_z_offsets|Material Z Offsets now refreshes and verifies its START_PRINT handoff
 material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets|Newly discovered materials now start with a zero Z offset instead of inheriting the former 0.050 mm seed
+material-z-offsets-fluidd-namespace-bootstrap-v1|material-z-offsets|is_material_z_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Material Z Offset layout setup
 macros-preserve-carto-surface-wrapper-v1|macros|is_macros|Macro repairs now preserve an installed Cartographer surface-selection wrapper
 case-fan-runtime-state-v2|macros|is_macros|The guarded pre-print case-fan release now applies independently of firmware version
 case-fan-any-direct-request-v3|macros|is_macros|Pre-print now releases any nonzero direct case-fan request while preserving chamber cooling

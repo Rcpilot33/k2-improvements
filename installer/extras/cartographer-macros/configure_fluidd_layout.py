@@ -145,7 +145,7 @@ def _result_value(payload):
     return response["value"]
 
 
-def _request_json(url, method="GET", body=None):
+def _request_json(url, method="GET", body=None, allow_missing=False):
     data = None
     headers = {"Accept": "application/json"}
     if body is not None:
@@ -155,6 +155,10 @@ def _request_json(url, method="GET", body=None):
     try:
         with urllib.request.urlopen(request, timeout=10) as response:
             return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if allow_missing and method == "GET" and exc.code == 404:
+            return None
+        raise LayoutError(str(exc))
     except (urllib.error.URLError, ValueError) as exc:
         raise LayoutError(str(exc))
 
@@ -162,8 +166,13 @@ def _request_json(url, method="GET", body=None):
 def configure(api_url, show_plate_selectors=False):
     api_url = api_url.rstrip("/")
     query = urllib.parse.urlencode({"namespace": "fluidd"})
-    payload = _request_json("{}/server/database/item?{}".format(api_url, query))
-    namespace = _result_value(payload)
+    payload = _request_json(
+        "{}/server/database/item?{}".format(api_url, query), allow_missing=True
+    )
+    # A wiped printer may not have launched Fluidd far enough to create its
+    # database namespace. Moonraker creates a missing client namespace when
+    # the first keyed item is posted, so seed the layout from an empty object.
+    namespace = {} if payload is None else _result_value(payload)
     updated = merge_layout(namespace, show_plate_selectors=show_plate_selectors)
 
     if updated == namespace:

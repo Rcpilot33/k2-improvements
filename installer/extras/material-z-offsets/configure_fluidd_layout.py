@@ -80,7 +80,7 @@ def _result_value(payload):
     return response["value"]
 
 
-def _request_json(url, method="GET", body=None):
+def _request_json(url, method="GET", body=None, allow_missing=False):
     data = None
     headers = {"Accept": "application/json"}
     if body is not None:
@@ -90,6 +90,10 @@ def _request_json(url, method="GET", body=None):
     try:
         with urllib.request.urlopen(request, timeout=10) as response:
             return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if allow_missing and method == "GET" and exc.code == 404:
+            return None
+        raise LayoutError(str(exc))
     except (urllib.error.URLError, ValueError) as exc:
         raise LayoutError(str(exc))
 
@@ -97,7 +101,10 @@ def _request_json(url, method="GET", body=None):
 def configure(api_url):
     api_url = api_url.rstrip("/")
     query = urllib.parse.urlencode({"namespace": "fluidd"})
-    namespace = _result_value(_request_json("%s/server/database/item?%s" % (api_url, query)))
+    payload = _request_json(
+        "%s/server/database/item?%s" % (api_url, query), allow_missing=True
+    )
+    namespace = {} if payload is None else _result_value(payload)
     updated = merge_layout(namespace)
     if updated == namespace:
         return False

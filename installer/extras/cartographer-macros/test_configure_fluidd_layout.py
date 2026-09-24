@@ -4,11 +4,58 @@ import copy
 from pathlib import Path
 import re
 import unittest
+from unittest import mock
+import urllib.error
 
 import configure_fluidd_layout as layout
 
 
 class FluiddLayoutTests(unittest.TestCase):
+    def test_wiped_printer_creates_missing_fluidd_namespace(self):
+        created = {
+            "result": {
+                "namespace": "fluidd",
+                "key": "macros",
+                "value": {},
+            }
+        }
+        with mock.patch.object(
+            layout,
+            "_request_json",
+            side_effect=[None, created],
+        ) as request_json:
+            self.assertTrue(layout.configure("http://127.0.0.1:7125"))
+
+        first = request_json.call_args_list[0]
+        self.assertTrue(first.kwargs["allow_missing"])
+        second = request_json.call_args_list[1]
+        self.assertEqual(second.kwargs["method"], "POST")
+        self.assertEqual(second.kwargs["body"]["namespace"], "fluidd")
+        self.assertEqual(second.kwargs["body"]["key"], "macros")
+        self.assertEqual(len(second.kwargs["body"]["value"]["stored"]), 11)
+
+    def test_only_get_404_may_be_treated_as_missing(self):
+        missing = urllib.error.HTTPError(
+            "http://127.0.0.1:7125/server/database/item",
+            404,
+            "Namespace fluidd not found",
+            None,
+            None,
+        )
+        with mock.patch.object(layout.urllib.request, "urlopen", side_effect=missing):
+            self.assertIsNone(
+                layout._request_json(
+                    "http://127.0.0.1:7125/server/database/item",
+                    allow_missing=True,
+                )
+            )
+            with self.assertRaises(layout.LayoutError):
+                layout._request_json(
+                    "http://127.0.0.1:7125/server/database/item",
+                    method="POST",
+                    allow_missing=True,
+                )
+
     def test_setup_checklist_uses_fluidd_button_labels(self):
         workflow = (Path(__file__).resolve().parents[2] / "menus" / "workflows.sh").read_text()
         checklist = workflow.split("show_cartographer_setup_checklist() {", 1)[1].split(

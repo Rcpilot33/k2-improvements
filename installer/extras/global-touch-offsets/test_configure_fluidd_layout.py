@@ -2,11 +2,26 @@
 
 import copy
 import unittest
+from unittest import mock
 
 import configure_fluidd_layout as layout
 
 
 class FluiddLayoutTests(unittest.TestCase):
+    def test_wiped_printer_creates_missing_fluidd_namespace(self):
+        created = {"result": {"value": {}}}
+        with mock.patch.object(
+            layout, "_request_json", side_effect=[None, created]
+        ) as request_json:
+            self.assertTrue(layout.configure("http://127.0.0.1:7125"))
+
+        self.assertTrue(request_json.call_args_list[0].kwargs["allow_missing"])
+        post = request_json.call_args_list[1]
+        self.assertEqual(post.kwargs["method"], "POST")
+        self.assertEqual(post.kwargs["body"]["namespace"], "fluidd")
+        self.assertEqual(post.kwargs["body"]["key"], "macros")
+        self.assertEqual(len(post.kwargs["body"]["value"]["stored"]), 1)
+
     def test_creates_category_and_editor_metadata(self):
         source = {"theme": {"isDark": True}, "macros": {"stored": [], "categories": []}}
         result = layout.merge_layout(source)

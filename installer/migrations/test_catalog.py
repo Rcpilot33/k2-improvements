@@ -92,6 +92,23 @@ class MigrationCatalogTests(unittest.TestCase):
             {"cartographer"},
         )
 
+    def test_fluidd_namespace_bootstrap_is_offered_once(self):
+        catalog_ids = {entry[0] for entry in entries()}
+        cases = {
+            "cartographer-fluidd-namespace-bootstrap-v1": "cartographer",
+            "macros-fluidd-namespace-bootstrap-v1": "macros",
+            "global-touch-offsets-fluidd-namespace-bootstrap-v1": "global-touch-offsets",
+            "material-z-offsets-fluidd-namespace-bootstrap-v1": "material-z-offsets",
+        }
+        for update_id, component in cases.items():
+            with self.subTest(update_id=update_id):
+                self.assertIn(update_id, catalog_ids)
+                previously_completed = catalog_ids - {update_id}
+                self.assertEqual(
+                    recommended(set(cases.values()), previously_completed),
+                    {component},
+                )
+
     def test_material_editor_zero_seed_is_offered_once(self):
         update_id = "material-z-offsets-zero-new-material-v3"
         catalog_ids = {entry[0] for entry in entries()}
