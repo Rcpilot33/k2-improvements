@@ -7,9 +7,11 @@ testing exception is described next.
 
 ## Cartographer integration testing
 
-On `carto-plugin-update-testing`, the installer and Moonraker both use
-`Rcpilot33/cartographer3d-plugin`, branch `k2-cartographer-upstream-integration`
-(reviewed baseline `213504f`). This is a moving testing branch, not a commit pin.
+On `integration-testing`, the installer and Moonraker both use
+`Rcpilot33/cartographer3d-plugin`, branch `main`. The released and printer-tested
+runtime baseline is `v1.10.1b1+k2.1` at `d53f03c`; the current plugin `main`
+adds only fork workflow guards at `83fc8eb`. This is a moving branch, not a
+commit pin.
 Re-run the Cartographer installer after switching K2 Improvements to this branch;
 updating K2 Improvements alone does not migrate the installed plugin checkout.
 The installer accepts a clean, fast-forward migration from Jacob's fork and
@@ -47,12 +49,12 @@ an otherwise successful install, leaving failed dependency actions pending.
 
 ### Release gate and branch transitions
 
-The integration branch is a moving TEST target, not a release channel. Do not
-promote this installer configuration to main until a release-only plugin branch
-and its tested commit are selected. Publish/verify that branch first, update the
-native and overlay update-manager configurations together, and ship a refresh
-migration that re-runs the installer and protected host restart. Do not rely on
-a configuration-only pull to activate new plugin Python code.
+The plugin release gate was completed with `v1.10.1b1+k2.1` at `d53f03c`, and
+the plugin's `main` branch is now the selected update channel. The
+k2-improvements `integration-testing` branch remains the installer TEST target
+until the normal update flow re-runs the Cartographer installer and protected
+host restart on hardware. Do not rely on a configuration-only pull to activate
+new plugin Python code.
 
 Fresh and migrated plugin checkouts fetch all origin branches, while tracking
 only the configured primary branch for updates. This avoids hiding a later

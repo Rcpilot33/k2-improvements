@@ -2,8 +2,8 @@
 
 ## Cartographer integration testing (September 2026)
 
-The `carto-plugin-update-testing` installer and
-`k2-cartographer-upstream-integration` plugin remain testing branches, separate
+The `integration-testing` installer now tracks the released Cartographer plugin
+`main` branch. This installer path remains under integration testing, separate
 from the historical firmware matrix below. See
 [the integration hardware record](DEPENDENCY_PRESERVATION.md#v3-hardware-validation-september-1920-2026)
 for completed V3 checks and outstanding release gates. The overall historical

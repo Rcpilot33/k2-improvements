@@ -9,7 +9,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 FEATURE = ROOT / "features/cartographer"
-BRANCH = "k2-cartographer-upstream-integration"
+BRANCH = "main"
 URL = "https://github.com/Rcpilot33/cartographer3d-plugin.git"
 BASH = shutil.which("bash") or "C:/Program Files/Git/bin/bash.exe"
 
@@ -32,7 +32,7 @@ class PluginInstallTests(unittest.TestCase):
         self.git("add", "plugin.py")
         self.git("commit", "-m", "base")
         self.old = self.git("rev-parse", "HEAD").stdout.strip()
-        self.git("checkout", "-b", BRANCH)
+        self.git("branch", "legacy-main")
         self.git("commit", "--allow-empty", "-m", "integration")
         self.target = self.git("rev-parse", "HEAD").stdout.strip()
         self.git("config", "--global", "protocol.file.allow", "always")
@@ -43,7 +43,8 @@ class PluginInstallTests(unittest.TestCase):
                               text=True, capture_output=True, check=True)
 
     def existing(self):
-        self.git("clone", "--branch", "main", str(self.source), str(self.dest))
+        self.git("clone", "--branch", "legacy-main", str(self.source), str(self.dest))
+        self.git("branch", "-m", "main", cwd=self.dest)
         self.git("remote", "set-url", "origin",
                  "https://github.com/Jacob10383/cartographer3d-plugin.git", cwd=self.dest)
 
@@ -79,7 +80,7 @@ class PluginInstallTests(unittest.TestCase):
         self.install()
         self.install()
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.dest).stdout.strip(), self.target)
-        self.assertEqual(self.git("rev-parse", "main", cwd=self.dest).stdout.strip(), self.old)
+        self.assertEqual(self.git("rev-parse", "main", cwd=self.dest).stdout.strip(), self.target)
         self.assertEqual(self.git("rev-parse", "--abbrev-ref", "@{upstream}", cwd=self.dest).stdout.strip(),
                          "origin/" + BRANCH)
         self.assertEqual(self.git("remote", "get-url", "origin", cwd=self.dest).stdout.strip(),
@@ -127,11 +128,12 @@ class PluginInstallTests(unittest.TestCase):
 
     def test_divergent_destination_branch_is_preserved(self):
         self.existing()
-        self.git("checkout", "-b", BRANCH, cwd=self.dest)
+        self.git("checkout", "-b", "working-state", cwd=self.dest)
+        self.git("checkout", BRANCH, cwd=self.dest)
         self.git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
                  "commit", "--allow-empty", "-m", "local branch", cwd=self.dest)
         before = self.git("rev-parse", "HEAD", cwd=self.dest).stdout
-        self.git("checkout", "main", cwd=self.dest)
+        self.git("checkout", "working-state", cwd=self.dest)
         self.install(False)
         self.assertEqual(self.git("rev-parse", BRANCH, cwd=self.dest).stdout, before)
 
