@@ -118,9 +118,12 @@ A confirmed recovery followed this sequence:
 
 1. The menu's `factory-reset-improved` workflow was attempted under firmware
    `1.1.5.2`.
-2. A live directory removal appears to have failed with a
-   `Directory not empty` error. The script stopped before displaying
-   `Begin factory reset...`, so `wipe.sock all` was not reached.
+2. A live directory removal failed with a `Directory not empty` error because
+   Creality services were actively recreating files under
+   `/mnt/UDISK/creality/userdata/log`. The script stopped before displaying
+   `Begin factory reset...`, so `wipe.sock all` was not reached. The improved
+   cleanup now defers the live stock-owned `creality` tree to `wipe.sock` and
+   pre-deletes only third-party and user top-level directories.
 3. Firmware `1.1.5.5` was installed without a completed factory wipe.
 4. The printer entered XS3002 with the incompatible
    `prtouch_v3_wrapper.py`/`bed_mesh.py` interface shown above.

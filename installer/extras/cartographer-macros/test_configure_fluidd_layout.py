@@ -207,6 +207,29 @@ class FluiddLayoutTests(unittest.TestCase):
         self.assertEqual(item["alias"], "CARTO_INFO")
         self.assertEqual(item["color"], "#2196F3")
 
+    def test_repairs_named_uncategorized_assignment(self):
+        source = {
+            "macros": {
+                "categories": [{"id": "generic", "name": "Uncategorized"}],
+                "stored": [
+                    {
+                        "name": "A63_CARTO_INFO",
+                        "alias": "CARTO_INFO",
+                        "categoryId": "generic",
+                    }
+                ],
+            }
+        }
+
+        result = layout.merge_layout(source)
+        target_category = next(
+            item
+            for item in result["macros"]["categories"]
+            if item["name"] == layout.CATEGORY_NAME
+        )
+        item = result["macros"]["stored"][0]
+        self.assertEqual(item["categoryId"], target_category["id"])
+
     def test_is_idempotent(self):
         first = layout.merge_layout({"macros": {}})
         second = layout.merge_layout(copy.deepcopy(first))

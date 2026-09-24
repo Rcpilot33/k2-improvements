@@ -44,6 +44,21 @@ class FluiddLayoutTests(unittest.TestCase):
         result = LAYOUT.merge_layout(source)
         self.assertEqual(result["macros"]["stored"][0]["categoryId"], "z")
 
+    def test_moves_editor_out_of_named_uncategorized_category(self):
+        source = {
+            "macros": {
+                "categories": [{"id": "generic", "name": "Uncategorized"}],
+                "stored": [
+                    {"name": "MATERIAL_Z_OFFSETS", "categoryId": "generic"}
+                ],
+            }
+        }
+        result = LAYOUT.merge_layout(source)
+        target = next(
+            item for item in result["macros"]["categories"] if item["name"] == "Z Offsets"
+        )
+        self.assertEqual(result["macros"]["stored"][0]["categoryId"], target["id"])
+
     def test_preserves_user_alias_and_visibility(self):
         source = {"macros": {"categories": [{"id": "z", "name": "Z Offsets"}], "stored": [{
             "name": "material_z_offsets", "alias": "Mine", "visible": False, "categoryId": "z"

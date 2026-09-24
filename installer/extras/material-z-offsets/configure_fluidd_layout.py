@@ -63,7 +63,16 @@ def merge_layout(namespace):
         item["disabledWhilePrinting"] = True
         item["color"] = MACRO_COLOR
         valid_ids = {str(value.get("id")) for value in categories if value.get("id")}
-        if str(item.get("categoryId", "")) not in valid_ids:
+        category_names_by_id = {
+            str(value.get("id")): str(value.get("name", "")).casefold()
+            for value in categories
+            if value.get("id")
+        }
+        current_category = str(item.get("categoryId", ""))
+        if (
+            current_category not in valid_ids
+            or category_names_by_id.get(current_category) == "uncategorized"
+        ):
             item["categoryId"] = category_id
     macros["categories"] = categories
     macros["stored"] = stored

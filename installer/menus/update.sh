@@ -399,12 +399,55 @@ migration_record_refreshed_component() {
     done
 }
 
+# Fluidd can discover or rebuild macro metadata when the repaired Klipper
+# configuration becomes active. Reapply the intended layout after the one
+# shared protected restart, then read Moonraker's database back before marking
+# the component current. This prevents a successful installer message when the
+# controls actually remain uncategorized.
+migration_reconcile_fluidd_layout() {
+    local component pwd_home layout verifier
+    component="$1"
+    pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+    [ -n "$pwd_home" ] || pwd_home="$HOME"
+    verifier="$INSTALLER_DIR/installer/migrations/verify_fluidd_layout.py"
+
+    case "$component" in
+        cartographer|cartographer-plate-workflow)
+            layout="$INSTALLER_DIR/installer/extras/cartographer-macros/configure_fluidd_layout.py"
+            if migration_component_installed cartographer-plate-workflow 2>/dev/null; then
+                HOME="$pwd_home" python3 "$layout" --show-plate-selectors || return 1
+            else
+                HOME="$pwd_home" python3 "$layout" || return 1
+            fi
+            ;;
+        macros)
+            layout="$INSTALLER_DIR/features/macros/m191/configure_fluidd_layout.py"
+            HOME="$pwd_home" python3 "$layout" || return 1
+            ;;
+        global-touch-offsets)
+            layout="$INSTALLER_DIR/installer/extras/global-touch-offsets/configure_fluidd_layout.py"
+            HOME="$pwd_home" python3 "$layout" || return 1
+            ;;
+        material-z-offsets)
+            layout="$INSTALLER_DIR/installer/extras/material-z-offsets/configure_fluidd_layout.py"
+            HOME="$pwd_home" python3 "$layout" || return 1
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+
+    HOME="$pwd_home" python3 "$verifier" "$component"
+}
+
 migration_apply_components() {
-    local components_file succeeded failures component restart_kind restart_script
+    local components_file succeeded activated failures component restart_kind restart_script
     components_file="$1"
     migration_require_idle || return 1
     succeeded="/tmp/k2-update-succeeded.$$"
+    activated="/tmp/k2-update-activated.$$"
     : > "$succeeded"
+    : > "$activated"
     failures=0
     restart_kind=config
 
@@ -430,7 +473,7 @@ migration_apply_components() {
     done 3< "$components_file"
 
     if [ ! -s "$succeeded" ]; then
-        rm -f "$succeeded"
+        rm -f "$succeeded" "$activated"
         warn 'no component refresh completed'
         return 1
     fi
@@ -443,19 +486,29 @@ migration_apply_components() {
     fi
 
     if K2_DEFER_FIRMWARE_RESTART=0 sh "$restart_script"; then
+        printf '\n--- Verifying post-restart component state ---\n'
+        while IFS= read -r component; do
+            if migration_reconcile_fluidd_layout "$component"; then
+                printf '%s\n' "$component" >> "$activated"
+            else
+                warn "$(migration_component_label "$component") post-restart verification failed; leaving its update pending"
+                failures=$((failures + 1))
+            fi
+        done < "$succeeded"
+
         while IFS= read -r component; do
             if ! migration_mark_component_current "$component"; then
                 failures=$((failures + 1))
             fi
-        done < "$succeeded"
-        rm -f "$succeeded"
+        done < "$activated"
+        rm -f "$succeeded" "$activated"
         if [ "$failures" -eq 0 ]; then
             printf '\n%s\n' "$(c_green 'Selected updates installed and activated successfully.')"
         else
             warn 'one or more updates remain pending; review the messages above'
         fi
     else
-        rm -f "$succeeded"
+        rm -f "$succeeded" "$activated"
         warn 'final protected restart failed; completed repairs remain pending for verification'
         warn 'power-cycle before homing or attempting a print'
         return 1

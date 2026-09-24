@@ -13,6 +13,8 @@ cartographer-current-mcu-api-v1|cartographer|is_cartographer|Refresh SAFE_MOVE_Z
 cartographer-safe-move-trigger-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer so an unexpected SAFE_MOVE_Z trigger finalizes the K2 motor stop before disarming probe homing, then reload through the protected restart
 cartographer-active-disconnect-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer active-probe disconnect cleanup and mesh abort checkpoints, then reload through the protected restart
 cartographer-integration-review-v1|cartographer|is_cartographer|Refresh Cartographer integration warning cleanup and branch discovery, then reload through the protected restart
+cartographer-plugin-runtime-artifacts-v2|cartographer|is_cartographer|Migrate the Cartographer plugin checkout while preserving harmless untracked runtime bytecode and operator files
+cartographer-fluidd-post-restart-layout-v2|cartographer|is_cartographer|Reapply and verify persistent Cartographer Fluidd grouping after the upgraded macros are active
 main-451901d-cartographer-temperatures|cartographer|is_cartographer|Cartographer touch-home temperature diagnostics changed
 main-eb60d34-cartographer-touch-defaults|cartographer|is_cartographer|Cartographer touch calibration defaults changed
 main-7fb13f9-touchscreen-offset|cartographer|is_cartographer|Cartographer touchscreen Z-offset compatibility was added
@@ -60,6 +62,7 @@ updater-kamp-interactive-refresh-v1|kamp-adaptive-purge|is_kamp|KAMP updates now
 main-m191-chamber-circulation-v1|macros|is_macros|M191 now lowers the bed, circulates chamber air, and waits for the original bed temperature after assisted heating
 main-m191-cleanup-response-v1|macros|is_macros|M191 assisted-heating cleanup messages were corrected for the K2 command parser
 macros-fluidd-namespace-bootstrap-v1|macros|is_macros|Create the Fluidd database namespace when a wiped printer has not initialized it before Bed Assist layout setup
+macros-fluidd-post-restart-layout-v2|macros|is_macros|Reapply and verify persistent Bed Assist Fluidd grouping after the upgraded macros are active
 installer-protected-motor-ready-v1|save-config-restart|is_save_config_restart|Installer code reload now requires K2 motor readiness before one firmware reset
 save-config-stock-then-firmware-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG now completes its stock restart before one guarded firmware reset
 save-config-stock-restart-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG restored to its stock host restart with no wrapper or firmware reset
@@ -82,16 +85,19 @@ cartographer-fluidd-layout-v1|cartographer-plate-workflow|is_carto_plate_workflo
 cartographer-fluidd-colors-v1|cartographer-plate-workflow|is_carto_plate_workflow|Cartographer plate macro actions now receive default Fluidd colors
 cartographer-fluidd-rgb-colors-v2|cartographer-plate-workflow|is_carto_plate_workflow|Cartographer plate macro colors now use Fluidd-compatible RGB values
 cartographer-fluidd-orange-calibration-v3|cartographer-plate-workflow|is_carto_plate_workflow|Cartographer calibration macro accents now use orange for clearer visual separation
+cartographer-plate-fluidd-post-restart-layout-v2|cartographer-plate-workflow|is_carto_plate_workflow|Reapply and verify named Cartographer selector visibility after the upgraded macros are active
 cartographer-global-z-optional-v2|cartographer-plate-workflow|is_carto_plate_workflow|The global Touch-offset editor is now a separate optional feature
 global-touch-offsets-live-editor-v1|global-touch-offsets|is_global_touch_offsets|The optional global Touch-offset editor uses a live Fluidd control and saves without SAVE_CONFIG
 global-touch-offsets-camera-resolver-v2|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets restores Creality camera support
 global-touch-offsets-category-v3|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets moves its macro into the Z Offsets category
 global-touch-offsets-shared-ui-v4|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets now shares one safe Fluidd overlay with the material editor
 global-touch-offsets-fluidd-namespace-bootstrap-v1|global-touch-offsets|is_global_touch_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Global Touch Offset layout setup
+global-touch-offsets-fluidd-post-restart-layout-v2|global-touch-offsets|is_global_touch_offsets|Reapply and verify persistent Global Carto Touch Fluidd grouping after the upgraded macros are active
 material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor and automatic material registration are available
 material-z-offsets-start-print-bridge-v2|material-z-offsets|is_material_z_offsets|Material Z Offsets now refreshes and verifies its START_PRINT handoff
 material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets|Newly discovered materials now start with a zero Z offset instead of inheriting the former 0.050 mm seed
 material-z-offsets-fluidd-namespace-bootstrap-v1|material-z-offsets|is_material_z_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Material Z Offset layout setup
+material-z-offsets-fluidd-post-restart-layout-v2|material-z-offsets|is_material_z_offsets|Reapply and verify persistent Material Z Offset Fluidd grouping after the upgraded macros are active
 macros-preserve-carto-surface-wrapper-v1|macros|is_macros|Macro repairs now preserve an installed Cartographer surface-selection wrapper
 case-fan-runtime-state-v2|macros|is_macros|The guarded pre-print case-fan release now applies independently of firmware version
 case-fan-any-direct-request-v3|macros|is_macros|Pre-print now releases any nonzero direct case-fan request while preserving chamber cooling

@@ -101,6 +101,24 @@ class FluiddLayoutTests(unittest.TestCase):
         )
         self.assertEqual(result["macros"]["stored"][0]["categoryId"], "intermediate")
 
+    def test_moves_editor_out_of_named_uncategorized_category(self):
+        source = {
+            "macros": {
+                "categories": [{"id": "generic", "name": "Uncategorized"}],
+                "stored": [
+                    {
+                        "name": "GLOBAL_Z_OFFSETS_CARTO",
+                        "categoryId": "generic",
+                    }
+                ],
+            }
+        }
+        result = layout.merge_layout(source)
+        target = next(
+            item for item in result["macros"]["categories"] if item["name"] == "Z Offsets"
+        )
+        self.assertEqual(result["macros"]["stored"][0]["categoryId"], target["id"])
+
     def test_rejects_malformed_state(self):
         with self.assertRaises(layout.LayoutError):
             layout.merge_layout({"macros": {"categories": {}, "stored": []}})

@@ -221,6 +221,54 @@ class MigrationCatalogTests(unittest.TestCase):
             recommended(installed, completed=macro_ids), {"save-config-restart"}
         )
 
+    def test_plugin_runtime_artifact_fix_reopens_cartographer_once(self):
+        migration_id = "cartographer-plugin-runtime-artifacts-v2"
+        cartographer_ids = {
+            item_id
+            for item_id, component, _detector, _reason in entries()
+            if component == "cartographer"
+        }
+        self.assertIn(migration_id, cartographer_ids)
+        self.assertEqual(
+            recommended(
+                {"cartographer"},
+                completed=cartographer_ids - {migration_id},
+            ),
+            {"cartographer"},
+        )
+        self.assertEqual(
+            recommended({"cartographer"}, completed=cartographer_ids),
+            set(),
+        )
+
+    def test_post_restart_fluidd_repairs_are_tracked_per_installed_component(self):
+        expected = {
+            "cartographer-fluidd-post-restart-layout-v2": "cartographer",
+            "macros-fluidd-post-restart-layout-v2": "macros",
+            "cartographer-plate-fluidd-post-restart-layout-v2": "cartographer-plate-workflow",
+            "global-touch-offsets-fluidd-post-restart-layout-v2": "global-touch-offsets",
+            "material-z-offsets-fluidd-post-restart-layout-v2": "material-z-offsets",
+        }
+        actual = {
+            migration_id: component
+            for migration_id, component, _detector, _reason in entries()
+            if migration_id in expected
+        }
+        self.assertEqual(actual, expected)
+
+    def test_component_completion_waits_for_post_restart_verification(self):
+        menu = UPDATE_MENU.read_text(encoding="utf-8")
+        self.assertIn("migration_reconcile_fluidd_layout()", menu)
+        apply_body = menu.split("migration_apply_components() {", 1)[1].split(
+            "\nmenu_update_results()", 1
+        )[0]
+        restart = apply_body.index('sh "$restart_script"')
+        reconcile = apply_body.index('migration_reconcile_fluidd_layout "$component"')
+        complete = apply_body.index('migration_mark_component_current "$component"')
+        self.assertLess(restart, reconcile)
+        self.assertLess(reconcile, complete)
+        self.assertIn("post-restart verification failed", apply_body)
+
     def test_integration_promotion_recommends_only_installed_changed_components(self):
         installed = {
             "cartographer",

@@ -92,6 +92,11 @@ def merge_layout(namespace, show_plate_selectors=False):
         category_id = str(category["id"])
 
     valid_category_ids = {str(item.get("id")) for item in categories if item.get("id")}
+    category_names_by_id = {
+        str(item.get("id")): str(item.get("name", "")).casefold()
+        for item in categories
+        if item.get("id")
+    }
     by_name = {
         str(item.get("name", "")).casefold(): index
         for index, item in enumerate(stored)
@@ -125,7 +130,11 @@ def merge_layout(namespace, show_plate_selectors=False):
         if is_plate_selector:
             item["visible"] = show_plate_selectors
         current_category = str(item.get("categoryId", "0"))
-        if current_category == "0" or current_category not in valid_category_ids:
+        if (
+            current_category == "0"
+            or current_category not in valid_category_ids
+            or category_names_by_id.get(current_category) == "uncategorized"
+        ):
             item["categoryId"] = category_id
 
     macros["categories"] = categories
