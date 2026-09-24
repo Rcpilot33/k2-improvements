@@ -3,11 +3,11 @@
 This file records fallback copies of external repositories used by K2
 Improvements. The table below records the original preservation snapshot.
 Moonraker and Fluidd still use their original sources. The Cartographer
-testing exception is described next.
+plugin source is described next.
 
-## Cartographer integration testing
+## Cartographer plugin source
 
-On `integration-testing`, the installer and Moonraker both use
+On `main`, the installer and Moonraker both use
 `Rcpilot33/cartographer3d-plugin`, branch `main`. The released and printer-tested
 runtime baseline is `v1.10.1b1+k2.1` at `d53f03c`; the current plugin `main`
 adds only fork workflow guards at `83fc8eb`. This is a moving branch, not a
@@ -22,11 +22,11 @@ same; USB bridge, K2 patches, touchscreen compatibility, and firmware are unchan
 The normal installer ends with its existing Klipper code restart; run it only
 while idle. No MCU firmware flash is part of this change.
 
-Before promotion, validate disconnected startup, reconnect, guarded homing,
-repeated meshes, and print start/cancel on hardware using the plugin's
-`K2_UPSTREAM_INTEGRATION.md` checklist. Do not reset the checkout to roll back:
-preserve it first and deliberately restore the previous plugin source and matching
-Moonraker configuration while idle.
+The plugin source completed disconnected startup, reconnect, guarded homing,
+repeated mesh, print start/cancel, clean-install, and branch-migration checks on
+hardware using the plugin's `K2_UPSTREAM_INTEGRATION.md` checklist. Do not reset
+the checkout to roll back: preserve it first and deliberately restore the
+previous plugin source and matching Moonraker configuration while idle.
 
 ### Reconnect and installer follow-up
 
@@ -52,9 +52,10 @@ an otherwise successful install, leaving failed dependency actions pending.
 
 The plugin release gate was completed with `v1.10.1b1+k2.1` at `d53f03c`, and
 the plugin's `main` branch is now the selected update channel. The
-k2-improvements `integration-testing` branch remains the installer TEST target
-until the normal update flow applies the pending Cartographer action and protected
-host restart on hardware. Do not rely on the initial installer pull alone to
+k2-improvements integration upgrade completed the Cartographer action, protected
+restart, model load, `G28`, and print checks on hardware. The promoted
+k2-improvements `main` path still requires its final upgrade verification before
+the release tag is created. Do not rely on the initial installer pull alone to
 activate new plugin Python code.
 
 Fresh and migrated plugin checkouts fetch all origin branches, while tracking

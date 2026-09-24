@@ -1,15 +1,15 @@
 # Validation Status
 
-## Cartographer integration testing (September 2026)
+## Cartographer plugin main rollout (September 2026)
 
-The `integration-testing` installer now tracks the released Cartographer plugin
-`main` branch. Its one-time update migration must offer and complete the
-Cartographer action on an existing integration-branch install. This installer
-path remains under integration testing, separate from the historical firmware
-matrix below. See
+The `main` installer now tracks the released Cartographer plugin `main` branch.
+Its one-time update migration offers and completes the Cartographer action on an
+existing install. The integration upgrade path passed on hardware; the promoted
+`main` upgrade path remains the final test before tagging this release. This
+rollout record is separate from the historical firmware matrix below. See
 [the integration hardware record](DEPENDENCY_PRESERVATION.md#v3-hardware-validation-september-1920-2026)
-for completed V3 checks and outstanding release gates. The overall historical
-PASS below must not be read as blanket approval of this integration.
+for completed V3 checks and the remaining release gate. The overall historical
+PASS below must not be read as blanket approval of every rollout path.
 
 ## Local automated tests
 
