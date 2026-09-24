@@ -147,7 +147,10 @@ run_carto_plate_workflow() {
 
     if [ "$failed" -eq 0 ] && is_carto_plate_workflow; then
         if command -v migration_mark_component_current >/dev/null 2>&1; then
-            migration_mark_component_current cartographer-plate-workflow
+            if ! migration_mark_component_current cartographer-plate-workflow; then
+                warn "Plate workflow update verification is incomplete; review pending actions in Update installer / apply updates"
+                return 1
+            fi
         fi
         printf '\n%s\n' "$(c_green 'Cartographer plate workflow installed successfully.')"
         printf 'When no print is active, run FIRMWARE_RESTART and wait for the complete\n'
@@ -339,7 +342,9 @@ install_extra() {
     if HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script" $script_arg; then
         info "$name install completed"
         if command -v migration_mark_component_current >/dev/null 2>&1; then
-            migration_mark_component_current "$name"
+            if ! migration_mark_component_current "$name"; then
+                warn "$name installed, but update verification is incomplete; review pending actions in Update installer / apply updates"
+            fi
         fi
     else
         warn "$name install.sh exited non-zero"

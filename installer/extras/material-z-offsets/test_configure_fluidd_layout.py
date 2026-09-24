@@ -4,6 +4,7 @@ import copy
 import importlib.util
 import pathlib
 import unittest
+from unittest import mock
 
 
 MODULE_PATH = pathlib.Path(__file__).with_name("configure_fluidd_layout.py")
@@ -13,6 +14,20 @@ SPEC.loader.exec_module(LAYOUT)
 
 
 class FluiddLayoutTests(unittest.TestCase):
+    def test_wiped_printer_creates_missing_fluidd_namespace(self):
+        created = {"result": {"value": {}}}
+        with mock.patch.object(
+            LAYOUT, "_request_json", side_effect=[None, created]
+        ) as request_json:
+            self.assertTrue(LAYOUT.configure("http://127.0.0.1:7125"))
+
+        self.assertTrue(request_json.call_args_list[0].kwargs["allow_missing"])
+        post = request_json.call_args_list[1]
+        self.assertEqual(post.kwargs["method"], "POST")
+        self.assertEqual(post.kwargs["body"]["namespace"], "fluidd")
+        self.assertEqual(post.kwargs["body"]["key"], "macros")
+        self.assertEqual(len(post.kwargs["body"]["value"]["stored"]), 1)
+
     def test_creates_orange_macro_in_z_offsets(self):
         result = LAYOUT.merge_layout({"macros": {}})
         category = result["macros"]["categories"][0]
@@ -28,6 +43,21 @@ class FluiddLayoutTests(unittest.TestCase):
         source = {"macros": {"categories": [{"id": "z", "name": "Z Offsets"}], "stored": []}}
         result = LAYOUT.merge_layout(source)
         self.assertEqual(result["macros"]["stored"][0]["categoryId"], "z")
+
+    def test_moves_editor_out_of_named_uncategorized_category(self):
+        source = {
+            "macros": {
+                "categories": [{"id": "generic", "name": "Uncategorized"}],
+                "stored": [
+                    {"name": "MATERIAL_Z_OFFSETS", "categoryId": "generic"}
+                ],
+            }
+        }
+        result = LAYOUT.merge_layout(source)
+        target = next(
+            item for item in result["macros"]["categories"] if item["name"] == "Z Offsets"
+        )
+        self.assertEqual(result["macros"]["stored"][0]["categoryId"], target["id"])
 
     def test_preserves_user_alias_and_visibility(self):
         source = {"macros": {"categories": [{"id": "z", "name": "Z Offsets"}], "stored": [{

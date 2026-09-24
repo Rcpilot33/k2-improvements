@@ -67,8 +67,12 @@ The standard `wipe.sock` reset does not reliably remove every leftover
 top-level directory under `/mnt/UDISK`. When replacing or recovering an
 existing K2 Improvements or other third-party installation, use the menu's
 **Maintenance and recovery → Factory reset and cleanup tools** instead. Its
-`factory-reset-improved` workflow removes the leftover UDISK directories
-identified by its dry run and then invokes the standard `wipe.sock` reset.
+`factory-reset-improved` workflow removes the leftover third-party and user
+UDISK directories identified by its dry run and then invokes the standard
+`wipe.sock` reset. It deliberately leaves the live stock-owned
+`/mnt/UDISK/creality` tree to `wipe.sock`; Creality services continuously write
+under `creality/userdata/log`, so trying to pre-delete that tree races the
+active log writers.
 
 ### Complete the stock setup
 

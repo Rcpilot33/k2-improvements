@@ -1,12 +1,71 @@
 #!/usr/bin/env python3
 
 import copy
+from pathlib import Path
+import re
 import unittest
+from unittest import mock
+import urllib.error
 
 import configure_fluidd_layout as layout
 
 
 class FluiddLayoutTests(unittest.TestCase):
+    def test_wiped_printer_creates_missing_fluidd_namespace(self):
+        created = {
+            "result": {
+                "namespace": "fluidd",
+                "key": "macros",
+                "value": {},
+            }
+        }
+        with mock.patch.object(
+            layout,
+            "_request_json",
+            side_effect=[None, created],
+        ) as request_json:
+            self.assertTrue(layout.configure("http://127.0.0.1:7125"))
+
+        first = request_json.call_args_list[0]
+        self.assertTrue(first.kwargs["allow_missing"])
+        second = request_json.call_args_list[1]
+        self.assertEqual(second.kwargs["method"], "POST")
+        self.assertEqual(second.kwargs["body"]["namespace"], "fluidd")
+        self.assertEqual(second.kwargs["body"]["key"], "macros")
+        self.assertEqual(len(second.kwargs["body"]["value"]["stored"]), 11)
+
+    def test_only_get_404_may_be_treated_as_missing(self):
+        missing = urllib.error.HTTPError(
+            "http://127.0.0.1:7125/server/database/item",
+            404,
+            "Namespace fluidd not found",
+            None,
+            None,
+        )
+        with mock.patch.object(layout.urllib.request, "urlopen", side_effect=missing):
+            self.assertIsNone(
+                layout._request_json(
+                    "http://127.0.0.1:7125/server/database/item",
+                    allow_missing=True,
+                )
+            )
+            with self.assertRaises(layout.LayoutError):
+                layout._request_json(
+                    "http://127.0.0.1:7125/server/database/item",
+                    method="POST",
+                    allow_missing=True,
+                )
+
+    def test_setup_checklist_uses_fluidd_button_labels(self):
+        workflow = (Path(__file__).resolve().parents[2] / "menus" / "workflows.sh").read_text()
+        checklist = workflow.split("show_cartographer_setup_checklist() {", 1)[1].split(
+            "run_protected_firmware_restart() {", 1
+        )[0]
+        for name, alias, _color in layout.MACRO_LAYOUT:
+            if name.startswith(("A1", "A2")):
+                self.assertIn(alias, checklist)
+        self.assertIsNone(re.search(r"\bA\d{2}\b", checklist))
+
     def test_creates_category_and_all_aliases_without_renaming_macros(self):
         source = {
             "theme": {"isDark": True},
@@ -147,6 +206,29 @@ class FluiddLayoutTests(unittest.TestCase):
         self.assertEqual(item["categoryId"], category["id"])
         self.assertEqual(item["alias"], "CARTO_INFO")
         self.assertEqual(item["color"], "#2196F3")
+
+    def test_repairs_named_uncategorized_assignment(self):
+        source = {
+            "macros": {
+                "categories": [{"id": "generic", "name": "Uncategorized"}],
+                "stored": [
+                    {
+                        "name": "A63_CARTO_INFO",
+                        "alias": "CARTO_INFO",
+                        "categoryId": "generic",
+                    }
+                ],
+            }
+        }
+
+        result = layout.merge_layout(source)
+        target_category = next(
+            item
+            for item in result["macros"]["categories"]
+            if item["name"] == layout.CATEGORY_NAME
+        )
+        item = result["macros"]["stored"][0]
+        self.assertEqual(item["categoryId"], target_category["id"])
 
     def test_is_idempotent(self):
         first = layout.merge_layout({"macros": {}})

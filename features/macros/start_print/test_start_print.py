@@ -21,35 +21,49 @@ class StartPrintConfigTests(unittest.TestCase):
         self.assertIn(
             "rename_existing: _K2_ORIGINAL_BOX_NOZZLE_CLEAN", section
         )
-        self.assertIn("_K2_ORIGINAL_BOX_NOZZLE_CLEAN {rawparams}", section)
-        self.assertIn("M107 P1", section)
+        original = section.index("_K2_ORIGINAL_BOX_NOZZLE_CLEAN {rawparams}")
+        release_before = section.index("_RELEASE_PREPRINT_CASE_FAN")
+        release_after = section.index("_RELEASE_PREPRINT_CASE_FAN", original)
+        self.assertLess(release_before, original)
+        self.assertLess(original, release_after)
+        self.assertEqual(section.count("_RELEASE_PREPRINT_CASE_FAN"), 2)
+
+    def test_case_fan_release_runs_immediately_after_box_start_print(self):
+        section = self.config.split(
+            "[gcode_macro START_PRINT]", 1
+        )[1]
+        box_start = section.index("BOX_START_PRINT")
+        release = section.index("_RELEASE_PREPRINT_CASE_FAN", box_start)
+        absolute_mode = section.index("G90", release)
+        self.assertLess(box_start, release)
+        self.assertLess(release, absolute_mode)
 
     def test_case_fan_release_applies_to_both_probe_paths(self):
         section = self.config.split(
-            "[gcode_macro BOX_NOZZLE_CLEAN]", 1
-        )[1].split("[gcode_macro START_PRINT]", 1)[0]
+            "[gcode_macro _RELEASE_PREPRINT_CASE_FAN]", 1
+        )[1].split("[gcode_macro BOX_NOZZLE_CLEAN]", 1)[0]
         self.assertIn("DIRECT_CASE_FAN > 0.0", section)
         self.assertNotIn("'cartographer' not in printer", section)
 
     def test_case_fan_release_accepts_any_nonzero_direct_request(self):
         section = self.config.split(
-            "[gcode_macro BOX_NOZZLE_CLEAN]", 1
-        )[1].split("[gcode_macro START_PRINT]", 1)[0]
+            "[gcode_macro _RELEASE_PREPRINT_CASE_FAN]", 1
+        )[1].split("[gcode_macro BOX_NOZZLE_CLEAN]", 1)[0]
         self.assertIn('printer["output_pin fan1"].value', section)
         self.assertIn("DIRECT_CASE_FAN > 0.0", section)
         self.assertNotIn("DIRECT_CASE_FAN >= 0.999", section)
 
     def test_case_fan_release_is_not_blocked_by_temporary_chamber_cooling(self):
         section = self.config.split(
-            "[gcode_macro BOX_NOZZLE_CLEAN]", 1
-        )[1].split("[gcode_macro START_PRINT]", 1)[0]
+            "[gcode_macro _RELEASE_PREPRINT_CASE_FAN]", 1
+        )[1].split("[gcode_macro BOX_NOZZLE_CLEAN]", 1)[0]
         self.assertNotIn('printer["temperature_fan chamber_fan"].speed', section)
         self.assertNotIn("CHAMBER_COOLING", section)
 
     def test_case_fan_release_is_runtime_state_gated(self):
         section = self.config.split(
-            "[gcode_macro BOX_NOZZLE_CLEAN]", 1
-        )[1].split("[gcode_macro START_PRINT]", 1)[0]
+            "[gcode_macro _RELEASE_PREPRINT_CASE_FAN]", 1
+        )[1].split("[gcode_macro BOX_NOZZLE_CLEAN]", 1)[0]
         self.assertNotIn("_FIRMWARE_COMPAT_K2", section)
         self.assertNotIn("RELEASE_CASE_FAN", section)
         self.assertNotIn("variable_release_stock_case_fan:", self.config)
@@ -60,6 +74,7 @@ class StartPrintConfigTests(unittest.TestCase):
     def test_case_fan_is_not_continuously_enforced(self):
         self.assertEqual(self.config.count("M107 P1"), 1)
         self.assertNotIn("[delayed_gcode", self.config)
+        self.assertNotIn("[gcode_macro SET_CHAMBER_FAN]", self.config)
 
     def test_active_chamber_wait_uses_creality_35c_boundary(self):
         self.assertIn("{% if CHAMBER_TEMP > 35 %}", self.config)
@@ -142,9 +157,9 @@ class StartPrintConfigTests(unittest.TestCase):
         self.assertIn('K2_MATERIAL_Z_APPLY MATERIAL="{MATERIAL}"', self.config)
         self.assertEqual(self.config.count("SET_GCODE_OFFSET Z={OFFSET}"), 1)
 
-    def test_material_defaults_start_at_point_zero_five(self):
+    def test_material_defaults_start_at_zero(self):
         for material in ("PLA", "PETG", "ABS", "ASA", "DEFAULT"):
-            self.assertIn("variable_offset_%s: 0.05" % material, self.config)
+            self.assertIn("variable_offset_%s: 0.00" % material, self.config)
 
     def test_macro_repair_preserves_plate_surface_wrapper(self):
         installer = MACROS_INSTALLER.read_text(encoding="utf-8")

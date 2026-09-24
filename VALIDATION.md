@@ -1,5 +1,27 @@
 # Validation Status
 
+## Cartographer plugin main rollout (September 2026)
+
+The `main` installer now tracks the released Cartographer plugin `main` branch.
+Its one-time update migration offers and completes the Cartographer action on an
+existing install. The integration upgrade path passed on hardware; the promoted
+`main` upgrade path remains the final test before tagging this release. This
+rollout record is separate from the historical firmware matrix below. See
+[the integration hardware record](DEPENDENCY_PRESERVATION.md#v3-hardware-validation-september-1920-2026)
+for completed V3 checks and the remaining release gate. The overall historical
+PASS below must not be read as blanket approval of every rollout path.
+
+## Local automated tests
+
+Run `python scripts/run_tests.py` from a development checkout. This discovers
+Python unittest suites under bootstrap, features, installer, and scripts, using
+an isolated process per test directory so duplicate module basenames and sibling
+imports do not collide. It continues after failures and exits nonzero if any
+directory fails. Tests requiring unavailable platform tools may report skips;
+review those before claiming full coverage. Git and Bash are needed for installer
+fixtures. Shell-only test scripts and printer hardware checks remain separate.
+Root-level `pytest .` collection is not the supported runner.
+
 ## Firmware validation summary
 
 The current menu/bootstrap redesign completed full install-and-print validation
@@ -164,6 +186,10 @@ print.
 | Fluidd macro sorting and readability | PASS |
 
 The validated button sequence is:
+
+The names below are underlying macro names. With the Fluidd layout extra
+installed, their display aliases include `DEFAULT`, `CARTO_SCAN_CALIBRATE`,
+`CARTO_TOUCH_CALIBRATE`, and `CARTO_LOAD`, as shown in the installer checklist.
 
 1. Press exactly one selector:
 

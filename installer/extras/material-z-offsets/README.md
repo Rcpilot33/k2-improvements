@@ -9,7 +9,7 @@ The editor keeps material variables at the top of `_START_PRINT_VARS`, with
 `overrides.cfg` directly and then runs `FIRMWARE_RESTART`.
 
 When `START_PRINT` receives a new material name, the current print uses
-`DEFAULT`. The helper saves the new material at `0.050` before `DEFAULT` so it
+`DEFAULT`. The helper saves the new material at `0.000` before `DEFAULT` so it
 can be adjusted and activated by the next Save & Restart.
 
 The installer also refreshes the managed `start_print.cfg` link so the apply

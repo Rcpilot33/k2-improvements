@@ -62,6 +62,114 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_missing_scan_model_homing_guard_is_offered_once(self):
+        update_id = "cartographer-scan-model-homing-guard-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+
+    def test_cartographer_mesh_defaults_override_is_offered_once(self):
+        update_id = "cartographer-mesh-defaults-override-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+
+    def test_optional_kamp_override_order_is_offered_once(self):
+        update_id = "cartographer-optional-kamp-order-v2"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+
+    def test_fluidd_namespace_bootstrap_is_offered_once(self):
+        catalog_ids = {entry[0] for entry in entries()}
+        cases = {
+            "cartographer-fluidd-namespace-bootstrap-v1": "cartographer",
+            "macros-fluidd-namespace-bootstrap-v1": "macros",
+            "global-touch-offsets-fluidd-namespace-bootstrap-v1": "global-touch-offsets",
+            "material-z-offsets-fluidd-namespace-bootstrap-v1": "material-z-offsets",
+        }
+        for update_id, component in cases.items():
+            with self.subTest(update_id=update_id):
+                self.assertIn(update_id, catalog_ids)
+                previously_completed = catalog_ids - {update_id}
+                self.assertEqual(
+                    recommended(set(cases.values()), previously_completed),
+                    {component},
+                )
+
+    def test_material_editor_zero_seed_is_offered_once(self):
+        update_id = "material-z-offsets-zero-new-material-v3"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"material-z-offsets"}, previously_completed),
+            {"material-z-offsets"},
+        )
+
+    def test_deformation_preflight_case_fan_fix_is_offered_once(self):
+        update_id = "case-fan-deformation-preflight-v7"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"macros"}, previously_completed), {"macros"}
+        )
+
+    def test_inherited_case_fan_output_clear_is_offered_once(self):
+        update_id = "case-fan-inherited-output-clear-v8"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"macros"}, previously_completed), {"macros"}
+        )
+
+    def test_preflight_chamber_fan_target_restore_is_offered_once(self):
+        update_id = "case-fan-restore-preflight-target-v9"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"macros"}, previously_completed), {"macros"}
+        )
+
+    def test_safe_move_trigger_cleanup_is_offered_once(self):
+        update_id = "cartographer-safe-move-trigger-cleanup-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+        self.assertEqual(recommended({"macros"}, previously_completed), set())
+        self.assertEqual(recommended({"cartographer"}, catalog_ids), set())
+
+    def test_current_cartographer_mcu_api_fix_is_offered_once(self):
+        update_id = "cartographer-current-mcu-api-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+        self.assertEqual(recommended({"macros"}, previously_completed), set())
+        self.assertEqual(recommended({"cartographer"}, catalog_ids), set())
+
     def test_ids_are_unique_and_entries_are_complete(self):
         catalog = entries()
         self.assertGreater(len(catalog), 20)
@@ -112,6 +220,80 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertEqual(
             recommended(installed, completed=macro_ids), {"save-config-restart"}
         )
+
+    def test_plugin_runtime_artifact_fix_reopens_cartographer_once(self):
+        migration_id = "cartographer-plugin-runtime-artifacts-v2"
+        cartographer_ids = {
+            item_id
+            for item_id, component, _detector, _reason in entries()
+            if component == "cartographer"
+        }
+        self.assertIn(migration_id, cartographer_ids)
+        self.assertEqual(
+            recommended(
+                {"cartographer"},
+                completed=cartographer_ids - {migration_id},
+            ),
+            {"cartographer"},
+        )
+        self.assertEqual(
+            recommended({"cartographer"}, completed=cartographer_ids),
+            set(),
+        )
+
+    def test_plugin_main_promotion_reopens_only_installed_cartographer_once(self):
+        migration_id = "cartographer-plugin-main-promotion-v1"
+        cartographer_ids = {
+            item_id
+            for item_id, component, _detector, _reason in entries()
+            if component == "cartographer"
+        }
+        completed_before_promotion = cartographer_ids - {migration_id}
+
+        self.assertIn(migration_id, cartographer_ids)
+        self.assertEqual(
+            recommended(
+                {"cartographer"},
+                completed=completed_before_promotion,
+            ),
+            {"cartographer"},
+        )
+        self.assertEqual(
+            recommended(set(), completed=completed_before_promotion),
+            set(),
+        )
+        self.assertEqual(
+            recommended({"cartographer"}, completed=cartographer_ids),
+            set(),
+        )
+
+    def test_post_restart_fluidd_repairs_are_tracked_per_installed_component(self):
+        expected = {
+            "cartographer-fluidd-post-restart-layout-v2": "cartographer",
+            "macros-fluidd-post-restart-layout-v2": "macros",
+            "cartographer-plate-fluidd-post-restart-layout-v2": "cartographer-plate-workflow",
+            "global-touch-offsets-fluidd-post-restart-layout-v2": "global-touch-offsets",
+            "material-z-offsets-fluidd-post-restart-layout-v2": "material-z-offsets",
+        }
+        actual = {
+            migration_id: component
+            for migration_id, component, _detector, _reason in entries()
+            if migration_id in expected
+        }
+        self.assertEqual(actual, expected)
+
+    def test_component_completion_waits_for_post_restart_verification(self):
+        menu = UPDATE_MENU.read_text(encoding="utf-8")
+        self.assertIn("migration_reconcile_fluidd_layout()", menu)
+        apply_body = menu.split("migration_apply_components() {", 1)[1].split(
+            "\nmenu_update_results()", 1
+        )[0]
+        restart = apply_body.index('sh "$restart_script"')
+        reconcile = apply_body.index('migration_reconcile_fluidd_layout "$component"')
+        complete = apply_body.index('migration_mark_component_current "$component"')
+        self.assertLess(restart, reconcile)
+        self.assertLess(reconcile, complete)
+        self.assertIn("post-restart verification failed", apply_body)
 
     def test_integration_promotion_recommends_only_installed_changed_components(self):
         installed = {
@@ -356,6 +538,16 @@ class MigrationCatalogTests(unittest.TestCase):
     def test_macros_track_m191_chamber_temperature_report(self):
         self.assertIn(
             "m191-chamber-temperature-report-v1",
+            {
+                migration_id
+                for migration_id, component, _detector, _reason in entries()
+                if component == "macros"
+            },
+        )
+
+    def test_macros_track_immediate_case_fan_release(self):
+        self.assertIn(
+            "case-fan-immediate-start-release-v5",
             {
                 migration_id
                 for migration_id, component, _detector, _reason in entries()

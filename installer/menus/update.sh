@@ -14,6 +14,7 @@ migration_component_label() {
         macros) echo 'Macros (START_PRINT / M191 / bed mesh)' ;;
         save-config-restart) echo 'SAVE_CONFIG restart protection' ;;
         virtual-sdcard-guard) echo 'Virtual SD-card upload guard' ;;
+        memory-diagnostics) echo 'Memory diagnostics' ;;
         abort_homing) echo 'Abort Homing' ;;
         screws_tilt_adjust) echo 'Screws Tilt Adjust' ;;
         kamp-adaptive-purge) echo 'KAMP adaptive purge' ;;
@@ -34,6 +35,7 @@ migration_component_installed() {
         macros) is_macros ;;
         save-config-restart) is_save_config_restart ;;
         virtual-sdcard-guard) is_virtual_sdcard_guard ;;
+        memory-diagnostics) is_memory_diagnostics ;;
         abort_homing) is_abort_homing ;;
         screws_tilt_adjust) is_screws_tilt ;;
         kamp-adaptive-purge) is_kamp ;;
@@ -188,6 +190,15 @@ migration_mark_component_current() {
         migration_catalog | awk -F'|' -v component="$component" '$2 == component { print $1 }'
     } | awk 'NF && !seen[$0]++' > "$temporary"
     migration_write_atomic "$MIGRATION_COMPLETED" "$temporary"
+    # Cartographer installs these protections itself. Record their migrations
+    # only after the parent install/restart succeeded and each detector passes.
+    if [ "$component" = cartographer ]; then
+        local dependency dependency_failed=0
+        for dependency in save-config-restart virtual-sdcard-guard; do
+            migration_mark_component_current "$dependency" || dependency_failed=1
+        done
+        [ "$dependency_failed" -eq 0 ] || return 1
+    fi
 }
 
 migration_print_details() {
@@ -211,7 +222,31 @@ migration_print_state_summary() {
         IFS='|' read -r old new branch < "$MIGRATION_LAST_PULL"
         printf ' Last update: %s -> %s\n' "${old:-unknown}" "${new:-unknown}"
         printf ' Branch     : %s\n\n' "${branch:-unknown}"
+        migration_print_firmware_notice "$old" "$new"
     fi
+}
+
+# Firmware bundles are installer-only updates, not repair migrations. Report
+# their availability without marking a probe flashed or requesting a restart.
+migration_print_firmware_notice() {
+    local old new changed
+    old="$1"
+    new="$2"
+    [ -n "$old" ] && [ -n "$new" ] && [ "$old" != "$new" ] || return 0
+    changed=$(git -C "$INSTALLER_DIR" diff --name-only "$old" "$new" -- \
+        features/cartographer/firmware/flash.py \
+        features/cartographer/firmware/firmware/CartographerV3_6.1.0_USB_full_8kib_offset.bin \
+        features/cartographer/firmware/firmware/CartographerV3_6.1.0_USB_lite_8kib_offset.bin \
+        features/cartographer/firmware/firmware/CartographerV4_6.2.0_USB_full_8kib_offset.bin \
+        features/cartographer/firmware/firmware/CartographerV4_6.2.0_USB_lite_8kib_offset.bin \
+        2>/dev/null) || return 0
+    [ -n "$changed" ] || return 0
+    printf '%s\n' 'Recommended Cartographer firmware: V4 6.2.0 and V3 6.1.0 Full / Lite.'
+    printf '%s\n' 'V4 6.0.0 and V3 5.1.0 remain available as legacy rollback choices.'
+    printf '%s\n' 'Available in Cartographer tools -> Normal USB / Katapult firmware flash.'
+    printf '%s\n' 'Requires the audited plugin support; the flasher checks before selection.'
+    printf '%s\n' 'No automatic flash or printer restart is performed by this installer update.'
+    printf '%s\n\n' 'After flashing: protected firmware restart, then Scan and Touch calibration.'
 }
 
 printer_activity_state() {
@@ -364,12 +399,55 @@ migration_record_refreshed_component() {
     done
 }
 
+# Fluidd can discover or rebuild macro metadata when the repaired Klipper
+# configuration becomes active. Reapply the intended layout after the one
+# shared protected restart, then read Moonraker's database back before marking
+# the component current. This prevents a successful installer message when the
+# controls actually remain uncategorized.
+migration_reconcile_fluidd_layout() {
+    local component pwd_home layout verifier
+    component="$1"
+    pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+    [ -n "$pwd_home" ] || pwd_home="$HOME"
+    verifier="$INSTALLER_DIR/installer/migrations/verify_fluidd_layout.py"
+
+    case "$component" in
+        cartographer|cartographer-plate-workflow)
+            layout="$INSTALLER_DIR/installer/extras/cartographer-macros/configure_fluidd_layout.py"
+            if migration_component_installed cartographer-plate-workflow 2>/dev/null; then
+                HOME="$pwd_home" python3 "$layout" --show-plate-selectors || return 1
+            else
+                HOME="$pwd_home" python3 "$layout" || return 1
+            fi
+            ;;
+        macros)
+            layout="$INSTALLER_DIR/features/macros/m191/configure_fluidd_layout.py"
+            HOME="$pwd_home" python3 "$layout" || return 1
+            ;;
+        global-touch-offsets)
+            layout="$INSTALLER_DIR/installer/extras/global-touch-offsets/configure_fluidd_layout.py"
+            HOME="$pwd_home" python3 "$layout" || return 1
+            ;;
+        material-z-offsets)
+            layout="$INSTALLER_DIR/installer/extras/material-z-offsets/configure_fluidd_layout.py"
+            HOME="$pwd_home" python3 "$layout" || return 1
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+
+    HOME="$pwd_home" python3 "$verifier" "$component"
+}
+
 migration_apply_components() {
-    local components_file succeeded failures component restart_kind restart_script
+    local components_file succeeded activated failures component restart_kind restart_script
     components_file="$1"
     migration_require_idle || return 1
     succeeded="/tmp/k2-update-succeeded.$$"
+    activated="/tmp/k2-update-activated.$$"
     : > "$succeeded"
+    : > "$activated"
     failures=0
     restart_kind=config
 
@@ -395,7 +473,7 @@ migration_apply_components() {
     done 3< "$components_file"
 
     if [ ! -s "$succeeded" ]; then
-        rm -f "$succeeded"
+        rm -f "$succeeded" "$activated"
         warn 'no component refresh completed'
         return 1
     fi
@@ -408,19 +486,29 @@ migration_apply_components() {
     fi
 
     if K2_DEFER_FIRMWARE_RESTART=0 sh "$restart_script"; then
+        printf '\n--- Verifying post-restart component state ---\n'
+        while IFS= read -r component; do
+            if migration_reconcile_fluidd_layout "$component"; then
+                printf '%s\n' "$component" >> "$activated"
+            else
+                warn "$(migration_component_label "$component") post-restart verification failed; leaving its update pending"
+                failures=$((failures + 1))
+            fi
+        done < "$succeeded"
+
         while IFS= read -r component; do
             if ! migration_mark_component_current "$component"; then
                 failures=$((failures + 1))
             fi
-        done < "$succeeded"
-        rm -f "$succeeded"
+        done < "$activated"
+        rm -f "$succeeded" "$activated"
         if [ "$failures" -eq 0 ]; then
             printf '\n%s\n' "$(c_green 'Selected updates installed and activated successfully.')"
         else
             warn 'one or more updates remain pending; review the messages above'
         fi
     else
-        rm -f "$succeeded"
+        rm -f "$succeeded" "$activated"
         warn 'final protected restart failed; completed repairs remain pending for verification'
         warn 'power-cycle before homing or attempting a print'
         return 1

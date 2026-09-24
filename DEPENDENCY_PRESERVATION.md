@@ -1,9 +1,123 @@
 # Dependency Preservation Record
 
 This file records fallback copies of external repositories used by K2
-Improvements. These copies are preserved for continuity only. The installer
-and Moonraker update-manager configurations still use their existing sources;
-none of the `Rcpilot33` copies below are active installation sources.
+Improvements. The table below records the original preservation snapshot.
+Moonraker and Fluidd still use their original sources. The Cartographer
+plugin source is described next.
+
+## Cartographer plugin source
+
+On `main`, the installer and Moonraker both use
+`Rcpilot33/cartographer3d-plugin`, branch `main`. The released and printer-tested
+runtime baseline is `v1.10.1b1+k2.1` at `d53f03c`; the current plugin `main`
+adds only fork workflow guards at `83fc8eb`. This is a moving branch, not a
+commit pin.
+The `cartographer-plugin-main-promotion-v1` update migration schedules a one-time
+Cartographer refresh after switching K2 Improvements to this branch; applying
+that recommended action migrates the installed plugin checkout.
+The installer accepts a clean, fast-forward migration from Jacob's fork and
+refuses local changes, unknown origins, and divergent history. Existing local
+branches are retained. The installed plugin directory and import shim stay the
+same; USB bridge, K2 patches, touchscreen compatibility, and firmware are unchanged.
+The normal installer ends with its existing Klipper code restart; run it only
+while idle. No MCU firmware flash is part of this change.
+
+The plugin source completed disconnected startup, reconnect, guarded homing,
+repeated mesh, print start/cancel, clean-install, and branch-migration checks on
+hardware using the plugin's `K2_UPSTREAM_INTEGRATION.md` checklist. Do not reset
+the checkout to roll back: preserve it first and deliberately restore the
+previous plugin source and matching Moonraker configuration while idle.
+
+### Reconnect and installer follow-up
+
+The K2 MCU patch now emits a per-MCU identification event before reconnect
+configuration is built. The MCU temperature sensor initializes on that event,
+so a probe absent at startup gets ADC sampling configured when it connects.
+Initialization failures abort the reconnect rather than reporting success.
+The existing post-configuration reconnect event used by the plugin is unchanged.
+
+The updater offers a Cartographer refresh for this change. After a successful
+install/restart, Cartographer's bundled SAVE_CONFIG and upload-guard migrations
+are recorded only if their installed-state detectors pass. Missing protections
+remain pending. No calibration values or temperature conversion formulas change.
+
+Both native and portable Jacob-overlay installs now carry the matching MCU and
+temperature_mcu patches. The fix concerns MCU ADC temperature initialization;
+coil streaming is a separate path. Overlay parity and repeat application are
+covered by local tests; this is not a claim of end-to-end overlay printer validation.
+Feature/Extras menus explicitly report incomplete migration verification after
+an otherwise successful install, leaving failed dependency actions pending.
+
+### Release gate and branch transitions
+
+The plugin release gate was completed with `v1.10.1b1+k2.1` at `d53f03c`, and
+the plugin's `main` branch is now the selected update channel. The
+k2-improvements integration upgrade completed the Cartographer action, protected
+restart, model load, `G28`, and print checks on hardware. The promoted
+k2-improvements `main` path still requires its final upgrade verification before
+the release tag is created. Do not rely on the initial installer pull alone to
+activate new plugin Python code.
+
+Fresh and migrated plugin checkouts fetch all origin branches, while tracking
+only the configured primary branch for updates. This avoids hiding a later
+release branch behind a single-branch refspec; it does not automatically migrate
+existing printers until they run the updated installer. Confirm Moonraker reports
+the component valid, on the intended branch, after that migration.
+
+### V3 hardware validation, September 19–20, 2026
+
+September 20 follow-up on plugin `015b5b3`: print startup loaded the existing
+models, completed a 20x20 two-run mesh, and accepted three touch readings of
+0.2307 mm. Mid-print disconnect/reconnect at 08:12:08/08:12:26 was followed by
+print completion. Disconnected startup recovered after the known K2 motor
+initialization restart failure; reconnect at 08:44:58 cleared the warning and
+restored both temperatures. A disconnected G28 completed bottom-switch leveling
+but rejected probe-dependent homing with approximately 30 mm physical clearance
+(operator observation), remained Ready, and homed after reconnect without a
+restart at 08:53:15.
+
+Active mesh disconnection exposed delayed error reporting: the scan continued
+until 08:58:23 and then rejected the aborted sampling session. The opt-in touch
+diagnostic (`bfc459c`) stopped promptly by operator observation when unplugged
+at 09:41:12. `klippy (61).log` showed an error querying the disconnected MCU in
+dispatch cleanup before the diagnostic's intentional shutdown. Log timestamps
+are one hour behind these Fluidd timestamps. Neither test establishes a numeric
+stopping-distance guarantee or full nozzle-contact safety.
+
+The `cartographer-active-disconnect-cleanup-v1` migration refreshes the plugin
+and paired native/portable MCU patch: active homing failure cleans all trigger
+participants and shuts down rather than trusting stale Z coordinates; host
+shutdown skips commands to an already-disconnected non-critical MCU. Mesh
+abort checkpoints stop enqueueing further points but do not cancel already
+queued movement. Software validation and the prior hardware observations must
+not be confused with hardware sign-off of these new fixes. Repeat the bounded
+diagnostic only after refresh and the **protected restart**; plain Klipper Ready
+does not establish safe K2 motor initialization.
+
+User-supplied logs and supervised observations on K2 Plus 1.1.5.5, Cartographer
+V3 firmware 5.1.0, plugin integration through 5ed2ee7:
+
+- Passed disconnected startup, idle reconnect, live MCU/coil temperature
+  recovery, and automatic removal of the stale startup warning after reconnect.
+- Passed Scan/Touch calibration, protected SAVE_CONFIG restart, subsequent model
+  loading, normal homing, Z tilt, and repeated meshes.
+- Passed disconnect/reconnect during ordinary printing: Fluidd 23:07:16 to
+  23:07:32, followed by successful print completion. This did not test active
+  probing disconnection.
+- Passed next-print homing, meshing, Touch home and completion without a Klipper
+  restart. Passed normal cancellation/parking/heater shutdown (user observation),
+  followed by another successful print ending 23:35:17 without a restart.
+- V3 directional mesh striping predates this update. It follows scan direction;
+  repeated spiral meshes reduce it. Root cause and absolute accuracy remain
+  unestablished; do not label it an update regression or claim spiral fixes it.
+
+Still pending: supervised disconnected-operation rejection, full power-cycle
+persistence, broad heated first-layer/longer-print validation, Moonraker update
+manager health, and a real pre-migration/portable-overlay printer install.
+Local Git fixtures exercise both Jacob origin spellings, fast-forward migration,
+tracking repair, future-branch visibility, and refusal to overwrite user changes.
+They do not substitute for those remaining printer checks. No firmware flash or
+deliberate disconnection during an active probe move is required.
 
 Preservation date: **2026-08-16**
 

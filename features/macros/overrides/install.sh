@@ -48,7 +48,7 @@ rm -f ~/printer_data/config/custom/firmware_1152.cfg
 # The same overrides seed is used by both setup paths. Activate the
 # Cartographer-only defaults only when Cartographer is actually configured.
 if [ -f ~/printer_data/config/custom/cartographer.cfg ]; then
-    sh "${SCRIPT_DIR}/enable_cartographer_touch.sh" \
+    python3 "${SCRIPT_DIR}/ensure_cartographer_overrides.py" \
         ~/printer_data/config/custom/overrides.cfg
 fi
 

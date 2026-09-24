@@ -305,6 +305,50 @@ class PrinterHoming:
         elif config.has_section('bltouch'):
             self.probe_type = "bltouch"
         self.z_move = 0
+
+    @staticmethod
+    def _scanner_mcu_is_disconnected(scanner):
+        if scanner is None:
+            return False
+
+        try:
+            mcu = getattr(scanner, 'mcu', None)
+            if mcu is not None:
+                # Current Cartographer interface.
+                is_disconnected = getattr(mcu, 'is_disconnected', None)
+                if callable(is_disconnected):
+                    return bool(is_disconnected())
+
+                # Older Cartographer MCU wrapper interface.
+                legacy_check = getattr(
+                    mcu, '_check_mcu_disconnected', None)
+                if callable(legacy_check):
+                    return bool(legacy_check())
+
+                host_mcu = getattr(mcu, 'klipper_mcu', None)
+                if host_mcu is None:
+                    host_mcu = getattr(mcu, 'host_mcu', None)
+                if host_mcu is not None:
+                    return bool(getattr(
+                        host_mcu, 'non_critical_disconnected', False))
+
+                if hasattr(mcu, 'non_critical_disconnected'):
+                    return bool(mcu.non_critical_disconnected)
+
+            # Retain compatibility with the oldest scanner object layout.
+            legacy_check = getattr(
+                scanner, '_check_mcu_disconnected', None)
+            if callable(legacy_check):
+                return bool(legacy_check())
+        except Exception:
+            logging.exception(
+                'Unable to read Cartographer MCU state before Z homing')
+            return True
+
+        # A loaded Cartographer object with no known connection interface is
+        # unsafe for a move toward the bed.
+        return True
+
     def _check_scanner_connected(self):
         """Check if scanner MCU is connected before Z homing with scanner.
         
@@ -312,11 +356,25 @@ class PrinterHoming:
         leveling to complete first, preserving that work even if scanner is disconnected.
         """
         scanner = self.printer.lookup_object('cartographer', None)
-        if scanner is not None:
-            if hasattr(scanner, '_check_mcu_disconnected') and scanner._check_mcu_disconnected():
-                raise self.printer.command_error(
-                    "Scanner MCU is disconnected - cannot complete Z homing. "
-                    "Photoelectric leveling is preserved. Reconnect scanner and retry G28 Z.")
+        if self._scanner_mcu_is_disconnected(scanner):
+            raise self.printer.command_error(
+                "Scanner MCU is disconnected - cannot complete Z homing. "
+                "Photoelectric leveling is preserved. Reconnect scanner and retry G28 Z.")
+
+    def _check_scanner_model_ready(self):
+        """Reject Cartographer Z homing before motion when no scan model is loaded."""
+        scanner = self.printer.lookup_object('cartographer', None)
+        if scanner is None:
+            return
+
+        # Current Cartographer versions expose model readiness through
+        # scan_mode.is_ready.  Older plugin layouts retain their own homing
+        # guard, so only reject an explicitly unready current interface.
+        scan_mode = getattr(scanner, 'scan_mode', None)
+        if scan_mode is not None and not getattr(scan_mode, 'is_ready', True):
+            raise self.printer.command_error(
+                "Cartographer scan model is not loaded - calibrate or load a "
+                "scan model before G28 Z.")
     def manual_home(self, toolhead, endstops, pos, speed,
                     triggered, check_triggered):
         hmove = HomingMove(self.printer, endstops, toolhead)
@@ -424,7 +482,10 @@ class PrinterHoming:
                                 # Mark photoelectric leveling as done BEFORE scanner check
                                 # This preserves the leveling work even if scanner is disconnected
                                 z_align.is_already_zodwn = True
-                                # Check scanner before kin.home - photoelectric leveling is done
+                                # Photoelectric preparation is complete.  Reject
+                                # scanner-controlled Z homing before it can move
+                                # if firmware validation removed the scan model.
+                                self._check_scanner_model_ready()
                                 self._check_scanner_connected()
                                 kin.home(homing_state)
                                 gcode.respond_info("za1:%s za2:%s z_max:%s"%(self.z_move,homing_state.out_z_all,(self.z_move+homing_state.out_z_all)))
@@ -446,6 +507,7 @@ class PrinterHoming:
                                 # Mark photoelectric leveling as done BEFORE scanner check
                                 z_align.is_already_zodwn = True
                                 # Check scanner before kin.home - photoelectric leveling is done
+                                self._check_scanner_model_ready()
                                 self._check_scanner_connected()
                                 kin.home(homing_state)
                                 gcode.respond_info("za1:%s za2:%s z_max:%s"%(self.z_move,homing_state.out_z_all,(self.z_move+homing_state.out_z_all)))
@@ -454,18 +516,25 @@ class PrinterHoming:
                                     self.write_real_zmax(self.z_move+homing_state.out_z_all)
                                 gcode.run_script_from_command("SET_Z_LIMIT")
                                 continue
+                            # Photoelectric leveling is already complete, so
+                            # fail closed before the stock fast Z10
+                            # pre-positioning move as well as before
+                            # scanner-controlled homing.  Otherwise a second
+                            # G28 Z can move the bed at 30mm/s after the
+                            # Cartographer has disconnected.
+                            self._check_scanner_model_ready()
+                            self._check_scanner_connected()
                             curtime = self.printer.get_reactor().monotonic()
                             gcode_move = self.printer.lookup_object('gcode_move')
                             if 'z' in toolhead.get_status(curtime)['homed_axes'] and z_align.is_already_zodwn==True and \
                               gcode_move.get_status(curtime)['position'][2] > 10:
                                 gcmd = 'G1 F%d Z%.3f' % (30 * 60, 10)
                                 self.run_gcmd(gcmd, wait=True)
-                            # 不做光电找平 - Check scanner before kin.home
-                            self._check_scanner_connected()
                             kin.home(homing_state)
                             gcode.run_script_from_command("SET_Z_LIMIT")
                         else:
                             # Check scanner before kin.home (no z_align section)
+                            self._check_scanner_model_ready()
                             self._check_scanner_connected()
                             kin.home(homing_state)
         except self.printer.command_error as err:

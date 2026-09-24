@@ -13,12 +13,22 @@ Replaces the stock start macro with a temperature-aware workflow that:
 - levels the gantry and prepares the correct bed mesh; and
 - handles either Cartographer or the stock probe path.
 
-On all firmware, the first nozzle-clean releases any nonzero direct case-fan
-request left active before printing on both the stock-probe and Cartographer
-paths. The release is skipped while chamber-temperature control requests
-cooling, and later nozzle cleans and ordinary homing do not repeatedly change
-the fan. This state-based guard has been validated on firmware `1.1.3.13`,
+On all firmware, the `BOX_NOZZLE_CLEAN` wrapper immediately releases any
+nonzero direct case-fan request before entering Creality's native cleaning and
+homing routine. It checks again afterward. `START_PRINT` also checks after
+`BOX_START_PRINT`, then restores the requested temperature-based
+chamber policy. The first nozzle-clean repeats the state-based release in case
+Creality reasserted the direct request; an already-zero request remains a no-op.
+This avoids depending on two Klipper objects that share the physical PA0 fan pin
+to overwrite each other. The guard has been validated on firmware `1.1.3.13`,
 `1.1.5.2`, and `1.1.5.5`.
+
+Creality's heated-bed deformation calibration runs before the G-code file and
+explicitly sends `M141 S30` followed by `M106 P1 S255`. The installed Klippy
+command guard recognizes only that short idle pre-file sequence and suppresses
+the direct case-fan request before it reaches the pin. Other `M106` commands,
+including case-fan changes outside the two-second handoff, continue to use
+Creality's original handler.
 
 On the stock PR Touch path, the installer also guards the first `_HOME_Z` after
 an artificial-coordinate `SAFE_MOVE_Z`. The guard recognizes that recovery

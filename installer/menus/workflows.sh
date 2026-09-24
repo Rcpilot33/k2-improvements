@@ -148,17 +148,17 @@ EOF
   3. Cartographer plate profiles and automatic selection are installed. With
      the correct plate on the bed, first press exactly one selector in Fluidd:
 
-       A11 Default / fallback
-       A12 Textured PEI Plate
-       A13 Epoxy Resin Plate
-       A14 Smooth PEI / High Temp Plate
-       A15 Customized Plate
+       DEFAULT       - Default / fallback
+       TEXTURED_PEI  - Textured PEI Plate
+       EPOXY         - Epoxy Resin Plate
+       HIGH_TEMP     - Smooth PEI / High Temp Plate
+       CUSTOM        - Customized Plate
 
      Then press the required shared action:
 
-       A21 Calibrate selected Scan model
-       A22 Calibrate selected Touch model
-       A23 Load selected Scan + Touch models
+       CARTO_SCAN_CALIBRATE  - Calibrate selected Scan model
+       CARTO_TOUCH_CALIBRATE - Calibrate selected Touch model
+       CARTO_LOAD            - Load selected Scan + Touch models
 
      Selection alone does not load a model. After calibration, run:
 
@@ -176,8 +176,14 @@ EOF
 EOF
         else
             cat <<'EOF'
-  3. Default Cartographer calibration controls are installed. Use A11 to
-     select the default profile, then A21/A22/A23 to calibrate or load it.
+  3. In Fluidd's "Cartographer Calibration" group, press DEFAULT to select
+     the default profile. Then use the required button:
+
+       CARTO_SCAN_CALIBRATE  - Calibrate the selected Scan model
+       CARTO_TOUCH_CALIBRATE - Calibrate the selected Touch model
+       CARTO_LOAD            - Load existing selected Scan + Touch models
+
+     Selection alone does not load a model.
      Optional named plate selectors and automatic slicer selection are not
      installed. Enable "Cartographer plate workflow" from Extras to reveal
      those selectors and install the slicer wrapper.
@@ -185,8 +191,9 @@ EOF
         fi
         cat <<'EOF'
   4. Until then, follow the standard Cartographer calibration workflow for the
-     active default plate with A11 and the shared actions; slicer plate
-     selection will not switch models.
+     active default plate: DEFAULT, CARTO_SCAN_CALIBRATE, and
+     CARTO_TOUCH_CALIBRATE. Use CARTO_LOAD for existing calibrated models.
+     Slicer plate selection will not switch models.
 EOF
     fi
     cat <<'EOF'

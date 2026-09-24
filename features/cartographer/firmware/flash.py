@@ -16,6 +16,7 @@ import struct
 import argparse
 import hashlib
 import pathlib
+import re
 import subprocess
 import time
 from typing import Optional, Union
@@ -500,6 +501,47 @@ def _print_unsupported_device(detected_mcu: Optional[str] = None):
     console.print("  [cyan]•[/cyan] Cartographer V3 / Survey (STM32F042)")
     console.print()
 
+V3_610_CHECKSUMS = {
+    "CartographerV3_6.1.0_USB_full_8kib_offset.bin":
+        "450f618396c837932c83b403a76d1bd912c04af68fdb543eb9fc11f1257847b4",
+    "CartographerV3_6.1.0_USB_lite_8kib_offset.bin":
+        "461cd887cf31aecc0d7ec959d99b6df3901b43e8ad6e326a9a58064a6ca3e262",
+}
+
+V4_620_CHECKSUMS = {
+    "CartographerV4_6.2.0_USB_full_8kib_offset.bin":
+        "b0c059dc063ff0f6ae0a4bdaa284073598647c27082d0106771f1a5cf9caf383",
+    "CartographerV4_6.2.0_USB_lite_8kib_offset.bin":
+        "45d4e6f8b520ecb5412fadb358e15974012e6b9935236bfe612af1bf63a532c4",
+}
+
+
+def format_firmware_label(version: str) -> str:
+    """Make the firmware's implicit Full/Lite variant explicit in the UI."""
+    label = version.strip()
+    if re.search(r"\blite$", label, re.IGNORECASE):
+        return re.sub(r"\s+lite$", "", label, flags=re.IGNORECASE) + " (Lite)"
+    if re.search(r"\bcartographer\b", label, re.IGNORECASE):
+        return label + " (Full)"
+    return label
+
+
+def v4_620_plugin_supported() -> bool:
+    """Fail closed unless the managed plugin has the audited 1.6 divisor code.
+
+    Check source without importing printer modules or trusting the fork's
+    legacy 1.5 version label. Future changes require a fresh compatibility audit.
+    """
+    source = pathlib.Path.home() / "cartographer3d-plugin/src/cartographer/mcu/constants.py"
+    try:
+        data = source.read_bytes().replace(b"\r\n", b"\n")
+    except OSError:
+        return False
+    return hashlib.sha256(data).hexdigest() == (
+        "5d413961b8daa0ae14ed2dbc78688d01c8e5f9421a0b44608c1cc5d1cc47bea1"
+    )
+
+
 def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) -> Optional[pathlib.Path]:
     """Display firmware selection menu."""
     script_dir = pathlib.Path(__file__).parent.resolve()
@@ -509,21 +551,29 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
         device_name = "Cartographer V4"
         device_chip = "STM32G431"
         options = [
-            ("1", "V4 6.0.0 Full", "Recommended for K2 (2x sampling rate)",
-             script_dir / "firmware" / "CartographerV4_6.0.0_USB_full_8kib_offset.bin"),
-            ("2", "V4 6.0.0 Lite", "Fallback for timing issues / conservative setup",
-             script_dir / "firmware" / "CartographerV4_6.0.0_USB_lite_8kib_offset.bin"),
+            ("1", "V4 6.2.0 Full", "Recommended for K2 (2x sampling rate); recalibrate",
+             script_dir / "firmware" / "CartographerV4_6.2.0_USB_full_8kib_offset.bin"),
+            ("2", "V4 6.2.0 Lite", "Current conservative option; recalibrate",
+             script_dir / "firmware" / "CartographerV4_6.2.0_USB_lite_8kib_offset.bin"),
             ("3", "Abort", "Exit bootloader mode", None),
+            ("4", "V4 6.0.0 Full", "Legacy rollback (2x sampling rate); recalibrate",
+             script_dir / "firmware" / "CartographerV4_6.0.0_USB_full_8kib_offset.bin"),
+            ("5", "V4 6.0.0 Lite", "Legacy conservative rollback; recalibrate",
+             script_dir / "firmware" / "CartographerV4_6.0.0_USB_lite_8kib_offset.bin"),
         ]
     elif mcu == "stm32f042x6":
         device_name = "Cartographer V3 / Survey"
         device_chip = "STM32F042"
         options = [
-            ("1", "5.1.0 (Full)", "Recommended for K2 (2x sampling rate)",
-             script_dir / "firmware" / "Survey_Cartographer_USB_8kib_offset.bin"),
-            ("2", "K1 5.1.0 (Lite)", "Fallback for timing issues / conservative setup",
-             script_dir / "firmware" / "Survey_Cartographer_K1_USB_8kib_offset.bin"),
+            ("1", "V3 6.1.0 Full", "Recommended for K2 (2x sampling rate); recalibrate",
+             script_dir / "firmware" / "CartographerV3_6.1.0_USB_full_8kib_offset.bin"),
+            ("2", "V3 6.1.0 Lite", "Current conservative option; recalibrate",
+             script_dir / "firmware" / "CartographerV3_6.1.0_USB_lite_8kib_offset.bin"),
             ("3", "Abort", "Exit bootloader mode", None),
+            ("4", "V3 5.1.0 Full", "Legacy rollback (2x sampling rate); recalibrate",
+             script_dir / "firmware" / "Survey_Cartographer_USB_8kib_offset.bin"),
+            ("5", "V3 5.1.0 Lite", "Legacy conservative rollback; recalibrate",
+             script_dir / "firmware" / "Survey_Cartographer_K1_USB_8kib_offset.bin"),
         ]
     else:
         _print_unsupported_device(mcu)
@@ -538,7 +588,7 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
     if fw_version:
         info_text.append("\n")
         info_text.append("Current Firmware: ", style="dim")
-        info_text.append(fw_version, style="bold")
+        info_text.append(format_firmware_label(fw_version), style="bold")
     
     console.print()
     console.print(Panel(info_text, title="[bold]Connected[/bold]", border_style="green", padding=(0, 1)))
@@ -557,15 +607,14 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
     console.print(table)
     
     # Get default option name (strip Rich markup)
-    import re
     default_name = re.sub(r'\[/?[^\]]+\]', '', options[0][1])
     
     # Two-part beginner-friendly prompt
     console.print()
     console.print(f"[dim]Default:[/dim] [bold]{default_name}[/bold]", highlight=False)
     choice = Prompt.ask(
-        "Press Enter to flash default, or type 2 or 3 then Enter",
-        choices=["", "1", "2", "3"],
+        "Press Enter to flash default, or type a listed option then Enter",
+        choices=[""] + [option[0] for option in options],
         default="",
         show_choices=False,
         show_default=False
@@ -583,6 +632,14 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
             if not path.is_file():
                 console.print(f"[red]✗[/red] Firmware not found: [yellow]{path.name}[/yellow]")
                 return None
+            if path.name in V4_620_CHECKSUMS and not v4_620_plugin_supported():
+                console.print("[red]V4 6.2 requires the audited sensor-frequency support. "
+                              "Refresh the K2 Cartographer plugin before flashing.[/red]")
+                return None
+            expected = V3_610_CHECKSUMS.get(path.name) or V4_620_CHECKSUMS.get(path.name)
+            if expected and hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+                console.print("[red]Firmware checksum mismatch; refusing to flash.[/red]")
+                return None
             clean_name = re.sub(r'\[/?[^\]]+\]', '', name)
             console.print(f"[green]✓[/green] Selected: [bold]{clean_name}[/bold]")
             return path
@@ -599,17 +656,17 @@ def scan_flash_for_version(flasher, mcu_type: str = ""):
     Quick check for Klipper data dictionary at known offsets.
     
     Offsets are ordered by MCU type for faster detection:
-    - V3 (stm32f042x6): 0x4C50 first
-    - V4 (stm32g431xx): 0x5B98 (6.0.0) first, then 0x5B38 (5.1)
+    - V3 (stm32f042x6): 6.1.0 Full/Lite, then 5.1.0
+    - V4 (stm32g431xx): 0x7174 (6.2.0), 0x5B98 (6.0.0), then 0x5B38 (5.1)
     """
     import zlib
     import json
     
     # Order offsets by MCU type for faster detection
     if mcu_type == "stm32f042x6":  # V3
-        offsets = [0x4C50, 0x5B98, 0x5B38]
+        offsets = [0x44F4, 0x4504, 0x4C50, 0x5B98, 0x5B38]
     elif mcu_type == "stm32g431xx":  # V4
-        offsets = [0x5B98, 0x5B38, 0x4C50]  # Try 6.0.0 first, then 5.1
+        offsets = [0x7174, 0x5B98, 0x5B38, 0x4C50]  # 6.2, 6.0, then 5.1
     else:
         offsets = [0x5B98, 0x5B38, 0x4C50]  # Default: newest first
     
@@ -825,7 +882,10 @@ def _main_inner(args):
             flasher.finish()
             console.print("[green]✓[/green] Device returned to normal mode")
             wait_for_exit()
-            return 0
+            # Let the installer distinguish a clean cancellation from a
+            # completed flash.  A cancelled flash must not trigger the
+            # protected firmware restart used to load newly flashed code.
+            return 2
         
         if not fw_path:
             return 1

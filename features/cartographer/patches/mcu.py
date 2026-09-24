@@ -794,6 +794,10 @@ class MCU:
             self.reset_to_initial_state()
             self.non_critical_disconnected = False
             self._get_status_info['non_critical_disconnected'] = False
+            # Sensors need identified constants and live queries before ADC
+            # configuration is built. Do not announce a completed reconnect yet.
+            self._printer.send_event(
+                "non_critical_mcu_%s:identified" % self._name)
             self._connect()
             self._gcode.respond_info(
                 "mcu: '%s' reconnected, loading models..." % (self._name,))
@@ -1160,7 +1164,8 @@ class MCU:
         self._serial.disconnect()
         self._steppersync = None
     def _shutdown(self, force=False):
-        if (self._emergency_stop_cmd is None
+        if (self.non_critical_disconnected
+            or self._emergency_stop_cmd is None
             or (self._is_shutdown and not force)):
             return
         self._emergency_stop_cmd.send()

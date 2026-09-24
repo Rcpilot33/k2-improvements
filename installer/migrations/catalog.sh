@@ -4,6 +4,18 @@
 
 migration_catalog() {
     cat <<'EOF'
+cartographer-z-rehome-preposition-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a disconnected Cartographer blocks the fast Z10 pre-positioning move on repeated Z homing
+cartographer-scan-model-homing-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a missing Cartographer scan model stops scanner-controlled Z homing before motion
+cartographer-mesh-defaults-override-v1|cartographer|is_cartographer|Set durable Cartographer defaults to a 150 mm/s, one-run spiral mesh for reliable Full and Lite sampling
+cartographer-optional-kamp-order-v2|cartographer|is_cartographer|Keep optional KAMP settings after core M191 settings without creating KAMP settings on printers where the extra is absent
+cartographer-fluidd-namespace-bootstrap-v1|cartographer|is_cartographer|Create the Fluidd database namespace when a wiped printer has not initialized it before Cartographer macro layout setup
+cartographer-current-mcu-api-v1|cartographer|is_cartographer|Refresh SAFE_MOVE_Z and Z-homing connection checks for the current Cartographer MCU interface, then reload through the protected restart
+cartographer-safe-move-trigger-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer so an unexpected SAFE_MOVE_Z trigger finalizes the K2 motor stop before disarming probe homing, then reload through the protected restart
+cartographer-active-disconnect-cleanup-v1|cartographer|is_cartographer|Refresh Cartographer active-probe disconnect cleanup and mesh abort checkpoints, then reload through the protected restart
+cartographer-integration-review-v1|cartographer|is_cartographer|Refresh Cartographer integration warning cleanup and branch discovery, then reload through the protected restart
+cartographer-plugin-runtime-artifacts-v2|cartographer|is_cartographer|Migrate the Cartographer plugin checkout while preserving harmless untracked runtime bytecode and operator files
+cartographer-plugin-main-promotion-v1|cartographer|is_cartographer|Migrate the Cartographer plugin checkout from the integration branch to released main, then reload through the protected restart
+cartographer-fluidd-post-restart-layout-v2|cartographer|is_cartographer|Reapply and verify persistent Cartographer Fluidd grouping after the upgraded macros are active
 main-451901d-cartographer-temperatures|cartographer|is_cartographer|Cartographer touch-home temperature diagnostics changed
 main-eb60d34-cartographer-touch-defaults|cartographer|is_cartographer|Cartographer touch calibration defaults changed
 main-7fb13f9-touchscreen-offset|cartographer|is_cartographer|Cartographer touchscreen Z-offset compatibility was added
@@ -18,6 +30,7 @@ main-safe-z-carto-retreat-v1|cartographer|is_cartographer|Artificial-Z Cartograp
 main-safe-z-backup-retreat-v1|cartographer|is_cartographer|Artificial-Z backup stops now retreat and report completion without waiting for a timeout
 main-safe-z-completion-ack-v1|cartographer|is_cartographer|Artificial-Z recovery now acknowledges the requested move without a second nozzle approach
 main-safe-z-clearance-target-v1|cartographer|is_cartographer|Artificial-Z recovery now stops directly at guarded Z30 when Cartographer does not trigger
+cartographer-reconnect-temperature-v1|cartographer|is_cartographer|Initialize MCU temperature sampling before configuring a probe connected after startup
 main-99f5328-save-config|save-config-restart|is_save_config_restart|SAVE_CONFIG firmware-restart behavior changed
 main-611cde3-save-config-guard|save-config-restart|is_save_config_restart|SAVE_CONFIG protection was expanded to every install path
 main-4b6aa14-abort-restart|abort_homing|is_abort_homing|Abort Homing installation restart handling changed
@@ -49,6 +62,8 @@ main-b0c7efe-plate-aware-v2|plate-aware-mesh|is_plate_aware_mesh|Plate-aware mes
 updater-kamp-interactive-refresh-v1|kamp-adaptive-purge|is_kamp|KAMP updates now offer settings and firmware-retraction questions before the shared protected restart
 main-m191-chamber-circulation-v1|macros|is_macros|M191 now lowers the bed, circulates chamber air, and waits for the original bed temperature after assisted heating
 main-m191-cleanup-response-v1|macros|is_macros|M191 assisted-heating cleanup messages were corrected for the K2 command parser
+macros-fluidd-namespace-bootstrap-v1|macros|is_macros|Create the Fluidd database namespace when a wiped printer has not initialized it before Bed Assist layout setup
+macros-fluidd-post-restart-layout-v2|macros|is_macros|Reapply and verify persistent Bed Assist Fluidd grouping after the upgraded macros are active
 installer-protected-motor-ready-v1|save-config-restart|is_save_config_restart|Installer code reload now requires K2 motor readiness before one firmware reset
 save-config-stock-then-firmware-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG now completes its stock restart before one guarded firmware reset
 save-config-stock-restart-v1|save-config-restart|is_save_config_restart|SAVE_CONFIG restored to its stock host restart with no wrapper or firmware reset
@@ -71,13 +86,19 @@ cartographer-fluidd-layout-v1|cartographer-plate-workflow|is_carto_plate_workflo
 cartographer-fluidd-colors-v1|cartographer-plate-workflow|is_carto_plate_workflow|Cartographer plate macro actions now receive default Fluidd colors
 cartographer-fluidd-rgb-colors-v2|cartographer-plate-workflow|is_carto_plate_workflow|Cartographer plate macro colors now use Fluidd-compatible RGB values
 cartographer-fluidd-orange-calibration-v3|cartographer-plate-workflow|is_carto_plate_workflow|Cartographer calibration macro accents now use orange for clearer visual separation
+cartographer-plate-fluidd-post-restart-layout-v2|cartographer-plate-workflow|is_carto_plate_workflow|Reapply and verify named Cartographer selector visibility after the upgraded macros are active
 cartographer-global-z-optional-v2|cartographer-plate-workflow|is_carto_plate_workflow|The global Touch-offset editor is now a separate optional feature
 global-touch-offsets-live-editor-v1|global-touch-offsets|is_global_touch_offsets|The optional global Touch-offset editor uses a live Fluidd control and saves without SAVE_CONFIG
 global-touch-offsets-camera-resolver-v2|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets restores Creality camera support
 global-touch-offsets-category-v3|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets moves its macro into the Z Offsets category
 global-touch-offsets-shared-ui-v4|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets now shares one safe Fluidd overlay with the material editor
+global-touch-offsets-fluidd-namespace-bootstrap-v1|global-touch-offsets|is_global_touch_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Global Touch Offset layout setup
+global-touch-offsets-fluidd-post-restart-layout-v2|global-touch-offsets|is_global_touch_offsets|Reapply and verify persistent Global Carto Touch Fluidd grouping after the upgraded macros are active
 material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor and automatic material registration are available
 material-z-offsets-start-print-bridge-v2|material-z-offsets|is_material_z_offsets|Material Z Offsets now refreshes and verifies its START_PRINT handoff
+material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets|Newly discovered materials now start with a zero Z offset instead of inheriting the former 0.050 mm seed
+material-z-offsets-fluidd-namespace-bootstrap-v1|material-z-offsets|is_material_z_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Material Z Offset layout setup
+material-z-offsets-fluidd-post-restart-layout-v2|material-z-offsets|is_material_z_offsets|Reapply and verify persistent Material Z Offset Fluidd grouping after the upgraded macros are active
 macros-preserve-carto-surface-wrapper-v1|macros|is_macros|Macro repairs now preserve an installed Cartographer surface-selection wrapper
 case-fan-runtime-state-v2|macros|is_macros|The guarded pre-print case-fan release now applies independently of firmware version
 case-fan-any-direct-request-v3|macros|is_macros|Pre-print now releases any nonzero direct case-fan request while preserving chamber cooling
@@ -92,6 +113,8 @@ cartographer-prtouch-cold-boot-registration-v1|cartographer|is_cartographer|Cart
 cartographer-prtouch-config-finalization-v2|cartographer|is_cartographer|Cartographer now restores PR Touch preparation compatibility before Klipper exposes its finalized configuration
 case-fan-preparation-target-v4|macros|is_macros|Pre-print now releases Creality's direct case-fan request and restores the requested chamber-fan target
 chamber-fan-start-print-target-v5|macros|is_macros|START_PRINT now restores the chamber-fan ceiling as soon as the requested chamber temperature is known
+case-fan-immediate-start-release-v5|macros|is_macros|START_PRINT now explicitly releases Creality's direct case-fan request immediately after BOX_START_PRINT and rechecks it after nozzle cleaning
+case-fan-pre-file-release-v6|macros|is_macros|Creality's pre-file case-fan request is now released before native nozzle-clean homing begins
 prtouch-safe-xy-clearance-v1|macros|is_macros|Stock PR Touch now establishes Z30 clearance before the post-recovery XY homing move
 prtouch-safe-xy-one-shot-v2|macros|is_macros|Stock PR Touch Z30 clearance now runs only on the first Z home after SAFE_MOVE_Z
 prtouch-safe-xy-artificial-gate-v3|macros|is_macros|Stock PR Touch Z30 clearance now runs only after artificial-coordinate SAFE_MOVE_Z recovery
@@ -101,5 +124,8 @@ m141-print-target-preserve-v1|macros|is_macros|Layer-time chamber commands now p
 m141-command-interceptor-v2|macros|is_macros|The chamber-fan target guard now wraps Creality's macro through a compatible Klippy command interceptor
 m191-circulation-cycle-v3|macros|is_macros|Bed assist now cycles low and high circulation speeds, actively cools the restored bed, and heat soaks at final print temperatures
 m191-chamber-temperature-report-v1|macros|is_macros|M191 waits now report the exact chamber temperature and requested target
+case-fan-deformation-preflight-v7|macros|is_macros|Heated-bed deformation calibration no longer leaves Creality's direct pre-file case-fan request active
+case-fan-inherited-output-clear-v8|macros|is_macros|Heated-bed deformation preflight now also clears case-fan output inherited from an already-active chamber controller
+case-fan-restore-preflight-target-v9|macros|is_macros|Heated-bed deformation preflight now restores the prior chamber-fan target before clearing the shared fan output
 EOF
 }

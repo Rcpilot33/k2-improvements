@@ -140,6 +140,52 @@ class GuardedMoveOutcomeTests(unittest.TestCase):
         self.assertEqual(guarded_target, requested_target)
 
 
+class McuCompatibilityTests(unittest.TestCase):
+    class HostMcu:
+        def __init__(self, disconnected=False):
+            self.non_critical_disconnected = disconnected
+
+    class CurrentMcu:
+        def __init__(self, disconnected=False):
+            self.host_mcu = McuCompatibilityTests.HostMcu()
+            self.disconnected = disconnected
+
+        def is_disconnected(self):
+            return self.disconnected
+
+    class LegacyMcu:
+        def __init__(self, disconnected=False):
+            self.klipper_mcu = McuCompatibilityTests.HostMcu(disconnected)
+
+    class HostMcuFallback:
+        def __init__(self, disconnected=False):
+            self.host_mcu = McuCompatibilityTests.HostMcu(disconnected)
+
+    def test_current_mcu_api_accepts_connected_sensor(self):
+        mcu = self.CurrentMcu(False)
+        self.assertFalse(MODULE.K2SafeMoveZ._is_mcu_disconnected(mcu))
+
+    def test_current_mcu_api_rejects_disconnected_sensor(self):
+        mcu = self.CurrentMcu(True)
+        self.assertTrue(MODULE.K2SafeMoveZ._is_mcu_disconnected(mcu))
+
+    def test_legacy_mcu_api_remains_supported(self):
+        self.assertFalse(MODULE.K2SafeMoveZ._is_mcu_disconnected(
+            self.LegacyMcu(False)))
+        self.assertTrue(MODULE.K2SafeMoveZ._is_mcu_disconnected(
+            self.LegacyMcu(True)))
+
+    def test_host_mcu_fallback_is_supported(self):
+        self.assertFalse(MODULE.K2SafeMoveZ._is_mcu_disconnected(
+            self.HostMcuFallback(False)))
+        self.assertTrue(MODULE.K2SafeMoveZ._is_mcu_disconnected(
+            self.HostMcuFallback(True)))
+
+    def test_missing_or_unknown_mcu_fails_closed(self):
+        self.assertTrue(MODULE.K2SafeMoveZ._is_mcu_disconnected(None))
+        self.assertTrue(MODULE.K2SafeMoveZ._is_mcu_disconnected(object()))
+
+
 class SafeMoveCommandTests(unittest.TestCase):
     def make_safe_move(self, start_z, recorded_z, stopped_z, triggered):
         toolhead = FakeToolhead(start_z, recorded_z)

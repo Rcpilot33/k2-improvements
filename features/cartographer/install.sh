@@ -13,14 +13,8 @@ fi
 
 cd ${HOME}
 
-# clone cartographer plugin
-if [ ! -d cartographer3d-plugin/.git ]; then
-    echo "I: cloning cartographer plugin"
-    if [ -d cartographer3d-plugin ]; then
-        rm -rf cartographer3d-plugin
-    fi
-    git clone https://github.com/Jacob10383/cartographer3d-plugin.git
-fi
+# Install or safely migrate the plugin to the update-manager source.
+sh "${SCRIPT_DIR}/install_plugin.sh" "${HOME}/cartographer3d-plugin"
 
 echo "I: installing python dependencies"
 ~/klippy-env/bin/pip install --disable-pip-version-check typing_extensions
@@ -73,12 +67,12 @@ python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
 sh "${SCRIPT_DIR}/install_prtouch_version_compat.sh" --no-restart
 
 # A conversion from the no-Cartographer path already has the shared
-# overrides.cfg. Add the Cartographer-only touch default without replacing
-# any existing user value. On a direct install, the macros installer repeats
-# this after it creates overrides.cfg.
+# overrides.cfg. Add and organize the Cartographer-only settings without
+# replacing existing user values. On a direct install, the macros installer
+# repeats this after it creates overrides.cfg.
 python3 "${SCRIPT_DIR}/../macros/overrides/cleanup_managed_overrides.py" \
     ~/printer_data/config/custom/overrides.cfg
-sh "${SCRIPT_DIR}/../macros/overrides/enable_cartographer_touch.sh" \
+python3 "${SCRIPT_DIR}/../macros/overrides/ensure_cartographer_overrides.py" \
     ~/printer_data/config/custom/overrides.cfg
 
 if [ "$CARTOGRAPHER_WAS_CONFIGURED" -eq 0 ]; then

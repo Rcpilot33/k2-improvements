@@ -74,6 +74,22 @@ class CorePatchSafetyTests(unittest.TestCase):
         )
         self.assertIn("if i >= 50 and truncate:", source)
 
+    def test_disconnected_scanner_blocks_fast_z_rehome_preposition(self):
+        source = (PATCHES / "homing.py").read_text(encoding="utf-8")
+        branch_start = source.index(
+            "# Photoelectric leveling is already complete"
+        )
+        branch_end = source.index("kin.home(homing_state)", branch_start)
+        branch = source[branch_start:branch_end]
+        fast_move = branch.index("gcmd = 'G1 F%d Z%.3f'")
+
+        self.assertLess(
+            branch.index("self._check_scanner_model_ready()"), fast_move
+        )
+        self.assertLess(
+            branch.index("self._check_scanner_connected()"), fast_move
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

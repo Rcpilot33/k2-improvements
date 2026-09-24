@@ -75,6 +75,34 @@ class K2SafeMoveZ:
             <= self.ARTIFICIAL_TARGET_TOLERANCE
             and start_z - recorded_z >= self.ARTIFICIAL_REFERENCE_GAP)
 
+    @staticmethod
+    def _is_mcu_disconnected(mcu):
+        if mcu is None:
+            return True
+
+        try:
+            # The current Cartographer API owns the connection check and
+            # exposes the underlying Klipper MCU as host_mcu.
+            is_disconnected = getattr(mcu, 'is_disconnected', None)
+            if callable(is_disconnected):
+                return bool(is_disconnected())
+
+            # Retain compatibility with Jacob's older plugin layout, where
+            # Cartographer exposed the Klipper MCU directly under this name.
+            host_mcu = getattr(mcu, 'klipper_mcu', None)
+            if host_mcu is None:
+                host_mcu = getattr(mcu, 'host_mcu', None)
+            if host_mcu is None:
+                return True
+            return bool(getattr(
+                host_mcu, 'non_critical_disconnected', False))
+        except Exception:
+            # SAFE_MOVE_Z moves the bed toward the nozzle.  An unreadable MCU
+            # state must therefore fail closed instead of permitting motion.
+            logging.exception(
+                '[SAFE_MOVE_Z] Unable to read Cartographer MCU state')
+            return True
+
     def _get_scan_endstop(self, gcmd):
         cartographer = self.printer.lookup_object('cartographer', None)
         scan_mode = getattr(cartographer, 'scan_mode', None)
@@ -82,17 +110,15 @@ class K2SafeMoveZ:
             raise gcmd.error(
                 '[SAFE_MOVE_Z] Cartographer scan model is not ready')
 
-        klipper_mcu = getattr(getattr(cartographer, 'mcu', None),
-                              'klipper_mcu', None)
-        if (klipper_mcu is None
-                or getattr(klipper_mcu, 'non_critical_disconnected', False)):
+        mcu = getattr(cartographer, 'mcu', None)
+        if self._is_mcu_disconnected(mcu):
             raise gcmd.error(
                 '[SAFE_MOVE_Z] Cartographer MCU is disconnected')
 
         # Delay the plugin import until the [cartographer] object has loaded
         # its source tree into sys.path.
         from cartographer.adapters.klipper.endstop import KlipperEndstop
-        return KlipperEndstop(cartographer.mcu, scan_mode)
+        return KlipperEndstop(mcu, scan_mode)
 
     def _guarded_move(self, gcmd, toolhead, target_z, speed):
         # This is deliberately an optional-endstop move.  A normal

@@ -40,13 +40,13 @@ class PrinterTemperatureMCU:
             return
         self.printer.register_event_handler("klippy:mcu_identify",
                                             self._mcu_identify)
-        # Register for non-critical MCU reconnect to complete init if skipped
+        # Complete skipped sensor setup before reconnect builds MCU config.
         mcu = self.mcu_adc.get_mcu()
         if hasattr(mcu, 'is_non_critical') and mcu.is_non_critical:
             mcu_name = mcu.get_name()
-            reconnect_event = "non_critical_mcu_%s:reconnected" % mcu_name
+            reconnect_event = "non_critical_mcu_%s:identified" % mcu_name
             self.printer.register_event_handler(
-                reconnect_event, self._mcu_identify_on_reconnect)
+                reconnect_event, self._mcu_identify)
     def setup_callback(self, temperature_callback):
         self.temperature_callback = temperature_callback
     def get_report_time_delta(self):
@@ -61,22 +61,13 @@ class PrinterTemperatureMCU:
         return (temp - self.base_temperature) / self.slope
     def calc_base(self, temp, adc):
         return temp - adc * self.slope
-    def _mcu_identify_on_reconnect(self):
-        try:
-            self._mcu_identify()
-        except Exception:
-            mcu = self.mcu_adc.get_mcu()
-            mcu_name = mcu.get_name() if hasattr(mcu, 'get_name') else 'unknown'
-            logging.exception(
-                "temperature_mcu: reconnect initialization failed for %s",
-                mcu_name)
     def _mcu_identify(self):
         # Obtain mcu information
         mcu = self.mcu_adc.get_mcu()
         # Skip initialization if this is a non-critical MCU that is disconnected
         if hasattr(mcu, 'is_non_critical') and mcu.is_non_critical:
             if hasattr(mcu, 'non_critical_disconnected') and mcu.non_critical_disconnected:
-                logging.info("temperature_mcu: Skipping %s - non-critical MCU disconnected", 
+                logging.info("temperature_mcu: Skipping %s - non-critical MCU disconnected",
                              mcu.get_name())
                 return
         self.debug_read_cmd = mcu.lookup_query_command(

@@ -92,6 +92,11 @@ def merge_layout(namespace, show_plate_selectors=False):
         category_id = str(category["id"])
 
     valid_category_ids = {str(item.get("id")) for item in categories if item.get("id")}
+    category_names_by_id = {
+        str(item.get("id")): str(item.get("name", "")).casefold()
+        for item in categories
+        if item.get("id")
+    }
     by_name = {
         str(item.get("name", "")).casefold(): index
         for index, item in enumerate(stored)
@@ -125,7 +130,11 @@ def merge_layout(namespace, show_plate_selectors=False):
         if is_plate_selector:
             item["visible"] = show_plate_selectors
         current_category = str(item.get("categoryId", "0"))
-        if current_category == "0" or current_category not in valid_category_ids:
+        if (
+            current_category == "0"
+            or current_category not in valid_category_ids
+            or category_names_by_id.get(current_category) == "uncategorized"
+        ):
             item["categoryId"] = category_id
 
     macros["categories"] = categories
@@ -145,7 +154,7 @@ def _result_value(payload):
     return response["value"]
 
 
-def _request_json(url, method="GET", body=None):
+def _request_json(url, method="GET", body=None, allow_missing=False):
     data = None
     headers = {"Accept": "application/json"}
     if body is not None:
@@ -155,6 +164,10 @@ def _request_json(url, method="GET", body=None):
     try:
         with urllib.request.urlopen(request, timeout=10) as response:
             return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if allow_missing and method == "GET" and exc.code == 404:
+            return None
+        raise LayoutError(str(exc))
     except (urllib.error.URLError, ValueError) as exc:
         raise LayoutError(str(exc))
 
@@ -162,8 +175,13 @@ def _request_json(url, method="GET", body=None):
 def configure(api_url, show_plate_selectors=False):
     api_url = api_url.rstrip("/")
     query = urllib.parse.urlencode({"namespace": "fluidd"})
-    payload = _request_json("{}/server/database/item?{}".format(api_url, query))
-    namespace = _result_value(payload)
+    payload = _request_json(
+        "{}/server/database/item?{}".format(api_url, query), allow_missing=True
+    )
+    # A wiped printer may not have launched Fluidd far enough to create its
+    # database namespace. Moonraker creates a missing client namespace when
+    # the first keyed item is posted, so seed the layout from an empty object.
+    namespace = {} if payload is None else _result_value(payload)
     updated = merge_layout(namespace, show_plate_selectors=show_plate_selectors)
 
     if updated == namespace:
