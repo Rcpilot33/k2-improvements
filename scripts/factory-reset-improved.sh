@@ -7,6 +7,17 @@ set -eu
 
 MODE="${1:-}"
 UDISK_ROOT=/mnt/UDISK
+CLEANUP_FAILURES=0
+
+remove_path() {
+    rm -rf -- "$1"
+}
+
+record_cleanup_failure() {
+    CLEANUP_FAILURES=$((CLEANUP_FAILURES + 1))
+    echo "W: improved cleanup could not completely remove: $1" >&2
+    echo "W: continuing so Creality's wipe.sock reset can finish recovery." >&2
+}
 
 case "$MODE" in
     --dry-run|--run)
@@ -50,28 +61,13 @@ for DIR in "$UDISK_ROOT"/* "$UDISK_ROOT"/.[!.]* "$UDISK_ROOT"/..?*; do
                 echo "REMOVE: $DIR"
             else
                 echo "Removing: $DIR"
-                if ! rm -rf "$DIR"; then
-                    echo "" >&2
-                    echo "============================================================" >&2
-                    echo "!!! FACTORY RESET FAILED !!!" >&2
-                    echo "============================================================" >&2
-                    echo "Could not completely remove: $DIR" >&2
-                    echo "The Creality wipe.sock reset was NOT started." >&2
-                    echo "Review the removal error above, then retry." >&2
-                    echo "============================================================" >&2
-                    exit 1
+                if ! remove_path "$DIR"; then
+                    record_cleanup_failure "$DIR"
+                    continue
                 fi
 
                 if [ -e "$DIR" ]; then
-                    echo "" >&2
-                    echo "============================================================" >&2
-                    echo "!!! FACTORY RESET FAILED !!!" >&2
-                    echo "============================================================" >&2
-                    echo "Directory still exists after removal: $DIR" >&2
-                    echo "The Creality wipe.sock reset was NOT started." >&2
-                    echo "Review active services or files, then retry." >&2
-                    echo "============================================================" >&2
-                    exit 1
+                    record_cleanup_failure "$DIR"
                 fi
             fi
             ;;
@@ -100,7 +96,9 @@ case "$UPDATER_STATE" in
     /mnt/UDISK/root/.k2-improvements/installer-state/updater)
         if [ -d "$UPDATER_STATE" ]; then
             echo "Clearing installer update-tracker state: $UPDATER_STATE"
-            rm -rf -- "$UPDATER_STATE"
+            if ! remove_path "$UPDATER_STATE" || [ -e "$UPDATER_STATE" ]; then
+                record_cleanup_failure "$UPDATER_STATE"
+            fi
         fi
         ;;
     *)
@@ -108,6 +106,17 @@ case "$UPDATER_STATE" in
         exit 1
         ;;
 esac
+
+if [ "$CLEANUP_FAILURES" -gt 0 ]; then
+    echo "" >&2
+    echo "============================================================" >&2
+    echo "!!! IMPROVED CLEANUP INCOMPLETE !!!" >&2
+    echo "============================================================" >&2
+    echo "$CLEANUP_FAILURES path(s) could not be completely removed." >&2
+    echo "Continuing with the confirmed Creality factory reset." >&2
+    echo "Some third-party files may remain afterward." >&2
+    echo "============================================================" >&2
+fi
 
 echo ""
 echo "Begin factory reset..."
