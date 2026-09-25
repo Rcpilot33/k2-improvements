@@ -21,6 +21,10 @@ SPEED_LINE_RE = re.compile(
 )
 STOCK_PROBE_COUNT = "19,19"
 CARTOGRAPHER_PROBE_COUNT = "50,50"
+LEGACY_MANAGED_SPEED_COMMENTS = (
+    "150 recommended for lite firmware",
+    "lite firmware: 150 recommended",
+)
 
 BED_MESH = "bed_mesh"
 START_PRINT = "gcode_macro _START_PRINT_VARS"
@@ -123,9 +127,14 @@ def _normalize_bed_mesh_presentation(block: str) -> str:
             continue
         speed = SPEED_LINE_RE.match(body)
         if speed:
+            value = speed.group(1)
+            if value == "200" and any(
+                marker in body.casefold() for marker in LEGACY_MANAGED_SPEED_COMMENTS
+            ):
+                value = "150"
             rendered.append(
                 "speed: {:<30} # 200 can be set for Full firmware{}".format(
-                    speed.group(1), newline
+                    value, newline
                 )
             )
             continue

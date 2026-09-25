@@ -196,7 +196,8 @@ class CartographerOverridesTests(unittest.TestCase):
         self.assertTrue(changed)
         self.assertIn("probe_count: 50,50", updated)
         self.assertIn("# Cartographer default: 50,50", updated)
-        self.assertIn("speed: 200", updated)
+        self.assertIn("speed: 150", updated)
+        self.assertNotIn("speed: 200", updated)
         self.assertIn(
             "# 200 can be set for Full firmware",
             updated,
