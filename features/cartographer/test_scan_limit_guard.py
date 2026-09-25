@@ -27,6 +27,14 @@ class FakeGcode:
         self.messages.append(message)
 
 
+class FakeToolhead:
+    def __init__(self):
+        self.recalculated = 0
+
+    def _calc_junction_deviation(self):
+        self.recalculated += 1
+
+
 class FakeConfigFile:
     def get_status(self, _eventtime):
         return {"settings": {"printer": {
@@ -40,10 +48,15 @@ class FakeConfigFile:
 class FakePrinter:
     def __init__(self):
         self.gcode = FakeGcode()
+        self.toolhead = FakeToolhead()
         self.events = {}
 
     def lookup_object(self, name):
-        return self.gcode if name == "gcode" else FakeConfigFile()
+        if name == "gcode":
+            return self.gcode
+        if name == "toolhead":
+            return self.toolhead
+        return FakeConfigFile()
 
     def register_event_handler(self, name, handler):
         self.events[name] = handler
@@ -72,18 +85,19 @@ class ScanLimitGuardTests(unittest.TestCase):
         guard.cmd_guard(FakeCommand(1))
         guard._handle_command_error()
         guard._handle_command_error()
-        self.assertEqual(len(config.printer.gcode.scripts), 1)
-        script = config.printer.gcode.scripts[0]
-        self.assertIn("VELOCITY=500.000000", script)
-        self.assertIn("ACCEL=6000.000000", script)
-        self.assertIn("ACCEL_TO_DECEL=3000.000000", script)
+        toolhead = config.printer.toolhead
+        self.assertEqual(toolhead.max_velocity, 500.0)
+        self.assertEqual(toolhead.square_corner_velocity, 5.0)
+        self.assertEqual(toolhead.max_accel, 6000.0)
+        self.assertEqual(toolhead.max_accel_to_decel, 3000.0)
+        self.assertEqual(toolhead.recalculated, 1)
         self.assertFalse(guard.active)
 
     def test_inactive_errors_do_not_change_limits(self):
         config = FakeConfig()
         guard = MODULE.K2CartographerScanGuard(config)
         guard._handle_command_error()
-        self.assertEqual(config.printer.gcode.scripts, [])
+        self.assertEqual(config.printer.toolhead.recalculated, 0)
 
 
 if __name__ == "__main__":

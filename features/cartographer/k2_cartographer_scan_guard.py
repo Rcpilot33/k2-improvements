@@ -1,5 +1,7 @@
 """Restore safe configured motion limits when a Cartographer mesh aborts."""
 
+import logging
+
 
 class K2CartographerScanGuard:
     def __init__(self, config):
@@ -31,13 +33,16 @@ class K2CartographerScanGuard:
             return
         self.active = False
         velocity, scv, accel, accel_to_decel = self._configured_limits()
-        self.gcode.run_script_from_command(
-            "SET_VELOCITY_LIMIT VELOCITY=%.6f "
-            "SQUARE_CORNER_VELOCITY=%.6f ACCEL=%.6f "
-            "ACCEL_TO_DECEL=%.6f"
-            % (velocity, scv, accel, accel_to_decel)
-        )
-        self.gcode.respond_info(
+        # command_error fires while G-code dispatch is already unwinding. Do
+        # not recursively run SET_VELOCITY_LIMIT from that handler; restore
+        # the same ToolHead fields directly and recalculate junction limits.
+        toolhead = self.printer.lookup_object("toolhead")
+        toolhead.max_velocity = velocity
+        toolhead.square_corner_velocity = scv
+        toolhead.max_accel = accel
+        toolhead.max_accel_to_decel = accel_to_decel
+        toolhead._calc_junction_deviation()
+        logging.warning(
             "Cartographer mesh aborted; restored configured motion limits"
         )
 
