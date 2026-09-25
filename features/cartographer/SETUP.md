@@ -8,10 +8,12 @@ It runs at 2x the sampling rate of K1/lite, so it is generally the better option
 
 K1/lite is still available as a fallback if you see timing issues (for example TRSYNC errors/timeouts), or if you just want a more conservative setup.
 
-The installer writes `speed: 150` under `[bed_mesh]` in the durable
-`custom/overrides.cfg`. This provides reliable sampling with both Full and
-Lite firmware. Full-firmware users may explicitly raise it to `200` when they
-prefer faster scans and have verified adequate sample coverage.
+The installer changes the untouched stock `probe_count: 19,19` to
+`probe_count: 50,50` and writes `speed: 150` under `[bed_mesh]` in the durable
+`custom/overrides.cfg`. These defaults were validated with the supported V3
+and V4 firmware. Full-firmware users may explicitly raise the speed to `200`
+when they prefer faster scans and have verified adequate sample coverage.
+An existing customized probe count or speed is preserved during updates.
 The same Cartographer-only override selects one spiral run by default, avoiding
 the direction-aligned ridges observed with snake scanning on K2 installations.
 Cartographer settings are grouped in `overrides.cfg` with the other settings a

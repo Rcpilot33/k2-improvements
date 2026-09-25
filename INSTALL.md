@@ -247,6 +247,11 @@ The normal flasher:
 Full is recommended for the K2 Plus. Lite is a conservative fallback for
 timing problems.
 
+Cartographer installations use `probe_count: 50,50` and `speed: 150` in
+`custom/overrides.cfg`. Speed `200` can be set when using Full firmware and
+adequate sample coverage has been verified. The no-Cartographer template
+remains `19,19`.
+
 ### Bundled STM32 DFU recovery
 
 Use DFU only when normal USB/Katapult flashing cannot communicate with the

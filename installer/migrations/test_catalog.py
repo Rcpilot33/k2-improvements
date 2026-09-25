@@ -82,6 +82,18 @@ class MigrationCatalogTests(unittest.TestCase):
             {"cartographer"},
         )
 
+    def test_cartographer_mesh_grid_defaults_are_offered_once(self):
+        update_id = "cartographer-mesh-grid-defaults-v2"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+        self.assertEqual(recommended({"macros"}, previously_completed), set())
+        self.assertEqual(recommended({"cartographer"}, catalog_ids), set())
+
     def test_optional_kamp_override_order_is_offered_once(self):
         update_id = "cartographer-optional-kamp-order-v2"
         catalog_ids = {entry[0] for entry in entries()}

@@ -120,6 +120,10 @@ After installation:
 4. Flash probe firmware only if needed; firmware flashing is a separate menu
    action.
 
+The installed bed-mesh defaults are `probe_count: 50,50` and `speed: 150` in
+`custom/overrides.cfg`. Speed `200` can be set for Full firmware after sample
+coverage is verified. The shared no-Cartographer template remains `19,19`.
+
 For automatic per-surface model selection, install the **Cartographer plate
 workflow** from Extras and follow its
 [selector/action guide](../../installer/extras/cartographer-macros/README.md).

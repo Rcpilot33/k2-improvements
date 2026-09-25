@@ -167,6 +167,11 @@ profiles are **untested** and use JimmyV's published offsets. Final profiles
 are provided for mounts without and with the 3DO nozzle camera. Custom offsets
 are supported.
 
+The Cartographer installer changes the untouched stock `19,19` probe count to
+`50,50` and sets bed-mesh speed to `150` in `custom/overrides.cfg`. Full
+firmware can use speed `200`; existing customized values are preserved during
+updates.
+
 Complete Scan and Touch calibration, then tune final print Z from an actual
 first layer. Touch calibration selects the detection threshold and speed; its
 saved `z_offset` is only the starting point for print tuning.

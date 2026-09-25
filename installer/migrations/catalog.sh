@@ -7,6 +7,7 @@ migration_catalog() {
 cartographer-z-rehome-preposition-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a disconnected Cartographer blocks the fast Z10 pre-positioning move on repeated Z homing
 cartographer-scan-model-homing-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a missing Cartographer scan model stops scanner-controlled Z homing before motion
 cartographer-mesh-defaults-override-v1|cartographer|is_cartographer|Set durable Cartographer defaults to a 150 mm/s, one-run spiral mesh for reliable Full and Lite sampling
+cartographer-mesh-grid-defaults-v2|cartographer|is_cartographer|Set untouched Cartographer meshes to a 50 by 50 grid at 150 mm/s while preserving explicit user choices
 cartographer-optional-kamp-order-v2|cartographer|is_cartographer|Keep optional KAMP settings after core M191 settings without creating KAMP settings on printers where the extra is absent
 cartographer-fluidd-namespace-bootstrap-v1|cartographer|is_cartographer|Create the Fluidd database namespace when a wiped printer has not initialized it before Cartographer macro layout setup
 cartographer-current-mcu-api-v1|cartographer|is_cartographer|Refresh SAFE_MOVE_Z and Z-homing connection checks for the current Cartographer MCU interface, then reload through the protected restart

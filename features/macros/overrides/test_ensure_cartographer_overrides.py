@@ -10,12 +10,22 @@ from unittest import mock
 
 MODULE_PATH = pathlib.Path(__file__).with_name("ensure_cartographer_overrides.py")
 OVERRIDES_PATH = pathlib.Path(__file__).with_name("overrides.cfg")
+CARTOGRAPHER_INSTALLER = pathlib.Path(__file__).parents[2] / "cartographer" / "install.sh"
+OVERRIDES_INSTALLER = pathlib.Path(__file__).with_name("install.sh")
 SPEC = importlib.util.spec_from_file_location("ensure_cartographer_overrides", MODULE_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
 class CartographerOverridesTests(unittest.TestCase):
+    def test_cartographer_install_paths_apply_override_migration(self):
+        command = 'python3 "${SCRIPT_DIR}/../macros/overrides/ensure_cartographer_overrides.py"'
+        self.assertIn(command, CARTOGRAPHER_INSTALLER.read_text(encoding="utf-8"))
+        self.assertIn(
+            'python3 "${SCRIPT_DIR}/ensure_cartographer_overrides.py"',
+            OVERRIDES_INSTALLER.read_text(encoding="utf-8"),
+        )
+
     def test_annotations_are_compatible_with_printer_python_39(self):
         tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8"))
         annotations = []
@@ -42,6 +52,7 @@ class CartographerOverridesTests(unittest.TestCase):
         text = OVERRIDES_PATH.read_text(encoding="utf-8")
 
         self.assertIn("probe_count: 19, 19", text)
+        self.assertIn("# Stock probe default", text)
         self.assertIn("[gcode_macro _M191_VARS]", text)
         self.assertNotIn("[gcode_macro _KAMP_Settings]", text)
         self.assertNotIn("speed: 150", text)
@@ -61,11 +72,30 @@ class CartographerOverridesTests(unittest.TestCase):
 
         self.assertTrue(changed)
         self.assertIn("speed: 150", updated)
+        self.assertIn("# 200 can be set for Full firmware", updated)
         self.assertIn("max_noisy_samples: 2", updated)
         self.assertIn("mesh_runs: 1", updated)
         self.assertIn("mesh_path: spiral", updated)
         self.assertNotIn("[gcode_macro _KAMP_Settings]", updated)
         self.assertLess(updated.index("probe_count: 50,50"), updated.index("speed: 150"))
+
+    def test_converts_untouched_stock_probe_count_for_cartographer(self):
+        updated, changed = MODULE.ensure_defaults(
+            "[bed_mesh]\nprobe_count: 19, 19 # Stock probe default\n"
+        )
+
+        self.assertTrue(changed)
+        self.assertIn("probe_count: 50,50", updated)
+        self.assertIn("# Cartographer default: 50,50", updated)
+        self.assertIn("speed: 150", updated)
+        self.assertNotIn("probe_count: 19,19", updated)
+
+    def test_adds_cartographer_probe_count_when_missing(self):
+        updated, changed = MODULE.ensure_defaults("[bed_mesh]\nmesh_pps: 0,0\n")
+
+        self.assertTrue(changed)
+        self.assertIn("probe_count: 50,50", updated)
+        self.assertIn("speed: 150", updated)
 
     def test_orders_user_sections_like_settings_panel(self):
         original = (
@@ -147,7 +177,7 @@ class CartographerOverridesTests(unittest.TestCase):
 
         self.assertIn("speed: 200", updated)
         self.assertIn(
-            "# 150 recommended for Lite firmware; 200 recommended for Full firmware",
+            "# 200 can be set for Full firmware",
             updated,
         )
         self.assertIn("max_noisy_samples: 0", updated)
@@ -165,10 +195,10 @@ class CartographerOverridesTests(unittest.TestCase):
 
         self.assertTrue(changed)
         self.assertIn("probe_count: 50,50", updated)
-        self.assertIn("# 50,50 is a good starting point with Cartographer", updated)
+        self.assertIn("# Cartographer default: 50,50", updated)
         self.assertIn("speed: 200", updated)
         self.assertIn(
-            "# 150 recommended for Lite firmware; 200 recommended for Full firmware",
+            "# 200 can be set for Full firmware",
             updated,
         )
         self.assertNotIn("\x00", updated)
