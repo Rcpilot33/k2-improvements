@@ -92,8 +92,8 @@ class FakePrinter:
         self.reactor = FakeReactor()
         self.events = {}
 
-    def lookup_object(self, name):
-        return self.objects[name]
+    def lookup_object(self, name, default=None):
+        return self.objects.get(name, default)
 
     def get_reactor(self):
         return self.reactor

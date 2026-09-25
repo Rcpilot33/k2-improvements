@@ -22,7 +22,7 @@ class K2M191Circulation:
         heaters = self.printer.lookup_object("heaters")
         if sensor_name in heaters.heaters:
             return heaters.heaters[sensor_name]
-        return self.printer.lookup_object(sensor_name)
+        return self.printer.lookup_object(sensor_name, None)
 
     def _report_temperatures(self, eventtime, report_id, temperature, target):
         heaters = self.printer.lookup_object("heaters")
@@ -53,6 +53,8 @@ class K2M191Circulation:
             return
 
         sensor = self._lookup_sensor(sensor_name)
+        if sensor is None:
+            raise gcmd.error("Unknown temperature sensor %s" % sensor_name)
         toolhead = self.printer.lookup_object("toolhead")
         eventtime = self.reactor.monotonic()
         low_phase = True

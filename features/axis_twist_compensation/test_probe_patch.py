@@ -131,6 +131,11 @@ class ProbePatchTests(unittest.TestCase):
             source.index("self.compensation.clear_compensations()"),
         )
 
+    def test_probe_points_use_xy_offsets_by_default(self):
+        source = PROBE_PATCH.read_text(encoding="utf-8")
+        self.assertIn("self.use_offsets = True", source)
+        self.assertNotIn("self.use_offsets = False", source)
+
 
 if __name__ == "__main__":
     unittest.main()

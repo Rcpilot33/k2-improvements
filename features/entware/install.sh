@@ -10,15 +10,32 @@ unset LD_PRELOAD
 LOADER=ld-linux.so.3
 GLIBC=2.27
 
-echo "Info: Removing old directories..."
-rm -rf /opt
-rm -rf /mnt/UDISK/opt
+ENTWARE_ROOT=/mnt/UDISK/opt
+FRESH_INSTALL=0
+if [ -x "$ENTWARE_ROOT/bin/opkg" ]; then
+  echo "Info: Preserving the existing Entware installation..."
+else
+  FRESH_INSTALL=1
+  echo "Info: Removing an absent or incomplete Entware installation..."
+  [ ! -L /opt ] || rm -f /opt
+  rm -rf "$ENTWARE_ROOT"
+fi
 
 echo "Info: Creating directory..."
-mkdir -p /mnt/UDISK/opt
+mkdir -p "$ENTWARE_ROOT"
 
 echo "Info: Linking folder..."
-ln -nsf /mnt/UDISK/opt /opt
+if [ -L /opt ]; then
+  if [ "$(readlink -f /opt)" != "$ENTWARE_ROOT" ]; then
+    echo "Error: /opt points outside $ENTWARE_ROOT; refusing to replace it" >&2
+    exit 1
+  fi
+elif [ -e /opt ]; then
+  echo "Error: /opt exists and is not the Entware symlink; refusing to replace it" >&2
+  exit 1
+else
+  ln -s "$ENTWARE_ROOT" /opt
+fi
 
 echo "Info: Creating subdirectories..."
 for folder in bin etc lib/opkg tmp var/lock
@@ -26,7 +43,6 @@ do
   mkdir -p /mnt/UDISK/opt/$folder
 done
 
-echo "Info: Downloading opkg package manager from Entware repo..."
 chmod 755 ./wget-ssl.py
 URL="https://bin.entware.net/armv7sf-k3.2/installer"
 
@@ -37,13 +53,16 @@ download_files() {
   return $?
 }
 
-if download_files "$URL/opkg" "/opt/bin/opkg"; then
-  download_files "$URL/opkg.conf" "/opt/etc/opkg.conf"
-else
-  echo "Info: Failed to download from openK1 repo..."
-  rm -rf /opt
-  rm -rf /mnt/UDISK/opt
-  exit 1
+if [ "$FRESH_INSTALL" -eq 1 ]; then
+  echo "Info: Downloading opkg package manager from Entware repo..."
+  if download_files "$URL/opkg" "/opt/bin/opkg"; then
+    download_files "$URL/opkg.conf" "/opt/etc/opkg.conf"
+  else
+    echo "Info: Failed to download from Entware repo..."
+    rm -f /opt
+    rm -rf "$ENTWARE_ROOT"
+    exit 1
+  fi
 fi
 
 echo "Info: Applying permissions..."

@@ -10,6 +10,11 @@ PATCHES = pathlib.Path(__file__).with_name("patches")
 
 
 class CorePatchSafetyTests(unittest.TestCase):
+    def test_homing_constructor_tolerates_missing_cartographer(self):
+        source = (PATCHES / "homing.py").read_text(encoding="utf-8")
+        self.assertIn("lookup_object('cartographer', None)", source)
+        self.assertIn("if self.prtouch_v3 is not None:", source)
+
     def test_motor_protection_paths_raise_an_explicit_command_error(self):
         tree = ast.parse(
             (PATCHES / "homing.py").read_text(encoding="utf-8")

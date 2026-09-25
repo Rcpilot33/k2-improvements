@@ -50,8 +50,14 @@ else
 fi
 
 
-# update printer config
-python ${SCRIPT_DIR}/alter_config.py
+# update printer config. A reinstall normally has no live PR Touch section;
+# when one is present, require the migration to complete successfully.
+if grep -q '^[[:space:]]*\[prtouch_v3\][[:space:]]*$' \
+    ~/printer_data/config/printer.cfg; then
+    python3 "${SCRIPT_DIR}/alter_config.py"
+else
+    echo "I: stock [prtouch_v3] section is already removed"
+fi
 python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg prtouch_v3.cfg True
 python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
@@ -108,7 +114,8 @@ ln -sf ${SCRIPT_DIR}/patches/k2_safe_move_z.py \
     ~/klipper/klippy/extras/k2_safe_move_z.py
 rm -f ~/klipper/klippy/extras/bed_mesh.py*
 ln -sf ${SCRIPT_DIR}/patches/bed_mesh.py ~/klipper/klippy/extras/bed_mesh.py
-sed -i 's/self\.use_offsets = False/self.use_offsets = True/g' ~/klipper/klippy/extras/probe.py || true
+python3 "${SCRIPT_DIR}/patch_probe_offsets.py" \
+    ~/klipper/klippy/extras/probe.py
 
 # install toggle script
 mkdir -p /mnt/UDISK/bin

@@ -161,6 +161,20 @@ class StartPrintConfigTests(unittest.TestCase):
         for material in ("PLA", "PETG", "ABS", "ASA", "DEFAULT"):
             self.assertIn("variable_offset_%s: 0.00" % material, self.config)
 
+    def test_cold_home_homes_xy_before_cartographer_z(self):
+        section = self.config.split(
+            "[gcode_macro HOME_IF_NEEDED]", 1
+        )[1]
+        full_home = section.index("{% if needs_z and (needs_x or needs_y) %}")
+        g28_all = section.index("G28", full_home)
+        z_only = section.index("{% elif needs_z %}", g28_all)
+        self.assertLess(full_home, g28_all)
+        self.assertLess(g28_all, z_only)
+
+    def test_cartographer_detection_checks_object_membership(self):
+        self.assertIn("{% if 'cartographer' in printer %}", self.config)
+        self.assertNotIn("{% if printer.cartographer %}", self.config)
+
     def test_macro_repair_preserves_plate_surface_wrapper(self):
         installer = MACROS_INSTALLER.read_text(encoding="utf-8")
         capture = installer.index("HAD_SURFACE_WRAPPER=1")

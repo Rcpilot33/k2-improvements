@@ -4,6 +4,9 @@
 
 migration_catalog() {
     cat <<'EOF'
+audit-cartographer-install-safety-v1|cartographer|is_cartographer|Preserve SAVE_CONFIG data, verify probe XY offsets, and tolerate a missing Cartographer object during patched homing
+audit-axis-twist-offsets-v1|axis_twist_compensation|is_axis_twist|Keep Cartographer probe XY offsets enabled when Axis Twist replaces the probe helper
+audit-macro-motion-heater-safety-v1|macros|is_macros|Home XY before an unhomed Cartographer Z axis, limit M191 S0 to the chamber, and use robust Cartographer detection
 cartographer-z-rehome-preposition-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a disconnected Cartographer blocks the fast Z10 pre-positioning move on repeated Z homing
 cartographer-scan-model-homing-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a missing Cartographer scan model stops scanner-controlled Z homing before motion
 cartographer-mesh-defaults-override-v1|cartographer|is_cartographer|Set durable Cartographer defaults to a 150 mm/s, one-run spiral mesh for reliable Full and Lite sampling

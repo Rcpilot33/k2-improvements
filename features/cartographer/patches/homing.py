@@ -43,8 +43,9 @@ class HomingMove:
         if toolhead is None:
             toolhead = printer.lookup_object('toolhead')
 
-        self.prtouch_v3 = self.printer.lookup_object('cartographer')
-        self.prtouch_v3.z_full_movement_flag = False
+        self.prtouch_v3 = self.printer.lookup_object('cartographer', None)
+        if self.prtouch_v3 is not None:
+            self.prtouch_v3.z_full_movement_flag = False
         self.toolhead = toolhead
         self.stepper_positions = []
     def get_mcu_endstops(self):

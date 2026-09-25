@@ -419,7 +419,10 @@ class ProbePointsHelper:
                                                 parser=float, count=2)
         self.horizontal_move_z = config.getfloat('horizontal_move_z', 5.)
         self.speed = config.getfloat('speed', 50., above=0.)
-        self.use_offsets = False
+        # K2 Cartographer mounts rely on the probe XY offset during Z_TILT.
+        # Keep this enabled in the shipped replacement so a later Axis Twist
+        # install cannot silently undo Cartographer's probe-offset patch.
+        self.use_offsets = True
         # Internal probing state
         self.lift_speed = self.speed
         self.probe_offsets = (0., 0., 0.)

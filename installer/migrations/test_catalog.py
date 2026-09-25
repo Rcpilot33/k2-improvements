@@ -62,6 +62,23 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_critical_audit_repairs_are_offered_once(self):
+        catalog_ids = {entry[0] for entry in entries()}
+        cases = {
+            "audit-cartographer-install-safety-v1": "cartographer",
+            "audit-axis-twist-offsets-v1": "axis_twist_compensation",
+            "audit-macro-motion-heater-safety-v1": "macros",
+        }
+        for update_id, component in cases.items():
+            with self.subTest(update_id=update_id):
+                self.assertIn(update_id, catalog_ids)
+                previously_completed = catalog_ids - {update_id}
+                self.assertEqual(
+                    recommended(set(cases.values()), previously_completed),
+                    {component},
+                )
+                self.assertEqual(recommended({component}, catalog_ids), set())
+
     def test_missing_scan_model_homing_guard_is_offered_once(self):
         update_id = "cartographer-scan-model-homing-guard-v1"
         catalog_ids = {entry[0] for entry in entries()}

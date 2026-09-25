@@ -9,7 +9,8 @@ installs packages including Git, curl, jq, unzip, secure wget, and SFTP support.
 ## Important
 
 - An internet connection is required.
-- A repair installation replaces the existing `/opt` and `/mnt/UDISK/opt`
-  directories.
+- A repair installation preserves a working `/mnt/UDISK/opt` tree, including
+  Cartographer and Moonraker startup hooks, and refreshes the required packages.
+  Only an absent or incomplete Entware tree is rebuilt.
 - Normal users should install Entware through bootstrap. Use the individual
   component installer only to repair a failed or incomplete setup.
