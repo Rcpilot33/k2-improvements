@@ -216,7 +216,8 @@ def ensure_defaults(contents: str) -> Tuple[str, bool]:
     if not _has_option(blocks[scan_index], "mesh_path"):
         blocks[scan_index] = _add_option(
             blocks[scan_index],
-            "mesh_path: spiral                   # Continuous spiral scanning path",
+            "mesh_path: spiral                   # Spiral scan; change to "
+            "snake for the default path",
             after="mesh_runs",
         )
 

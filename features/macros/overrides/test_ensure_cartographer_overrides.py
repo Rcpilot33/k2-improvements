@@ -76,6 +76,10 @@ class CartographerOverridesTests(unittest.TestCase):
         self.assertIn("max_noisy_samples: 2", updated)
         self.assertIn("mesh_runs: 1", updated)
         self.assertIn("mesh_path: spiral", updated)
+        self.assertIn(
+            "# Spiral scan; change to snake for the default path",
+            updated,
+        )
         self.assertNotIn("[gcode_macro _KAMP_Settings]", updated)
         self.assertLess(updated.index("probe_count: 50,50"), updated.index("speed: 150"))
 
