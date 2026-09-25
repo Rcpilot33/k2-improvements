@@ -56,7 +56,7 @@ sh "$SCRIPT_DIR/../../../features/macros/overrides/ensure_bed_mesh_soak.sh" \
 
 mkdir -p "$CUSTOM_DIR"
 ln -sf "$SOURCE" "$TARGET"
-python "$SCRIPT_DIR/../../../scripts/ensure_included.py" \
+python3 "$SCRIPT_DIR/../../../scripts/ensure_included.py" \
     "$MAIN_CFG" plate_aware_mesh.cfg
 
 echo "I: plate-aware saved mesh selection installed"

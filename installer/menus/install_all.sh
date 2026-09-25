@@ -90,6 +90,7 @@ menu_install_all() {
         # and child shells inherit that stale value. Setting HOME=... on
         # the sh call overrides it for that one invocation.
         pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+        [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
         info "running $name (HOME=$pwd_home)"
 
         # A full setup reloads Klipper once after all components and the
@@ -131,7 +132,9 @@ menu_install_all() {
         printf 'Probe x_offset and y_offset depend on which physical mount you have.\n'
         printf 'Without picking the right preset, Z heights are wrong across the bed.\n\n'
         if confirm "Open the Cartographer offset picker now?"; then
-            HOME=$(awk -F: '$1=="root"{print $6}' /etc/passwd) \
+            pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+            [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
+            HOME="$pwd_home" \
                 sh "$INSTALLER_DIR/installer/extras/cartographer-offset-setup/install.sh" || true
         else
             printf '\n%s\n\n' "$(c_yellow 'Skipped - run it later from Cartographer tools.')"

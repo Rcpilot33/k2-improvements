@@ -47,6 +47,7 @@ kamp_install() {
         if ! confirm "Install KAMP now?"; then return; fi
     fi
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+    [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
     info "running KAMP install (HOME=$pwd_home)"
     HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script" || warn "install.sh exited non-zero"
     printf '\n%s\n' "$(c_yellow 'Reminder: edit Creality Print machine start gcode to call LINE_PURGE.')"

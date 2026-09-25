@@ -157,6 +157,10 @@ Create and save a `default` bed mesh using the same `[bed_mesh] probe_count`
 that will be active while printing. Recreate it whenever `probe_count` changes.
 Saved `5,5` and `19,19` meshes are not interchangeable.
 
+Run `G28`, `Z_TILT_ADJUST`, `G28 Z`,
+`BED_MESH_CALIBRATE PROFILE=default`, and `SAVE_CONFIG` in that order, then
+wait for the protected restart to finish before moving the printer.
+
 See the [bed-mesh guide](./features/macros/bed_mesh/README.md).
 
 ### Cartographer

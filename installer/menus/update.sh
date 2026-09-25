@@ -179,6 +179,12 @@ migration_write_atomic() {
 migration_mark_component_current() {
     local component temporary
     component="$1"
+    # Components without catalog entries have nothing to acknowledge. Their
+    # successful install must not produce a false incomplete-update warning.
+    if ! migration_catalog | awk -F'|' -v component="$component" \
+        '$2 == component { found=1 } END { exit !found }'; then
+        return 0
+    fi
     if ! migration_component_installed "$component" 2>/dev/null; then
         warn "$(migration_component_label "$component") still appears incomplete; leaving its update pending"
         return 1
@@ -291,7 +297,8 @@ migration_repair_component() {
     local component pwd_home
     component="$1"
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
-    [ -n "$pwd_home" ] || pwd_home="$HOME"
+    [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
+    [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
 
     case "$component" in
         cartographer)
@@ -309,6 +316,10 @@ migration_repair_component() {
         virtual-sdcard-guard)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/features/virtual-sdcard-guard/install.sh"
+            ;;
+        memory-diagnostics)
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
+                sh "$INSTALLER_DIR/features/memory-diagnostics/install.sh"
             ;;
         abort_homing)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
@@ -367,7 +378,7 @@ migration_repair_component() {
 
 migration_component_restart_kind() {
     case "$1" in
-        cartographer|macros|save-config-restart|virtual-sdcard-guard|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|axis_twist_compensation|global-touch-offsets|material-z-offsets)
+        cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|axis_twist_compensation|global-touch-offsets|material-z-offsets)
             echo code
             ;;
         *)

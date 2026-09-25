@@ -15,7 +15,8 @@ Thanks to [@JaminCollins](https://github.com/jamincollins) and
 - Install `SCREWS_TILT_CALCULATE` support.
 - Heat the bed to at least 60 C and allow it to soak for 10 minutes.
 - Create a fresh bed mesh at that temperature.
-- Install Python on the computer that will run `bedlevel.py`.
+- Install Python and the packages listed in `requirements.txt` on the computer
+  that will run `bedlevel.py`.
 
 ## Level the bed screws
 
@@ -31,14 +32,17 @@ Copy `bedlevel.py` to your computer; do not run it on the printer.
 
 1. Enter the bed-mesh values in the section identified near the top of the
    script.
-2. Set `tape_thicknesses` to the measured tape thicknesses in millimetres. For
+2. Set `mesh_min` and `mesh_max` to the matching values from the printer's
+   `[bed_mesh]` configuration. The script derives spacing from any rectangular
+   mesh size instead of assuming a 9 x 9 grid.
+3. Set `tape_thicknesses` to the measured tape thicknesses in millimetres. For
    example:
 
    ```python
    tape_thicknesses = [0.125, 0.300]
    ```
 
-3. Run the script. It generates layer images showing where each tape layer
+4. Run the script. It generates layer images showing where each tape layer
    should be placed.
 
 Example output:

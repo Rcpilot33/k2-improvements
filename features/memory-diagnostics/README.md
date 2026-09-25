@@ -5,10 +5,12 @@ a userspace memory leak from the K2 Plus kernel's physical-memory
 fragmentation. It does not alter memory policy, add swap, reclaim cache, or
 change printer motion.
 
-The recorder runs inside Klippy, uses no subprocesses or background worker,
-and samples every 10 seconds. Once per minute and whenever the print state
-changes, it also records the largest resident processes and the kernel's
-Normal-zone allocation blocks by migration type.
+The recorder runs inside Klippy without subprocesses and samples every 10
+seconds. Procfs reads, process enumeration, and log writes run on a dedicated
+daemon worker so slow kernel or UDISK operations cannot block Klipper's motion
+reactor. Once per minute and whenever the print state changes, it also records
+the largest resident processes and the kernel's Normal-zone allocation blocks
+by migration type.
 
 Logs are stored outside the RAM-backed filesystem at:
 

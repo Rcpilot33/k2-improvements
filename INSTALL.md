@@ -199,7 +199,7 @@ omits those components.
 | Component | Purpose |
 |---|---|
 | Entware | Package toolchain used by the installers. |
-| [better-root](./features/better-root/README.md) | Moves root's home to persistent UDISK storage. |
+| [better-root](./installer/extras/better-root-safe/README.md) | Moves root's home to persistent UDISK storage without terminating the installer session. |
 | [better-init](./features/better-init/README.md) | Loads the persistent profile environment. |
 | skip-setup | Preserves Jacob's first-run wizard bypass. |
 | [Moonraker](./features/moonraker/README.md) | Mainline-based Klipper API server. |
@@ -207,7 +207,7 @@ omits those components.
 | [screws_tilt_adjust](./features/screws_tilt_adjust/README.md) | Manual bed-screw adjustment support. |
 | Cartographer | Probe support and K2-specific Klipper patches; Cartographer path only. |
 | abort_homing | Allows an emergency stop to abort homing. |
-| [Stock SAVE_CONFIG restart](./features/save-config-restart/README.md) | Writes the configuration and requests Klipper's original host restart, with no wrapper or firmware-restart attempt. |
+| [Protected SAVE_CONFIG restart](./features/save-config-restart/README.md) | Lets Klipper write the configuration and complete its stock host restart, then performs one guarded firmware reset and waits for K2 motor initialization. |
 | [Macros](./features/macros/README.md) | Installs `START_PRINT`, `M191`, bed-mesh, and overrides support. |
 
 Optional quality-of-life and hardware-specific features are deliberately
@@ -218,6 +218,19 @@ excluded from the guided core installation paths.
 Before the first print, create and save a bed mesh named `default` using the
 same `[bed_mesh] probe_count` that will be active during printing. The stock
 temperature-specific mesh workflow expects a compatible saved default mesh.
+
+From the Fluidd console, run:
+
+```gcode
+G28
+Z_TILT_ADJUST
+G28 Z
+BED_MESH_CALIBRATE PROFILE=default
+SAVE_CONFIG
+```
+
+Wait for the protected restart to report that Klipper and the K2 motor
+controller are ready before issuing another movement command.
 
 If `probe_count` changes, recreate and save `default` before printing. A `5,5`
 default and a `19,19` configuration cannot be mixed, nor can a `19,19` default
@@ -241,11 +254,14 @@ The normal flasher:
 
 | Hardware | Full recommendation | Lite fallback |
 |---|---|---|
-| Cartographer V3 / STM32F042 | `5.1.0` | `K1 5.1.0` |
-| Cartographer V4 / STM32G431 | `6.0.0` | `V4 6.0.0 Lite` |
+| Cartographer V3 / STM32F042 | `6.1.0 Full` | `6.1.0 Lite` |
+| Cartographer V4 / STM32G431 | `6.2.0 Full` | `6.2.0 Lite` |
 
 Full is recommended for the K2 Plus. Lite is a conservative fallback for
-timing problems.
+timing problems. V4 6.2.0 is offered only when the installed plugin source
+matches the audited sensor-frequency implementation; refresh Cartographer from
+the update menu if the firmware choice is unavailable. The older 5.1.0 and
+6.0.0 images remain legacy rollback choices.
 
 Cartographer installations use `probe_count: 50,50` and `speed: 150` in
 `custom/overrides.cfg`. Speed `200` can be set when using Full firmware and
@@ -399,8 +415,9 @@ run and two separately confirmed destructive reset paths:
 
 1. **Improved cleanup + Creality factory reset** preserves
    `/mnt/UDISK/root` and `/mnt/UDISK/bin`, removes most other top-level UDISK
-   directories—including `/mnt/UDISK/printer_data`—and then sends `all` to
-   Creality's `wipe.sock`. Review the dry run first.
+   directories—including `/mnt/UDISK/printer_data` and `/mnt/UDISK/opt`—and
+   then sends `all` to Creality's `wipe.sock`. Removing `/mnt/UDISK/opt` also
+   removes Entware and its installed packages. Review the dry run first.
 2. **Creality factory reset only** sends `wipe.sock all` without pre-deleting
    UDISK directories. Third-party files that Creality does not remove may
    remain afterward.

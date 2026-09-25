@@ -4,6 +4,9 @@
 
 migration_catalog() {
     cat <<'EOF'
+audit-cartographer-config-runtime-safety-v1|cartographer|is_cartographer|Back up managed Cartographer settings and restore configured motion limits automatically after an aborted mesh
+audit-memory-diagnostics-worker-v1|memory-diagnostics|is_memory_diagnostics|Move procfs sampling and UDISK logging off Klipper's motion reactor
+audit-abort-homing-patcher-safety-v1|abort_homing|is_abort_homing|Back up webhooks.py, reject partial patches, and replace it atomically
 audit-cartographer-install-safety-v1|cartographer|is_cartographer|Preserve SAVE_CONFIG data, verify probe XY offsets, and tolerate a missing Cartographer object during patched homing
 audit-axis-twist-offsets-v1|axis_twist_compensation|is_axis_twist|Keep Cartographer probe XY offsets enabled when Axis Twist replaces the probe helper
 audit-macro-motion-heater-safety-v1|macros|is_macros|Home XY before an unhomed Cartographer Z axis, limit M191 S0 to the chamber, and use robust Cartographer detection

@@ -3,12 +3,14 @@
 set -xe
 
 SCRIPT_DIR=$(readlink -f $(dirname ${0}))
+RUN_MARKERS=$(mktemp -d /tmp/k2-jamin.XXXXXX)
+trap 'rm -rf "$RUN_MARKERS"' EXIT INT TERM
 
 install_feature() {
     FEATURE=${1}
-    if [ ! -f /tmp/${FEATURE} ]; then
+    if [ ! -f "$RUN_MARKERS/${FEATURE}" ]; then
         K2_DEFER_FIRMWARE_RESTART=1 ${SCRIPT_DIR}/features/${FEATURE}/install.sh
-        touch /tmp/${FEATURE}
+        touch "$RUN_MARKERS/${FEATURE}"
     fi
 }
 

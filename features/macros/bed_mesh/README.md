@@ -32,6 +32,19 @@ On a no-Cartographer / stock PR Touch installation, create and save a
 `default` mesh before the first print. That mesh must be generated with the
 same `[bed_mesh] probe_count` that is currently configured.
 
+Use the Fluidd console to run:
+
+```gcode
+G28
+Z_TILT_ADJUST
+G28 Z
+BED_MESH_CALIBRATE PROFILE=default
+SAVE_CONFIG
+```
+
+Wait for the protected restart to finish before issuing another movement
+command.
+
 Recreate and save `default` whenever `probe_count` changes. Mesh dimensions are
 not interchangeable: a saved `5,5` default mesh cannot be used with an active
 `19,19` configuration, and a saved `19,19` mesh cannot be used with `5,5`.

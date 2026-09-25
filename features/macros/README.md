@@ -25,10 +25,11 @@ used only when the stock-probe workflow must create a missing saved mesh. Users
 who heat soak before sending a print can set it to `0`.
 
 The same overrides template serves both setup paths. When Cartographer is
-present, its installer adds one active `[cartographer touch]` section with the
-stock `max_noisy_samples: 2` value. That Cartographer-only section is absent
-from a stock PR Touch installation, and existing user-selected values are
-preserved on reinstall.
+present, its installer adds active `[cartographer touch]` and
+`[cartographer scan]` sections. They contain the Touch noisy-sample limit and
+the scan-run/path choices. Those Cartographer-only sections are absent from a
+stock PR Touch installation, and existing user-selected values are preserved
+on reinstall.
 
 M191 is part of the core macro bundle, so its `_M191_VARS` settings are present
 in the shared overrides template. KAMP remains an optional extra: the core

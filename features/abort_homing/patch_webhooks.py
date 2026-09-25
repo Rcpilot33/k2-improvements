@@ -2,6 +2,10 @@
 """Patches webhooks.py to add force_stop_homing endpoint."""
 import sys
 import re
+import os
+import shutil
+import stat
+import tempfile
 
 ENDPOINT_REGISTRATION = '        self.register_endpoint("force_stop_homing", self._handle_force_stop_homing)'
 
@@ -41,9 +45,18 @@ def patch_webhooks(filepath):
         print(f"Error reading file {filepath}: {e}")
         return False
 
-    if 'force_stop_homing' in original_content and 'can_force_stop_homing' in original_content:
+    patch_markers = (
+        ENDPOINT_REGISTRATION.strip(),
+        "def _handle_force_stop_homing(self, web_request):",
+        "'can_force_stop_homing': True",
+    )
+    marker_state = [marker in original_content for marker in patch_markers]
+    if all(marker_state):
         print("Already patched, no changes needed.")
         return None
+    if any(marker_state):
+        print("ERROR: webhooks.py contains a partial abort-homing patch; refusing to double-patch it.")
+        return False
 
     estop_reg = 'self.register_endpoint("emergency_stop", self._handle_estop_request)'
     if estop_reg not in original_content:
@@ -84,14 +97,29 @@ def patch_webhooks(filepath):
     content = new_content
     print("  + Updated get_status to include can_force_stop_homing")
 
+    backup_path = str(filepath) + ".before-abort-homing.bak"
+    directory = os.path.dirname(os.path.realpath(filepath)) or "."
+    mode = stat.S_IMODE(os.stat(filepath).st_mode)
+    descriptor, temporary = tempfile.mkstemp(
+        prefix=".abort-homing-", dir=directory, text=True
+    )
     try:
-        with open(filepath, 'w') as f:
-            f.write(content)
+        if not os.path.exists(backup_path):
+            shutil.copy2(filepath, backup_path)
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="") as output:
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        os.chmod(temporary, mode)
+        os.replace(temporary, filepath)
         print("Patch applied successfully!")
         return True
     except Exception as e:
         print(f"Error writing file: {e}")
         return False
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:

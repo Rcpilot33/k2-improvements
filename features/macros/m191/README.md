@@ -33,8 +33,9 @@ are missing but does not overwrite existing values.
 | `chamber_wait_max_delta` | `5.0` | above `0` to `20` C | Upper allowance used while waiting for the chamber target. |
 
 Invalid settings stop the macro before Klipper executes its heater, fan, or
-movement commands. `M191 S0` always retains its immediate heater-off and fan-off
-behavior.
+movement commands. `M191 S0` turns off only the chamber heater and restores the
+normal 35 C chamber-fan target; it preserves existing bed, hotend, model-fan,
+and side-fan targets.
 
 ## Layer-time chamber commands
 

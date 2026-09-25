@@ -94,11 +94,17 @@ An unexpected trigger during a normal between-print move stops that command
 without reporting completion.
 
 On a direct Cartographer install or a conversion from the stock-probe setup,
-the installer resets the PLA, PETG, ABS, ASA, DEFAULT, and PROBE offsets in
+the installer resets the PLA, PETG, ABS, ASA, and DEFAULT offsets in
 `custom/overrides.cfg` to zero. Those values are probe-dependent and must be
 retuned for Cartographer. Other overrides are preserved. Rerunning the
 installer when Cartographer is already configured preserves the existing
 Cartographer offsets.
+
+If a plugin refresh refuses to proceed, preserve the affected path before
+retrying: move aside a non-Git plugin directory; commit or copy out tracked
+changes; verify `origin` is either the supported upstream or Rcpilot33 fork;
+and preserve divergent local commits on a separate branch. The installer
+deliberately never deletes or resets those states automatically.
 
 ## Hardware
 

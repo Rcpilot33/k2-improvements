@@ -14,8 +14,15 @@ CFG="${PRINTER_CFG_DIR:-/mnt/UDISK/printer_data/config}/printer.cfg"
 
 if grep -q '^#\*# \[prtouch_v3\]$' "$CFG"; then
     cp "$CFG" "${CFG}.before-prtouch-cleanup-$(date +%s)"
-    sed -i '/^#\*# \[prtouch_v3\]$/d' "$CFG"
-    echo "I: removed orphan [prtouch_v3] SAVE_CONFIG header from $CFG"
+    TEMP="${CFG}.prtouch-cleanup.$$"
+    awk '
+        /^#\*# \[prtouch_v3\]$/ { skip=1; next }
+        skip && /^#\*# \[/ { skip=0 }
+        skip && /^#\*#/ { next }
+        { print }
+    ' "$CFG" > "$TEMP"
+    mv -f "$TEMP" "$CFG"
+    echo "I: removed orphan [prtouch_v3] SAVE_CONFIG section from $CFG"
     echo "I: backup at ${CFG}.before-prtouch-cleanup-*"
 else
     echo "I: no orphan [prtouch_v3] header found — nothing to do"

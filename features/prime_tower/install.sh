@@ -9,6 +9,11 @@ mkdir -p "${HOME}/printer_data/config/custom"
 rm -f "${KLIPPER_EXTRA}c" \
     "${HOME}/klipper/klippy/extras/__pycache__/prime_tower."*.pyc
 ln -sf "${SCRIPT_DIR}/prime_tower.py" "${KLIPPER_EXTRA}"
+if [ -f "${CUSTOM_CFG}" ] && ! cmp -s "${SCRIPT_DIR}/prime_tower.cfg" "${CUSTOM_CFG}"; then
+    PRIME_CFG_BACKUP="${CUSTOM_CFG}.before-managed-update.$(date +%Y%m%d-%H%M%S)"
+    cp -p "${CUSTOM_CFG}" "${PRIME_CFG_BACKUP}"
+    echo "I: preserved previous prime-tower config at ${PRIME_CFG_BACKUP}"
+fi
 cp -f "${SCRIPT_DIR}/prime_tower.cfg" "${CUSTOM_CFG}"
 
 python3 "${SCRIPT_DIR}/../../scripts/ensure_included.py" \

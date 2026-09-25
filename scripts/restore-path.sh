@@ -18,7 +18,7 @@ FULLPATH=$(readlink -f "$1") || {
 }
 
 case "$FULLPATH" in
-    /|/overlay|/overlay/*|/mnt|/mnt/*)
+    /|/bin|/etc|/lib|/sbin|/usr|/var|/overlay|/overlay/*|/mnt|/mnt/*)
         echo "ERROR: refusing unsafe restore target: $FULLPATH" >&2
         exit 2
         ;;
