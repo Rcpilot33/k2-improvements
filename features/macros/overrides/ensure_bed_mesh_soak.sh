@@ -22,7 +22,7 @@ if ! awk '
 BEGIN { in_vars=0; inserted=0 }
 /^\[gcode_macro _START_PRINT_VARS\]$/ { in_vars=1 }
 in_vars && /^gcode:[[:space:]]*$/ && !inserted {
-    print "variable_bed_mesh_soak: 5 # minutes; set to 0 if already heat soaked"
+    print "variable_bed_mesh_soak: 5                   # Minutes; use 0 when the printer is already heat soaked"
     inserted=1
 }
 { print }

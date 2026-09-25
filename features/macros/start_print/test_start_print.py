@@ -71,6 +71,22 @@ class StartPrintConfigTests(unittest.TestCase):
     def test_obsolete_probe_switch_is_not_advertised(self):
         self.assertNotIn("variable_offset_PROBE:", self.config)
 
+    def test_user_setting_comments_are_separated_from_values(self):
+        expected = (
+            "variable_heat_soak: 0                       # Minutes",
+            "variable_bed_mesh_soak: 5                   # Minutes; use 0 "
+            "when the printer is already heat soaked",
+            "variable_carto_touch_calibrate_start: 500   # Cartographer A22 "
+            "Touch calibration default",
+        )
+        for line in expected:
+            self.assertIn(line, self.config)
+
+        fallback = (
+            CONFIG.parent.parent / "overrides" / "ensure_bed_mesh_soak.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn(expected[1], fallback)
+
     def test_case_fan_is_not_continuously_enforced(self):
         self.assertEqual(self.config.count("M107 P1"), 1)
         self.assertNotIn("[delayed_gcode", self.config)

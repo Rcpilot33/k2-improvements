@@ -4,6 +4,7 @@
 
 migration_catalog() {
     cat <<'EOF'
+macro-user-comment-spacing-v1|macros|is_macros|Keep START_PRINT setting comments separated from their values so configuration editors expose every setting
 audit-cartographer-config-runtime-safety-v1|cartographer|is_cartographer|Back up managed Cartographer settings and restore configured motion limits automatically after an aborted mesh
 audit-memory-diagnostics-worker-v1|memory-diagnostics|is_memory_diagnostics|Move procfs sampling and UDISK logging off Klipper's motion reactor
 audit-abort-homing-patcher-safety-v1|abort_homing|is_abort_homing|Back up webhooks.py, reject partial patches, and replace it atomically
