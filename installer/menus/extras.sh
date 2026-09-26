@@ -109,7 +109,7 @@ run_carto_plate_workflow() {
     clear
     ui_heading 'CARTOGRAPHER PLATE PROFILES / AUTO-SELECTION'
     printf '\nThis installs the two tied parts of the plate workflow:\n'
-    printf '  - reveals CARTO_* buttons for the four Creality Print plate types\n'
+    printf '  - reveals plate buttons for Creality Print, OrcaSlicer, or both\n'
     printf '  - START_PRINT surface selection using the slicer plate choice\n\n'
 
     if ! is_cartographer; then
@@ -123,18 +123,28 @@ run_carto_plate_workflow() {
     printf '  %-32s %s\n\n' 'Surface-selection wrapper' \
         "$(if is_surface_wrap; then state_installed; else state_not_installed; fi)"
 
-    if ! confirm 'Install the missing plate-workflow components now?'; then
+    if ! confirm 'Install or update the plate workflow and choose its selectors?'; then
         return 0
     fi
 
-    local pwd_home failed
+    local pwd_home failed plate_choice plate_slicers
+    printf '\nPlate selectors: 1. Creality Print  2. OrcaSlicer  3. Both\n'
+    printf 'Select [1-3], or Enter to keep the saved choice: '
+    read -r plate_choice
+    case "$plate_choice" in
+        1) plate_slicers=creality ;;
+        2) plate_slicers=orca ;;
+        3) plate_slicers=both ;;
+        '') plate_slicers='' ;;
+        *) warn 'Invalid plate selector choice'; press_enter; return 1 ;;
+    esac
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
     [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
     [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
     failed=0
 
     info 'refreshing Cartographer Fluidd macros'
-    HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" \
+    K2_PLATE_SLICERS="$plate_slicers" HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" \
         sh "$INSTALLER_DIR/installer/extras/cartographer-macros/install.sh" \
             --show-plate-selectors \
         || failed=1

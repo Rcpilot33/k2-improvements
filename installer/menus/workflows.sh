@@ -148,11 +148,19 @@ EOF
   3. Cartographer plate profiles and automatic selection are installed. With
      the correct plate on the bed, first press exactly one selector in Fluidd:
 
-       DEFAULT       - Default / fallback
-       TEXTURED_PEI  - Textured PEI Plate
-       EPOXY         - Epoxy Resin Plate
-       HIGH_TEMP     - Smooth PEI / High Temp Plate
-       CUSTOM        - Customized Plate
+       DEFAULT - Default / fallback
+       Creality Print selectors (when enabled):
+         Textured PEI (Creality Print)
+         Epoxy Resin (Creality Print)
+         High Temp (Creality Print)
+         Customized (Creality Print)
+       Orca selectors (when enabled):
+         Smooth Cool Plate (Orca)
+         Engineering Plate (Orca)
+         Smooth High Temp Plate (Orca)
+         Textured PEI Plate (Orca)
+         Textured Cool Plate (Orca)
+         Cool Plate (SuperTack) (Orca)
 
      Then press the required shared action:
 

@@ -4,6 +4,7 @@
 
 migration_catalog() {
     cat <<'EOF'
+cartographer-dual-slicer-plates-v1|cartographer-plate-workflow|is_carto_plate_workflow|Add persistent Creality Print, OrcaSlicer, or Both plate selectors while preserving existing calibration models
 macro-user-comment-spacing-v1|macros|is_macros|Keep START_PRINT setting comments separated from their values so configuration editors expose every setting
 audit-cartographer-config-runtime-safety-v1|cartographer|is_cartographer|Back up managed Cartographer settings and restore configured motion limits automatically after an aborted mesh
 audit-memory-diagnostics-worker-v1|memory-diagnostics|is_memory_diagnostics|Move procfs sampling and UDISK logging off Klipper's motion reactor

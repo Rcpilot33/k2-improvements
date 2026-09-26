@@ -65,9 +65,14 @@ else
     LAYOUT_ARG=""
 fi
 
-if python3 "$SCRIPT_DIR/configure_fluidd_layout.py" $LAYOUT_ARG; then
+set --
+if [ -n "${K2_PLATE_SLICERS:-}" ]; then
+    set -- --plate-slicers "$K2_PLATE_SLICERS"
+fi
+if python3 "$SCRIPT_DIR/configure_fluidd_layout.py" $LAYOUT_ARG "$@"; then
     :
 else
     echo "W: macros were installed, but their Fluidd aliases/category could not be configured"
     echo "W: use Fluidd Settings -> Macros to configure them manually"
+    exit 1
 fi
