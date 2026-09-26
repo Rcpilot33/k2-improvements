@@ -7,27 +7,18 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import importlib.util
+from pathlib import Path
 
 
-CARTOGRAPHER_MACROS = (
-    "A11_CARTO_SELECT_DEFAULT",
-    "A12_CARTO_SELECT_TEXTURED_PEI",
-    "A13_CARTO_SELECT_EPOXY",
-    "A14_CARTO_SELECT_HIGH_TEMP",
-    "A15_CARTO_SELECT_CUSTOM",
-    "A21_CARTO_SCAN_SELECTED",
-    "A22_CARTO_TOUCH_SELECTED",
-    "A23_CARTO_LOAD_SELECTED",
-    "A61_CARTO_TOUCH_HOME",
-    "A62_CARTO_LIST_MODELS",
-    "A63_CARTO_INFO",
+_spec = importlib.util.spec_from_file_location(
+    "cartographer_layout", Path(__file__).resolve().parents[1]
+    / "extras/cartographer-macros/configure_fluidd_layout.py"
 )
-PLATE_SELECTORS = {
-    "A12_CARTO_SELECT_TEXTURED_PEI",
-    "A13_CARTO_SELECT_EPOXY",
-    "A14_CARTO_SELECT_HIGH_TEMP",
-    "A15_CARTO_SELECT_CUSTOM",
-}
+cartographer_layout = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(cartographer_layout)
+CARTOGRAPHER_MACROS = tuple(name for name, _, _ in cartographer_layout.MACRO_LAYOUT)
+PLATE_SELECTORS = cartographer_layout.PLATE_SELECTOR_NAMES
 COMPONENT_MACROS = {
     "cartographer": CARTOGRAPHER_MACROS,
     "cartographer-plate-workflow": CARTOGRAPHER_MACROS,
@@ -41,7 +32,7 @@ class VerificationError(RuntimeError):
     pass
 
 
-def verify_layout(namespace, component):
+def verify_layout(namespace, component, plate_slicers="creality"):
     expected = COMPONENT_MACROS.get(component)
     if expected is None:
         raise VerificationError("unsupported component: {}".format(component))
@@ -68,6 +59,7 @@ def verify_layout(namespace, component):
         if item.get("name")
     }
     errors = []
+    selected = cartographer_layout.visible_selectors(plate_slicers)
     for name in expected:
         item = stored_by_name.get(name.casefold())
         if item is None:
@@ -82,9 +74,9 @@ def verify_layout(namespace, component):
         if (
             component == "cartographer-plate-workflow"
             and name in PLATE_SELECTORS
-            and not item.get("visible", False)
+            and bool(item.get("visible", False)) != (name in selected)
         ):
-            errors.append("{} is still hidden".format(name))
+            errors.append("{} has incorrect selector visibility".format(name))
     if errors:
         raise VerificationError("; ".join(errors))
 
@@ -129,8 +121,10 @@ def main():
         verify_layout(
             fetch_namespace(os.environ.get("MOONRAKER_URL", "http://127.0.0.1:7125")),
             component,
+            plate_slicers=(cartographer_layout.read_plate_slicers()
+                           if component == "cartographer-plate-workflow" else "creality"),
         )
-    except VerificationError as exc:
+    except (VerificationError, cartographer_layout.LayoutError, OSError, ValueError, KeyError) as exc:
         print("E: Fluidd layout verification failed for {}: {}".format(component, exc))
         return 1
     print("I: verified persistent Fluidd macro grouping for {}".format(component))

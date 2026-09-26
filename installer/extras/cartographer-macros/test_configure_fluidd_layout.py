@@ -32,7 +32,7 @@ class FluiddLayoutTests(unittest.TestCase):
         self.assertEqual(second.kwargs["method"], "POST")
         self.assertEqual(second.kwargs["body"]["namespace"], "fluidd")
         self.assertEqual(second.kwargs["body"]["key"], "macros")
-        self.assertEqual(len(second.kwargs["body"]["value"]["stored"]), 11)
+        self.assertEqual(len(second.kwargs["body"]["value"]["stored"]), 17)
 
     def test_only_get_404_may_be_treated_as_missing(self):
         missing = urllib.error.HTTPError(
@@ -145,7 +145,7 @@ class FluiddLayoutTests(unittest.TestCase):
         self.assertEqual(first["color"], "#1AED07")
         self.assertEqual(first["order"], 9)
         second = result["macros"]["stored"][1]
-        self.assertEqual(second["alias"], "TEXTURED_PEI")
+        self.assertEqual(second["alias"], "Textured PEI (Creality Print)")
         self.assertEqual(second["color"], "#1AED07")
         self.assertEqual(second["categoryId"], "carto-user-id")
         self.assertTrue(second["visible"])
@@ -153,7 +153,7 @@ class FluiddLayoutTests(unittest.TestCase):
     def test_optional_workflow_reveals_all_named_plate_selectors(self):
         source = layout.merge_layout({"macros": {}})
 
-        result = layout.merge_layout(source, show_plate_selectors=True)
+        result = layout.merge_layout(source, show_plate_selectors=True, plate_slicers="both")
         targets = {item["name"]: item for item in result["macros"]["stored"]}
 
         for name in layout.PLATE_SELECTOR_NAMES:

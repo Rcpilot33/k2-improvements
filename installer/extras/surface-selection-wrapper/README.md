@@ -7,6 +7,12 @@ installed together with the predefined
 
 ## How it works
 
+The same optional workflow supports Creality Print, OrcaSlicer, or Both; choose
+visible selectors in Extras. See the [plate mapping](../cartographer-macros/README.md#slicer-choice-and-orca-mapping)
+and [four Orca templates](../kamp-adaptive-purge/slicer-templates/README.md).
+New surface models need saved Scan and Touch calibrations. Orca's unknown-plate
+fallback is `default`. Changing visible selectors preserves saved models.
+
 The slicer passes `SURFACE=<name>` to `START_PRINT`. The wrapper loads the scan
 and touch models with that name:
 

@@ -14,7 +14,7 @@ def configured_namespace():
         {
             "name": name,
             "categoryId": "carto",
-            "visible": True,
+            "visible": name not in verifier.cartographer_layout.ORCA_SELECTOR_NAMES,
         }
         for name in verifier.CARTOGRAPHER_MACROS
     ]
@@ -29,6 +29,11 @@ def configured_namespace():
 
 
 class VerifyFluiddLayoutTests(unittest.TestCase):
+    def test_all_slicer_modes_match_installer_layout(self):
+        for mode in ("creality", "orca", "both"):
+            namespace = verifier.cartographer_layout.merge_layout({}, True, mode)
+            verifier.verify_layout(namespace, "cartographer-plate-workflow", mode)
+
     def test_accepts_all_supported_component_layouts(self):
         namespace = configured_namespace()
         for component in verifier.COMPONENT_MACROS:
@@ -75,7 +80,7 @@ class VerifyFluiddLayoutTests(unittest.TestCase):
         )
         target["visible"] = False
         verifier.verify_layout(hidden, "cartographer")
-        with self.assertRaisesRegex(verifier.VerificationError, "still hidden"):
+        with self.assertRaisesRegex(verifier.VerificationError, "incorrect selector visibility"):
             verifier.verify_layout(hidden, "cartographer-plate-workflow")
 
     def test_rejects_unknown_component(self):

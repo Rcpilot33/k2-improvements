@@ -132,11 +132,15 @@ printer profile. Keep the slicer's system preset unchanged as a fallback.
 | [`creality-start-material-surface-profiles.gcode`](./slicer-templates/creality-start-material-surface-profiles.gcode) | Yes | Yes | No |
 | [`creality-start-material-kamp.gcode`](./slicer-templates/creality-start-material-kamp.gcode) | Yes | No; uses `default` | Yes |
 | [`creality-start-material-surface-profiles-kamp.gcode`](./slicer-templates/creality-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
-| [`orca-machine-start.gcode`](./slicer-templates/orca-machine-start.gcode) | Yes | Yes | Yes |
+| [`orca-start-material-only.gcode`](./slicer-templates/orca-start-material-only.gcode) | Yes | No | No |
+| [`orca-start-material-kamp.gcode`](./slicer-templates/orca-start-material-kamp.gcode) | Yes | No | Yes |
+| [`orca-start-material-surface-profiles.gcode`](./slicer-templates/orca-start-material-surface-profiles.gcode) | Yes | Yes | No |
+| [`orca-start-material-surface-profiles-kamp.gcode`](./slicer-templates/orca-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
 
 All four Creality Print variants passed printer testing on firmware `1.1.5.5`.
-The Orca template remains dependent on the exact plate-name values emitted by
-the user's Orca profile and is not included in that Creality Print validation.
+The six Orca 2.4.2 plate names were verified from exported files. Standard,
+KAMP, enabled stock-purge fallback, and the `high_temp` print path were tested
+on the printer. The expanded selector UI and full plate matrix need testing.
 
 In the slicer:
 

@@ -5,6 +5,16 @@ plates on a K2 Plus using the stock PR Touch probe.
 
 ## Naming
 
+Creality Print and OrcaSlicer use the same optional extra; no slicer-specific
+printer installation is needed. Use a surface-profile variant from the
+[slicer templates](../kamp-adaptive-purge/slicer-templates/README.md).
+The [plate mapping](../cartographer-macros/README.md#slicer-choice-and-orca-mapping)
+also applies to stock PR Touch mesh names, without any Cartographer calibration
+requirement. For example `SURFACE=orca_cool_plate BED_TEMP=70 CHAMBER_TEMP=0`
+selects `orca_cool_plate_70.0c_0.0c`. The existing runtime accepts these names
+without modification; the complete Orca/stock-probe matrix still needs printer
+testing.
+
 When `START_PRINT` receives a `SURFACE` parameter, the surface is added before
 the existing bed- and chamber-temperature name:
 

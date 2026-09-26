@@ -3,21 +3,55 @@
 Adds compact `A**_CARTO_*` buttons to Fluidd for Cartographer profile
 selection, calibration, model loading, homing, and diagnostics.
 
-The core Cartographer installer seeds Fluidd's UI metadata for all 11 buttons.
+The core Cartographer installer seeds Fluidd's UI metadata for all 17 buttons.
 They appear in the **Cartographer Calibration** category with short aliases
 while their real `A**_CARTO_*` names remain unchanged and retain their sorting
 order. The default selector and shared calibration, loading, homing, and
-diagnostic actions are visible immediately. The four named plate selectors
+diagnostic actions are visible immediately. The ten named plate selectors
 remain hidden until the optional **Cartographer plate workflow** is enabled.
-Plate selectors are green (`#1AED07`), the two calibration actions are orange
-(`#FF9800`), and the remaining actions are blue (`#2196F3`). These 11 colors
-are installer-managed to keep the palette consistent. Existing non-empty
+Default and CP selectors are green (`#1AED07`); Orca selectors are purple
+(`#AB47BC`). The two calibration actions are orange
+(`#FF9800`), and the remaining actions are blue (`#2196F3`). These colors
+are installer-managed to keep the palette consistent. Original stock CP aliases migrate to slicer-qualified names. Other non-empty
 aliases and valid category assignments are treated as user customizations and
 preserved. Refresh Fluidd after installation to load a newly seeded layout.
 
 All macros are installed with Cartographer. The **Cartographer plate workflow**
-entry in Extras reveals the four named plate selectors and installs the
+entry in Extras offers **Creality Print**, **OrcaSlicer**, or **Both**, reveals
+only the chosen slicer's selectors, and installs the
 [surface-selection wrapper](../surface-selection-wrapper/README.md).
+
+## Slicer choice and Orca mapping
+
+The selection is saved in `custom/plate-workflow-slicers.json` and reused by
+updates and post-restart verification. Existing installations without a saved
+choice retain CP selectors. Reopen the same Extras entry to change the choice.
+
+Default comes first, then four CP selectors, then these six Orca selectors,
+then the existing shared actions. Numeric sub-prefixes preserve existing
+`A21`/`A22`/`A23` command names. Aliases show the plate name with
+`(Creality Print)` or `(Orca)`; intentionally customized aliases are preserved.
+
+| Orca display name | Exported `curr_bed_type` | Model / `SURFACE` | Numbered prefix |
+|---|---|---|---|
+| Smooth Cool Plate | Cool Plate | `orca_cool_plate` | `A16_CARTO_SELECT_ORCA_01` |
+| Engineering Plate | Engineering Plate | `orca_engineering` | `A16_CARTO_SELECT_ORCA_02` |
+| Smooth High Temp Plate | High Temp Plate | `high_temp` | `A16_CARTO_SELECT_ORCA_03` |
+| Textured PEI Plate | Textured PEI Plate | `textured_pei` | `A16_CARTO_SELECT_ORCA_04` |
+| Textured Cool Plate | Textured Cool Plate | `orca_textured_cool` | `A16_CARTO_SELECT_ORCA_05` |
+| Cool Plate (SuperTack) | Supertack Plate | `orca_supertack` | `A16_CARTO_SELECT_ORCA_06` |
+
+`high_temp` and `textured_pei` reuse existing CP models for the **same physical
+plate**. Different physical plates needing different calibration require
+separate custom models. Installation never renames or deletes saved models or
+offsets. Calibrate and save Scan and Touch models for each new surface before
+printing. Orca's unknown-plate fallback is `default`; it must match the fitted
+plate.
+
+All six internal names were captured from Orca 2.4.2 exports. The `high_temp`
+print path passed printer testing; the expanded UI and other physical plate
+calibrations still need printer validation. Automated tests check metadata,
+persistence, and model-name contracts.
 
 ## Included plate profiles
 
@@ -79,15 +113,21 @@ of Fluidd's alphabetical macro list. The selected profile resets to `default`
 after a Klipper restart, so select a plate again before calibrating or loading.
 Utility buttons provide touch homing, model listing, and probe information.
 
-The seeded aliases and colors, in macro-name order, are shown below. The four
+The seeded aliases and colors, in macro-name order, are shown below. The ten
 named plate aliases are hidden until the optional plate workflow is enabled.
 
 ```text
 DEFAULT                 green
-TEXTURED_PEI            green
-EPOXY                   green
-HIGH_TEMP               green
-CUSTOM                  green
+Textured PEI (Creality Print)          green
+Epoxy Resin (Creality Print)           green
+High Temp (Creality Print)             green
+Customized (Creality Print)            green
+Smooth Cool Plate (Orca)               purple
+Engineering Plate (Orca)               purple
+Smooth High Temp Plate (Orca)          purple
+Textured PEI Plate (Orca)               purple
+Textured Cool Plate (Orca)              purple
+Cool Plate (SuperTack) (Orca)           purple
 CARTO_SCAN_CALIBRATE    orange
 CARTO_TOUCH_CALIBRATE   orange
 CARTO_LOAD              blue
