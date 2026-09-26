@@ -18,6 +18,14 @@ mesh = np.array([
     [0.11, 0.147, 0.202, 0.2, 0.19, 0.19, 0.182, 0.147, 0.097],
 ])
 
+# Physical coordinates used to create this mesh. Match these to the
+# [bed_mesh] mesh_min and mesh_max values from the printer configuration.
+mesh_min = (5.0, 5.0)
+mesh_max = (345.0, 345.0)
+
+if mesh.ndim != 2 or mesh.shape[0] < 2 or mesh.shape[1] < 2:
+    raise ValueError("mesh must be a rectangular 2D grid with at least 2 rows and 2 columns")
+
 # Available tape thicknesses
 tape_thicknesses = [0.1, 0.06]
 
@@ -112,18 +120,19 @@ import matplotlib.patches as patches
 import numpy as np
 from collections import defaultdict
 
-# Dimensions of a single tape piece
-tape_size = 42.5
-
-# Generate the actual bed coordinates
-x_coords = np.arange(5, 346, 42.5)  # X-axis bed points
-y_coords = np.arange(5, 346, 42.5)  # Y-axis bed points
+# Generate physical bed coordinates directly from the pasted mesh shape.
+# Columns are X positions and rows are Y positions.
+x_coords = np.linspace(mesh_min[0], mesh_max[0], mesh.shape[1])
+y_coords = np.linspace(mesh_min[1], mesh_max[1], mesh.shape[0])
+x_pitch = abs(x_coords[1] - x_coords[0])
+y_pitch = abs(y_coords[1] - y_coords[0])
+tape_size = min(x_pitch, y_pitch)
 
 # Function to visualize a single layer with centered tape pieces
 def visualize_layer(layer_num, layer_details):
     fig, ax = plt.subplots(figsize=(10, 10))
-    ax.set_xlim(-20, 370)
-    ax.set_ylim(-20, 370)
+    ax.set_xlim(mesh_min[0] - x_pitch, mesh_max[0] + x_pitch)
+    ax.set_ylim(mesh_min[1] - y_pitch, mesh_max[1] + y_pitch)
     ax.set_title(f"Layer {layer_num}", fontsize=16)
     ax.set_xlabel("X (mm)", fontsize=12)
     ax.set_ylabel("Y (mm)", fontsize=12)

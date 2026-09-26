@@ -24,6 +24,7 @@ KNOWN_COMPONENTS = {
     "global-touch-offsets",
     "material-z-offsets",
     "plate-aware-mesh",
+    "memory-diagnostics",
 }
 
 EXPECTED_DETECTORS = {
@@ -40,6 +41,7 @@ EXPECTED_DETECTORS = {
     "global-touch-offsets": "is_global_touch_offsets",
     "material-z-offsets": "is_material_z_offsets",
     "plate-aware-mesh": "is_plate_aware_mesh",
+    "memory-diagnostics": "is_memory_diagnostics",
 }
 
 
@@ -62,6 +64,40 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_serious_audit_repairs_are_offered_once(self):
+        catalog_ids = {entry[0] for entry in entries()}
+        cases = {
+            "audit-cartographer-config-runtime-safety-v1": "cartographer",
+            "audit-memory-diagnostics-worker-v1": "memory-diagnostics",
+            "audit-abort-homing-patcher-safety-v1": "abort_homing",
+        }
+        for update_id, component in cases.items():
+            with self.subTest(update_id=update_id):
+                self.assertIn(update_id, catalog_ids)
+                previously_completed = catalog_ids - {update_id}
+                self.assertEqual(
+                    recommended(set(cases.values()), previously_completed),
+                    {component},
+                )
+                self.assertEqual(recommended({component}, catalog_ids), set())
+
+    def test_critical_audit_repairs_are_offered_once(self):
+        catalog_ids = {entry[0] for entry in entries()}
+        cases = {
+            "audit-cartographer-install-safety-v1": "cartographer",
+            "audit-axis-twist-offsets-v1": "axis_twist_compensation",
+            "audit-macro-motion-heater-safety-v1": "macros",
+        }
+        for update_id, component in cases.items():
+            with self.subTest(update_id=update_id):
+                self.assertIn(update_id, catalog_ids)
+                previously_completed = catalog_ids - {update_id}
+                self.assertEqual(
+                    recommended(set(cases.values()), previously_completed),
+                    {component},
+                )
+                self.assertEqual(recommended({component}, catalog_ids), set())
+
     def test_missing_scan_model_homing_guard_is_offered_once(self):
         update_id = "cartographer-scan-model-homing-guard-v1"
         catalog_ids = {entry[0] for entry in entries()}
@@ -81,6 +117,18 @@ class MigrationCatalogTests(unittest.TestCase):
             recommended({"cartographer", "macros"}, previously_completed),
             {"cartographer"},
         )
+
+    def test_cartographer_mesh_grid_defaults_are_offered_once(self):
+        update_id = "cartographer-mesh-grid-defaults-v2"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"cartographer", "macros"}, previously_completed),
+            {"cartographer"},
+        )
+        self.assertEqual(recommended({"macros"}, previously_completed), set())
+        self.assertEqual(recommended({"cartographer"}, catalog_ids), set())
 
     def test_optional_kamp_override_order_is_offered_once(self):
         update_id = "cartographer-optional-kamp-order-v2"

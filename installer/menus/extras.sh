@@ -119,7 +119,7 @@ run_carto_plate_workflow() {
     fi
 
     printf '  %-32s %s\n' 'Named plate selectors' \
-        "$(if is_surface_wrap; then state_installed; else state_not_installed; fi)"
+        "$(if is_carto_macros; then state_installed; else state_not_installed; fi)"
     printf '  %-32s %s\n\n' 'Surface-selection wrapper' \
         "$(if is_surface_wrap; then state_installed; else state_not_installed; fi)"
 
@@ -129,7 +129,8 @@ run_carto_plate_workflow() {
 
     local pwd_home failed
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
-    [ -n "$pwd_home" ] || pwd_home="$HOME"
+    [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
+    [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
     failed=0
 
     info 'refreshing Cartographer Fluidd macros'
@@ -337,7 +338,8 @@ install_extra() {
     esac
 
     local pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
-    [ -n "$pwd_home" ] || pwd_home="$HOME"
+    [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
+    [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
     info "running $script (HOME=$pwd_home)"
     if HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script" $script_arg; then
         info "$name install completed"

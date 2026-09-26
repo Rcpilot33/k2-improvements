@@ -12,6 +12,26 @@ BASH = shutil.which("bash") or "C:/Program Files/Git/bin/bash.exe"
 
 @unittest.skipUnless(Path(BASH).exists(), "bash required")
 class DependencyCompletionTests(unittest.TestCase):
+    def test_untracked_component_completion_is_a_clean_noop(self):
+        script = '''
+. "$UPDATE_SCRIPT"
+migration_catalog() { echo 'tracked|cartographer|is_cartographer|test'; }
+migration_component_installed() { return 1; }
+warn() { printf '%s\\n' "$*" >&2; }
+migration_mark_component_current entware
+'''
+        result = subprocess.run(
+            [BASH, "-c", script],
+            capture_output=True,
+            text=True,
+            env=dict(
+                os.environ,
+                UPDATE_SCRIPT=(ROOT / "installer/menus/update.sh").as_posix(),
+            ),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stderr, "")
+
     def test_memory_diagnostics_completion_requires_all_installed_files(self):
         for missing in (None, "config", "module", "include"):
             with self.subTest(missing=missing), tempfile.TemporaryDirectory(

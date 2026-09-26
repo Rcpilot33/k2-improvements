@@ -30,4 +30,9 @@ rm -f "$KLIPPER_EXTRAS/memory_diagnostics.pyc" \
 
 echo "I: installed bounded memory and fragmentation diagnostics"
 echo "I: log: /mnt/UDISK/printer_data/logs/memory-diagnostics.log"
-sh "$INSTALLER_BASE/scripts/klippy_code_restart.sh"
+if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" = "1" ]; then
+    touch /tmp/k2-klippy-code-restart-required
+    echo "I: deferring Klippy code reload until the full update is complete"
+else
+    sh "$INSTALLER_BASE/scripts/klippy_code_restart.sh"
+fi

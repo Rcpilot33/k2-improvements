@@ -80,6 +80,7 @@ install_feature() {
     # Force HOME from /etc/passwd - better-root may have changed root's
     # home mid-session, but the menu shell's HOME is cached from login.
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+    [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
     info "running $name (HOME=$pwd_home)"
     if HOME="$pwd_home" sh "$script"; then
         info "$name install completed"

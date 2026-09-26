@@ -1,6 +1,8 @@
 # Low-overhead memory and fragmentation recorder for constrained K2 hosts.
 
 import os
+import queue
+import threading
 import time
 
 
@@ -117,6 +119,13 @@ class MemoryDiagnostics:
         self.last_print_state = None
         self.last_status = {}
         self.failure_reported = False
+        self.pending_samples = queue.Queue(maxsize=1)
+        self.worker = threading.Thread(
+            target=self._worker_loop,
+            name="k2-memory-diagnostics",
+            daemon=True,
+        )
+        self.worker.start()
         self.reactor.register_timer(self._sample, self.reactor.NOW)
 
     def get_status(self, eventtime):
@@ -162,12 +171,11 @@ class MemoryDiagnostics:
         with open(self.log_path, "a") as handle:
             handle.write(line + "\n")
 
-    def _sample(self, eventtime):
+    def _collect_sample(self, eventtime, print_state):
         try:
             memory = read_key_values("/proc/meminfo", MEMINFO_KEYS)
             self_rss = read_key_values("/proc/self/status", ("VmRSS",)).get(
                 "VmRSS", -1)
-            print_state = self._print_state(eventtime)
             state_changed = self.last_print_state is not None and \
                 print_state != self.last_print_state
             reason = "state:%s>%s" % (self.last_print_state, print_state) \
@@ -214,6 +222,24 @@ class MemoryDiagnostics:
                 except Exception:
                     pass
                 self.failure_reported = True
+
+    def _worker_loop(self):
+        while True:
+            eventtime, print_state = self.pending_samples.get()
+            try:
+                self._collect_sample(eventtime, print_state)
+            finally:
+                self.pending_samples.task_done()
+
+    def _sample(self, eventtime):
+        # Klipper timer callbacks execute on the motion reactor. Keep this path
+        # bounded: capture only the in-memory print state and let the worker do
+        # all procfs traversal, flash writes, rotation, and formatting.
+        print_state = self._print_state(eventtime)
+        try:
+            self.pending_samples.put_nowait((eventtime, print_state))
+        except queue.Full:
+            pass
         return eventtime + self.interval
 
 

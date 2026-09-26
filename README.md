@@ -157,6 +157,10 @@ Create and save a `default` bed mesh using the same `[bed_mesh] probe_count`
 that will be active while printing. Recreate it whenever `probe_count` changes.
 Saved `5,5` and `19,19` meshes are not interchangeable.
 
+Run `G28`, `Z_TILT_ADJUST`, `G28 Z`,
+`BED_MESH_CALIBRATE PROFILE=default`, and `SAVE_CONFIG` in that order, then
+wait for the protected restart to finish before moving the printer.
+
 See the [bed-mesh guide](./features/macros/bed_mesh/README.md).
 
 ### Cartographer
@@ -166,6 +170,11 @@ spacers. The Jamin profile is printer-tested. The JimmyV legacy and final
 profiles are **untested** and use JimmyV's published offsets. Final profiles
 are provided for mounts without and with the 3DO nozzle camera. Custom offsets
 are supported.
+
+The Cartographer installer changes the untouched stock `19,19` probe count to
+`50,50` and sets bed-mesh speed to `150` in `custom/overrides.cfg`. Full
+firmware can use speed `200`; existing customized values are preserved during
+updates.
 
 Complete Scan and Touch calibration, then tune final print Z from an actual
 first layer. Touch calibration selects the detection threshold and speed; its

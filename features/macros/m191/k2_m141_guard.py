@@ -74,17 +74,18 @@ class K2M141Guard:
         # commands outside the window continue to use Creality's handler.
         if target == 30.0 and print_state not in ("printing", "paused"):
             chamber_fan = self.printer.lookup_object(
-                "temperature_fan chamber_fan"
+                "temperature_fan chamber_fan", None
             )
-            chamber_fan_status = chamber_fan.get_status(
-                self.reactor.monotonic()
-            )
-            self.pre_file_chamber_fan_target = float(
-                chamber_fan_status["target"]
-            )
-            self.pre_file_case_fan_deadline = (
-                self.reactor.monotonic() + self.PREFILE_CASE_FAN_WINDOW
-            )
+            if chamber_fan is not None:
+                chamber_fan_status = chamber_fan.get_status(
+                    self.reactor.monotonic()
+                )
+                self.pre_file_chamber_fan_target = float(
+                    chamber_fan_status["target"]
+                )
+                self.pre_file_case_fan_deadline = (
+                    self.reactor.monotonic() + self.PREFILE_CASE_FAN_WINDOW
+                )
 
         if should_restore:
             margin = self._chamber_fan_margin()

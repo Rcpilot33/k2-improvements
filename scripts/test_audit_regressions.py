@@ -46,15 +46,41 @@ class AuditRegressionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             target = pathlib.Path(temp_dir, "webhooks.py")
             target.write_text(
-                "force_stop_homing\ncan_force_stop_homing\n",
+                'self.register_endpoint("force_stop_homing", '
+                "self._handle_force_stop_homing)\n"
+                "def _handle_force_stop_homing(self, web_request):\n"
+                "    pass\n"
+                "'can_force_stop_homing': True\n",
                 encoding="utf-8",
             )
             self.assertIsNone(module.patch_webhooks(target))
 
+    def test_patch_webhooks_rejects_partial_patch(self):
+        module = load_module(
+            "patch_webhooks_partial_test",
+            ROOT / "features/abort_homing/patch_webhooks.py",
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = pathlib.Path(temp_dir, "webhooks.py")
+            target.write_text(
+                'self.register_endpoint("force_stop_homing", '
+                "self._handle_force_stop_homing)\n",
+                encoding="utf-8",
+            )
+            self.assertFalse(module.patch_webhooks(target))
+
+    def test_patch_webhooks_writes_backup_before_atomic_replacement(self):
+        source = (ROOT / "features/abort_homing/patch_webhooks.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(".before-abort-homing.bak", source)
+        self.assertIn("tempfile.mkstemp", source)
+        self.assertIn("os.replace(temporary, filepath)", source)
+
     def test_restore_path_rejects_broad_and_persistent_targets(self):
         source = (ROOT / "scripts/restore-path.sh").read_text(encoding="utf-8")
         self.assertIn('[ "$#" -eq 1 ]', source)
-        self.assertIn('/|/overlay|/overlay/*|/mnt|/mnt/*)', source)
+        self.assertIn('/|/bin|/etc|/lib|/sbin|/usr|/var|/overlay|/overlay/*|/mnt|/mnt/*)', source)
         self.assertIn('rm -fr "$FULLPATH"', source)
         self.assertIn('rm -fr "$OVERLAY_PATH"', source)
 

@@ -192,14 +192,20 @@ class M191WorkflowTests(unittest.TestCase):
             "Original bed target was off, skipping bed target wait", MACRO
         )
 
-    def test_s_zero_keeps_emergency_shutdown_behavior(self):
+    def test_s_zero_disables_only_chamber_heating(self):
         zero = MACRO.index("{% if S == 0 %}")
-        off = MACRO.index("TURN_OFF_HEATERS", zero)
-        fan_off = MACRO.index("M107", off)
-        settings = MACRO.index('printer["gcode_macro _M191_VARS"]', fan_off)
-        self.assertLess(zero, off)
-        self.assertLess(off, fan_off)
-        self.assertLess(fan_off, settings)
+        branch_end = MACRO.index("{% else %}", zero)
+        branch = MACRO[zero:branch_end]
+        self.assertIn(
+            "SET_HEATER_TEMPERATURE HEATER=chamber_heater TARGET=0", branch
+        )
+        self.assertIn(
+            "SET_TEMPERATURE_FAN_TARGET TEMPERATURE_FAN=chamber_fan TARGET=35",
+            branch,
+        )
+        self.assertNotIn("TURN_OFF_HEATERS", branch)
+        self.assertNotIn("M107", branch)
+        self.assertNotIn("M106 P2", branch)
 
     def test_old_direct_fan2_override_is_removed(self):
         self.assertNotIn("SET_PIN PIN=fan2", MACRO)

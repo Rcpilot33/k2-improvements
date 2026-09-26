@@ -1,9 +1,12 @@
 #!/bin/ash
+set -e
 
 SCRIPT_DIR="$(readlink -f $(dirname $0))"
 
-python ${SCRIPT_DIR}/patch_webhooks.py /mnt/UDISK/root/klipper/klippy/webhooks.py
+set +e
+python3 ${SCRIPT_DIR}/patch_webhooks.py /mnt/UDISK/root/klipper/klippy/webhooks.py
 EXIT_CODE=$?
+set -e
 
 if [ "$EXIT_CODE" -eq 0 ] || [ "$EXIT_CODE" -eq 2 ]; then
     rm -f /mnt/UDISK/root/klipper/klippy/webhooks.pyc

@@ -10,8 +10,9 @@ move_homedir() {
         rsync --remove-source-files -a /root/ /mnt/UDISK/root/
         # just remove any overlays for the original root location
         rm -fr /overlay/upper/root/*
-        # change root homedir
-        sed -i 's,/root,/mnt/UDISK/root,' /etc/passwd
+        # Back up the login database and change only root's home field.
+        cp -p /etc/passwd "/etc/passwd.before-better-root.$(date +%s)"
+        sed -i 's|^\(root:[^:]*:[^:]*:[^:]*:[^:]*\):/root:|\1:/mnt/UDISK/root:|' /etc/passwd
         sync
     fi
 }
@@ -62,7 +63,7 @@ elif [ -t 0 ]; then
     echo "I: logging you out now!"
     echo "I: please reconnect to continue"
     # terminate the SSH session
-    pgrep dropbear | grep -v "^$(pgrep -o dropbear)$" | xargs kill -9
+    pgrep dropbear | grep -v "^$(pgrep -o dropbear)$" | xargs -r kill -9
 else
     echo "I: non-interactive run detected; not killing SSH."
     echo "I: reconnect for the new HOME to take effect."

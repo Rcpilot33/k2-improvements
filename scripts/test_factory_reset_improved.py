@@ -19,12 +19,21 @@ class FactoryResetImprovedTests(unittest.TestCase):
         if self.shell is None:
             self.skipTest("sh is required")
 
-    def _fixture_script(self, root: Path) -> Path:
+    def _fixture_script(self, root: Path, fail_name: str = "") -> Path:
         script = SCRIPT.read_text(encoding="utf-8")
         shell_root = root.as_posix()
         script = script.replace(
             "UDISK_ROOT=/mnt/UDISK", f"UDISK_ROOT='{shell_root}'", 1
         )
+        if fail_name:
+            script = script.replace(
+                '    rm -rf -- "$1"',
+                '    case "$1" in\n'
+                f'        */{fail_name}) return 1 ;;\n'
+                '    esac\n'
+                '    rm -rf -- "$1"',
+                1,
+            )
         script = script.replace(
             'if ! echo "all" | /usr/bin/nc -U /var/run/wipe.sock; then',
             "if ! true; then",
@@ -81,6 +90,22 @@ class FactoryResetImprovedTests(unittest.TestCase):
             self.assertTrue((root / "creality/userdata/log/web-server.log").is_file())
             self.assertFalse((root / "printer_data").exists())
             self.assertFalse((root / "ai_image").exists())
+
+    def test_delete_failure_falls_back_to_creality_reset(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "UDISK"
+            for name in ("root", "bin", "creality", "printer_data", "stubborn"):
+                (root / name).mkdir(parents=True)
+            fixture = self._fixture_script(root, fail_name="stubborn")
+
+            result = self._run(fixture, "--run")
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("IMPROVED CLEANUP INCOMPLETE", result.stderr)
+            self.assertIn("Continuing with the confirmed Creality factory reset", result.stderr)
+            self.assertIn("Begin factory reset", result.stdout)
+            self.assertTrue((root / "stubborn").is_dir())
+            self.assertFalse((root / "printer_data").exists())
 
 
 if __name__ == "__main__":

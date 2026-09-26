@@ -72,8 +72,8 @@ class FakePrinter:
     def get_reactor(self):
         return self.reactor
 
-    def lookup_object(self, name):
-        return self.objects[name]
+    def lookup_object(self, name, default=None):
+        return self.objects.get(name, default)
 
     def get_start_args(self):
         return {}

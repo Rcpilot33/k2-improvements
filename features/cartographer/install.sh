@@ -50,12 +50,25 @@ else
 fi
 
 
-# update printer config
-python ${SCRIPT_DIR}/alter_config.py
+# update printer config. A reinstall normally has no live PR Touch section;
+# when one is present, require the migration to complete successfully.
+if grep -q '^[[:space:]]*\[prtouch_v3\][[:space:]]*$' \
+    ~/printer_data/config/printer.cfg; then
+    python3 "${SCRIPT_DIR}/alter_config.py"
+else
+    echo "I: stock [prtouch_v3] section is already removed"
+fi
 python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg prtouch_v3.cfg True
 python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/printer.cfg custom/main.cfg
+if [ -f ~/printer_data/config/custom/cartographer.cfg ] && \
+    ! cmp -s "${SCRIPT_DIR}/cartographer.cfg" \
+        ~/printer_data/config/custom/cartographer.cfg; then
+    CARTO_CFG_BACKUP=~/printer_data/config/custom/cartographer.cfg.before-managed-update.$(date +%Y%m%d-%H%M%S)
+    cp -p ~/printer_data/config/custom/cartographer.cfg "$CARTO_CFG_BACKUP"
+    echo "I: preserved previous Cartographer config at $CARTO_CFG_BACKUP"
+fi
 cp ${SCRIPT_DIR}/cartographer.cfg ~/printer_data/config/custom
 # update serial port based on kernel ACM support
 sed -i "s|serial: /dev/cartographer|serial: ${CARTO_SERIAL}|g" ~/printer_data/config/custom/cartographer.cfg
@@ -102,13 +115,18 @@ ln -sf ${SCRIPT_DIR}/patches/clocksync.py ~/klipper/klippy/clocksync.py
 sh ${SCRIPT_DIR}/../save-config-restart/install.sh --no-restart
 ln -sf ${SCRIPT_DIR}/patches/homing.py ~/klipper/klippy/extras/homing.py
 ln -sf ${SCRIPT_DIR}/patches/temperature_mcu.py ~/klipper/klippy/extras/temperature_mcu.py
+rm -f ~/klipper/klippy/extras/k2_cartographer_scan_guard.pyc \
+    ~/klipper/klippy/extras/__pycache__/k2_cartographer_scan_guard.*.pyc
+ln -sf ${SCRIPT_DIR}/k2_cartographer_scan_guard.py \
+    ~/klipper/klippy/extras/k2_cartographer_scan_guard.py
 rm -f ~/klipper/klippy/extras/k2_safe_move_z.pyc \
     ~/klipper/klippy/extras/__pycache__/k2_safe_move_z.*.pyc
 ln -sf ${SCRIPT_DIR}/patches/k2_safe_move_z.py \
     ~/klipper/klippy/extras/k2_safe_move_z.py
 rm -f ~/klipper/klippy/extras/bed_mesh.py*
 ln -sf ${SCRIPT_DIR}/patches/bed_mesh.py ~/klipper/klippy/extras/bed_mesh.py
-sed -i 's/self\.use_offsets = False/self.use_offsets = True/g' ~/klipper/klippy/extras/probe.py || true
+python3 "${SCRIPT_DIR}/patch_probe_offsets.py" \
+    ~/klipper/klippy/extras/probe.py
 
 # install toggle script
 mkdir -p /mnt/UDISK/bin

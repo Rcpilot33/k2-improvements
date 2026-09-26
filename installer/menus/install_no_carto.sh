@@ -75,6 +75,7 @@ menu_install_no_carto() {
         fi
 
         local pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+        [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
         info "running $name (HOME=$pwd_home)"
         # A full setup reloads Klipper once after all components are installed.
         # Individual component installers retain their immediate restart.

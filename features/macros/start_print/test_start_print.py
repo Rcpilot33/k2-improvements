@@ -71,6 +71,22 @@ class StartPrintConfigTests(unittest.TestCase):
     def test_obsolete_probe_switch_is_not_advertised(self):
         self.assertNotIn("variable_offset_PROBE:", self.config)
 
+    def test_user_setting_comments_are_separated_from_values(self):
+        expected = (
+            "variable_heat_soak: 0                       # Minutes",
+            "variable_bed_mesh_soak: 5                   # Minutes; use 0 "
+            "when the printer is already heat soaked",
+            "variable_carto_touch_calibrate_start: 500   # Cartographer A22 "
+            "Touch calibration default",
+        )
+        for line in expected:
+            self.assertIn(line, self.config)
+
+        fallback = (
+            CONFIG.parent.parent / "overrides" / "ensure_bed_mesh_soak.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn(expected[1], fallback)
+
     def test_case_fan_is_not_continuously_enforced(self):
         self.assertEqual(self.config.count("M107 P1"), 1)
         self.assertNotIn("[delayed_gcode", self.config)
@@ -160,6 +176,20 @@ class StartPrintConfigTests(unittest.TestCase):
     def test_material_defaults_start_at_zero(self):
         for material in ("PLA", "PETG", "ABS", "ASA", "DEFAULT"):
             self.assertIn("variable_offset_%s: 0.00" % material, self.config)
+
+    def test_cold_home_homes_xy_before_cartographer_z(self):
+        section = self.config.split(
+            "[gcode_macro HOME_IF_NEEDED]", 1
+        )[1]
+        full_home = section.index("{% if needs_z and (needs_x or needs_y) %}")
+        g28_all = section.index("G28", full_home)
+        z_only = section.index("{% elif needs_z %}", g28_all)
+        self.assertLess(full_home, g28_all)
+        self.assertLess(g28_all, z_only)
+
+    def test_cartographer_detection_checks_object_membership(self):
+        self.assertIn("{% if 'cartographer' in printer %}", self.config)
+        self.assertNotIn("{% if printer.cartographer %}", self.config)
 
     def test_macro_repair_preserves_plate_surface_wrapper(self):
         installer = MACROS_INSTALLER.read_text(encoding="utf-8")

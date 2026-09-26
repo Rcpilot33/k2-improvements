@@ -19,6 +19,12 @@ SPEED_LINE_RE = re.compile(
     r"^[ \t]*speed[ \t]*:[ \t]*([0-9]+(?:\.[0-9]+)?).*$",
     re.I,
 )
+STOCK_PROBE_COUNT = "19,19"
+CARTOGRAPHER_PROBE_COUNT = "50,50"
+LEGACY_MANAGED_SPEED_COMMENTS = (
+    "150 recommended for lite firmware",
+    "lite firmware: 150 recommended",
+)
 
 BED_MESH = "bed_mesh"
 START_PRINT = "gcode_macro _START_PRINT_VARS"
@@ -111,17 +117,24 @@ def _normalize_bed_mesh_presentation(block: str) -> str:
         probe_count = PROBE_COUNT_LINE_RE.match(body)
         if probe_count:
             value = re.sub(r"[ \t]*,[ \t]*", ",", probe_count.group(1))
+            if value == STOCK_PROBE_COUNT:
+                value = CARTOGRAPHER_PROBE_COUNT
             rendered.append(
-                "probe_count: {:<24} # 50,50 is a good starting point with Cartographer{}".format(
+                "probe_count: {:<24} # Cartographer default: 50,50{}".format(
                     value, newline
                 )
             )
             continue
         speed = SPEED_LINE_RE.match(body)
         if speed:
+            value = speed.group(1)
+            if value == "200" and any(
+                marker in body.casefold() for marker in LEGACY_MANAGED_SPEED_COMMENTS
+            ):
+                value = "150"
             rendered.append(
-                "speed: {:<30} # 150 recommended for Lite firmware; 200 recommended for Full firmware{}".format(
-                    speed.group(1), newline
+                "speed: {:<30} # 200 can be set for Full firmware{}".format(
+                    value, newline
                 )
             )
             continue
@@ -174,10 +187,15 @@ def ensure_defaults(contents: str) -> Tuple[str, bool]:
     preamble, blocks = _split(contents)
 
     bed_index = _ensure_section(blocks, BED_MESH, newline)
+    if not _has_option(blocks[bed_index], "probe_count"):
+        blocks[bed_index] = _add_option(
+            blocks[bed_index],
+            "probe_count: 50,50                  # Cartographer default: 50,50",
+        )
     if not _has_option(blocks[bed_index], "speed"):
         blocks[bed_index] = _add_option(
             blocks[bed_index],
-            "speed: 150                         # Lite firmware: 150 recommended; Full firmware: 200 recommended",
+            "speed: 150                         # 200 can be set for Full firmware",
             after="probe_count",
         )
     blocks[bed_index] = _normalize_bed_mesh_presentation(blocks[bed_index])
@@ -198,7 +216,8 @@ def ensure_defaults(contents: str) -> Tuple[str, bool]:
     if not _has_option(blocks[scan_index], "mesh_path"):
         blocks[scan_index] = _add_option(
             blocks[scan_index],
-            "mesh_path: spiral                   # Continuous spiral scanning path",
+            "mesh_path: spiral                   # Spiral scan; change to "
+            "snake for the default path",
             after="mesh_runs",
         )
 

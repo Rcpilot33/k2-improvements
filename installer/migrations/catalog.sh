@@ -4,9 +4,17 @@
 
 migration_catalog() {
     cat <<'EOF'
+macro-user-comment-spacing-v1|macros|is_macros|Keep START_PRINT setting comments separated from their values so configuration editors expose every setting
+audit-cartographer-config-runtime-safety-v1|cartographer|is_cartographer|Back up managed Cartographer settings and restore configured motion limits automatically after an aborted mesh
+audit-memory-diagnostics-worker-v1|memory-diagnostics|is_memory_diagnostics|Move procfs sampling and UDISK logging off Klipper's motion reactor
+audit-abort-homing-patcher-safety-v1|abort_homing|is_abort_homing|Back up webhooks.py, reject partial patches, and replace it atomically
+audit-cartographer-install-safety-v1|cartographer|is_cartographer|Preserve SAVE_CONFIG data, verify probe XY offsets, and tolerate a missing Cartographer object during patched homing
+audit-axis-twist-offsets-v1|axis_twist_compensation|is_axis_twist|Keep Cartographer probe XY offsets enabled when Axis Twist replaces the probe helper
+audit-macro-motion-heater-safety-v1|macros|is_macros|Home XY before an unhomed Cartographer Z axis, limit M191 S0 to the chamber, and use robust Cartographer detection
 cartographer-z-rehome-preposition-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a disconnected Cartographer blocks the fast Z10 pre-positioning move on repeated Z homing
 cartographer-scan-model-homing-guard-v1|cartographer|is_cartographer|Refresh K2 homing so a missing Cartographer scan model stops scanner-controlled Z homing before motion
 cartographer-mesh-defaults-override-v1|cartographer|is_cartographer|Set durable Cartographer defaults to a 150 mm/s, one-run spiral mesh for reliable Full and Lite sampling
+cartographer-mesh-grid-defaults-v2|cartographer|is_cartographer|Set untouched Cartographer meshes to a 50 by 50 grid at 150 mm/s while preserving explicit user choices
 cartographer-optional-kamp-order-v2|cartographer|is_cartographer|Keep optional KAMP settings after core M191 settings without creating KAMP settings on printers where the extra is absent
 cartographer-fluidd-namespace-bootstrap-v1|cartographer|is_cartographer|Create the Fluidd database namespace when a wiped printer has not initialized it before Cartographer macro layout setup
 cartographer-current-mcu-api-v1|cartographer|is_cartographer|Refresh SAFE_MOVE_Z and Z-homing connection checks for the current Cartographer MCU interface, then reload through the protected restart
