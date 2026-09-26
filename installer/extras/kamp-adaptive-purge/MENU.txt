@@ -29,8 +29,11 @@ Creality Print templates:
   slicer-templates/creality-start-material-surface-profiles.gcode
   slicer-templates/creality-start-material-surface-profiles-kamp.gcode
 
-Orca template:
-  slicer-templates/orca-machine-start.gcode
+Orca templates:
+  slicer-templates/orca-start-material-only.gcode
+  slicer-templates/orca-start-material-kamp.gcode
+  slicer-templates/orca-start-material-surface-profiles.gcode
+  slicer-templates/orca-start-material-surface-profiles-kamp.gcode
 
 After showing its instructions, the standalone installer waits for Enter and
 then performs the required protected Klippy code reload and firmware restart.

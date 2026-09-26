@@ -15,7 +15,6 @@ Creality's system preset unchanged as a fallback.
 | `orca-start-material-kamp.gcode` | Yes | No | Yes | KAMP and enabled stock fallback tested |
 | `orca-start-material-surface-profiles.gcode` | Yes | Yes | No | Exported plate names verified; full matrix pending |
 | `orca-start-material-surface-profiles-kamp.gcode` | Yes | Yes | Yes | `high_temp` workflow tested; full matrix pending |
-| `orca-machine-start.gcode` | Yes | Explicit `default` | Yes | Legacy filename; prefer the variants above |
 
 The plate-selection variants pass `SURFACE=` to either the Cartographer plate
 workflow or the optional stock-PR-Touch plate-aware mesh feature. On a

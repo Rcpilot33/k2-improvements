@@ -9,7 +9,8 @@ while their real `A**_CARTO_*` names remain unchanged and retain their sorting
 order. The default selector and shared calibration, loading, homing, and
 diagnostic actions are visible immediately. The ten named plate selectors
 remain hidden until the optional **Cartographer plate workflow** is enabled.
-Plate selectors are green (`#1AED07`), the two calibration actions are orange
+Default and CP selectors are green (`#1AED07`); Orca selectors are purple
+(`#AB47BC`). The two calibration actions are orange
 (`#FF9800`), and the remaining actions are blue (`#2196F3`). These colors
 are installer-managed to keep the palette consistent. Original stock CP aliases migrate to slicer-qualified names. Other non-empty
 aliases and valid category assignments are treated as user customizations and
@@ -121,12 +122,12 @@ Textured PEI (Creality Print)          green
 Epoxy Resin (Creality Print)           green
 High Temp (Creality Print)             green
 Customized (Creality Print)            green
-Smooth Cool Plate (Orca)               green
-Engineering Plate (Orca)               green
-Smooth High Temp Plate (Orca)          green
-Textured PEI Plate (Orca)               green
-Textured Cool Plate (Orca)              green
-Cool Plate (SuperTack) (Orca)           green
+Smooth Cool Plate (Orca)               purple
+Engineering Plate (Orca)               purple
+Smooth High Temp Plate (Orca)          purple
+Textured PEI Plate (Orca)               purple
+Textured Cool Plate (Orca)              purple
+Cool Plate (SuperTack) (Orca)           purple
 CARTO_SCAN_CALIBRATE    orange
 CARTO_TOUCH_CALIBRATE   orange
 CARTO_LOAD              blue

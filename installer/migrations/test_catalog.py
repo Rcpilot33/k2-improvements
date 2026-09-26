@@ -64,6 +64,18 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_slicer_color_upgrade_is_offered_exactly_once(self):
+        migration = "cartographer-slicer-colors-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(migration, catalog_ids)
+        completed = catalog_ids - {migration}
+        self.assertEqual(recommended({"cartographer-plate-workflow"}, completed),
+                         {"cartographer-plate-workflow"})
+        self.assertEqual(recommended({"cartographer-plate-workflow"}, catalog_ids), set())
+        self.assertEqual(recommended({"cartographer", "macros"}, completed), set())
+        self.assertEqual(next(row[2] for row in entries() if row[0] == migration),
+                         "is_carto_plate_workflow")
+
     def test_dual_slicer_workflow_is_offered_exactly_once(self):
         migration = "cartographer-dual-slicer-plates-v1"
         catalog_ids = {entry[0] for entry in entries()}

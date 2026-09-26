@@ -10,6 +10,25 @@ import configure_fluidd_layout as layout
 
 
 class PlateWorkflowTests(unittest.TestCase):
+    def test_color_upgrade_preserves_each_slicer_mode(self):
+        for mode in ("creality", "orca", "both"):
+            old = layout.merge_layout({}, True, mode)
+            for item in old["macros"]["stored"]:
+                if item["name"] in layout.ORCA_SELECTOR_NAMES:
+                    item["color"] = "#1AED07"
+            updated = layout.merge_layout(old, True, mode)
+            for before, after in zip(old["macros"]["stored"], updated["macros"]["stored"]):
+                name = after["name"]
+                self.assertEqual(before["visible"], after["visible"])
+                self.assertEqual(before["alias"], after["alias"])
+                if name in layout.ORCA_SELECTOR_NAMES:
+                    self.assertEqual(after["color"], "#AB47BC")
+                elif name in layout.CP_SELECTOR_NAMES or name == "A11_CARTO_SELECT_DEFAULT":
+                    self.assertEqual(after["color"], "#1AED07")
+                else:
+                    self.assertEqual(before["color"], after["color"])
+            self.assertEqual(layout.merge_layout(updated, True, mode), updated)
+
     def test_each_mode_is_repeatable_and_preserves_unrelated_metadata(self):
         state = {"theme": {"name": "custom"}}
         for mode in ("creality", "orca", "both", "orca", "creality"):
