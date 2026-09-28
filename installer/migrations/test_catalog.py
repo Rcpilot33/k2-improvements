@@ -324,6 +324,16 @@ class MigrationCatalogTests(unittest.TestCase):
             recommended({"macros"}, previously_completed), {"macros"}
         )
 
+    def test_chamber_fan_output_resync_is_offered_once(self):
+        update_id = "chamber-fan-output-resync-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"macros"}, previously_completed), {"macros"}
+        )
+        self.assertEqual(recommended({"macros"}, catalog_ids), set())
+
     def test_safe_move_trigger_cleanup_is_offered_once(self):
         update_id = "cartographer-safe-move-trigger-cleanup-v1"
         catalog_ids = {entry[0] for entry in entries()}

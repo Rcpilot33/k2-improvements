@@ -2,6 +2,11 @@
 
 
 class K2M191Circulation:
+    CHAMBER_FAN_OFF_TARGET = 80.0
+    CHAMBER_FAN_ON_TARGET = 1.0
+    CHAMBER_FAN_TRANSITION_TIMEOUT = 2.0
+    CHAMBER_FAN_POLL_INTERVAL = 0.050
+
     def __init__(self, config):
         self.printer = config.get_printer()
         self.reactor = self.printer.get_reactor()
@@ -10,6 +15,11 @@ class K2M191Circulation:
             "K2_M191_CIRCULATION_WAIT",
             self.cmd_wait,
             desc="Wait for chamber temperature while cycling circulation fans",
+        )
+        self.gcode.register_command(
+            "K2_CHAMBER_FAN_RESYNC",
+            self.cmd_chamber_fan_resync,
+            desc="Resynchronize the chamber thermostat with its shared fan pin",
         )
 
     def _set_fans(self, pwm):
@@ -23,6 +33,43 @@ class K2M191Circulation:
         if sensor_name in heaters.heaters:
             return heaters.heaters[sensor_name]
         return self.printer.lookup_object(sensor_name, None)
+
+    def _set_chamber_fan_target(self, target):
+        self.gcode.run_script_from_command(
+            "SET_TEMPERATURE_FAN_TARGET "
+            "TEMPERATURE_FAN=chamber_fan TARGET=%.6f" % target
+        )
+
+    def _wait_for_chamber_fan_output(self, chamber_fan, enabled, gcmd):
+        eventtime = self.reactor.monotonic()
+        deadline = eventtime + self.CHAMBER_FAN_TRANSITION_TIMEOUT
+        while eventtime < deadline:
+            speed = float(chamber_fan.get_status(eventtime).get("speed", 0.0))
+            if (speed > 0.0) == enabled:
+                return
+            eventtime = self.reactor.pause(
+                min(eventtime + self.CHAMBER_FAN_POLL_INTERVAL, deadline)
+            )
+        state = "on" if enabled else "off"
+        raise gcmd.error(
+            "Chamber fan controller did not transition %s during resync" % state
+        )
+
+    def cmd_chamber_fan_resync(self, gcmd):
+        target = gcmd.get_float("TARGET", minval=-30.0, maxval=80.0)
+        chamber_fan = self.printer.lookup_object(
+            "temperature_fan chamber_fan", None
+        )
+        if chamber_fan is None:
+            raise gcmd.error("Unknown temperature_fan chamber_fan")
+
+        try:
+            self._set_chamber_fan_target(self.CHAMBER_FAN_OFF_TARGET)
+            self._wait_for_chamber_fan_output(chamber_fan, False, gcmd)
+            self._set_chamber_fan_target(self.CHAMBER_FAN_ON_TARGET)
+            self._wait_for_chamber_fan_output(chamber_fan, True, gcmd)
+        finally:
+            self._set_chamber_fan_target(target)
 
     def _report_temperatures(self, eventtime, report_id, temperature, target):
         heaters = self.printer.lookup_object("heaters")

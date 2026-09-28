@@ -38,6 +38,14 @@ class FakeSensor:
         return temperature, 0.0
 
 
+class FakeTemperatureFan:
+    def __init__(self, speed):
+        self.speed = speed
+
+    def get_status(self, eventtime):
+        return {"speed": self.speed}
+
+
 class FakeToolhead:
     def get_last_move_time(self):
         return 0.0
@@ -119,9 +127,13 @@ class FakeCommand:
             raise ValueError(name)
         return value
 
-    def get_float(self, name, default=None, above=None, maxval=None):
+    def get_float(
+        self, name, default=None, above=None, minval=None, maxval=None
+    ):
         value = float(self.params.get(name, default))
         if above is not None and value <= above:
+            raise ValueError(name)
+        if minval is not None and value < minval:
             raise ValueError(name)
         if maxval is not None and value > maxval:
             raise ValueError(name)
@@ -135,6 +147,57 @@ class FakeCommand:
 
 
 class CirculationWaitTests(unittest.TestCase):
+    def test_chamber_fan_resync_forces_off_on_then_restores_target(self):
+        sensor = FakeSensor([35.0])
+        printer = FakePrinter(sensor)
+        chamber_fan = FakeTemperatureFan(1.0)
+        printer.objects["temperature_fan chamber_fan"] = chamber_fan
+        controller = module.K2M191Circulation(FakeConfig(printer))
+
+        def apply_latest_target():
+            target = float(printer.gcode.scripts[-1].rsplit("=", 1)[1])
+            chamber_fan.speed = 0.0 if target == 80.0 else 1.0
+
+        printer.reactor.on_pause = apply_latest_target
+        controller.cmd_chamber_fan_resync(FakeCommand(TARGET=32))
+
+        self.assertEqual(
+            printer.gcode.scripts,
+            [
+                "SET_TEMPERATURE_FAN_TARGET "
+                "TEMPERATURE_FAN=chamber_fan TARGET=80.000000",
+                "SET_TEMPERATURE_FAN_TARGET "
+                "TEMPERATURE_FAN=chamber_fan TARGET=1.000000",
+                "SET_TEMPERATURE_FAN_TARGET "
+                "TEMPERATURE_FAN=chamber_fan TARGET=32.000000",
+            ],
+        )
+
+    def test_chamber_fan_resync_restores_target_after_timeout(self):
+        sensor = FakeSensor([35.0])
+        printer = FakePrinter(sensor)
+        printer.objects["temperature_fan chamber_fan"] = FakeTemperatureFan(1.0)
+        controller = module.K2M191Circulation(FakeConfig(printer))
+
+        with self.assertRaisesRegex(ValueError, "did not transition off"):
+            controller.cmd_chamber_fan_resync(FakeCommand(TARGET=32))
+
+        self.assertEqual(
+            printer.gcode.scripts[-1],
+            "SET_TEMPERATURE_FAN_TARGET "
+            "TEMPERATURE_FAN=chamber_fan TARGET=32.000000",
+        )
+
+    def test_chamber_fan_resync_rejects_target_above_configured_maximum(self):
+        printer = FakePrinter(FakeSensor([35.0]))
+        printer.objects["temperature_fan chamber_fan"] = FakeTemperatureFan(1.0)
+        controller = module.K2M191Circulation(FakeConfig(printer))
+
+        with self.assertRaises(ValueError):
+            controller.cmd_chamber_fan_resync(FakeCommand(TARGET=81))
+
+        self.assertEqual(printer.gcode.scripts, [])
+
     def test_cycles_low_high_low_and_stops_when_target_is_reached(self):
         sensor = FakeSensor([20.0, 20.0, 20.0, 20.0, 50.0])
         printer = FakePrinter(sensor)

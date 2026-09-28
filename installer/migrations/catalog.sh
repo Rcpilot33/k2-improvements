@@ -155,5 +155,6 @@ case-fan-deformation-preflight-v7|macros|is_macros|Heated-bed deformation calibr
 case-fan-inherited-output-clear-v8|macros|is_macros|Heated-bed deformation preflight now also clears case-fan output inherited from an already-active chamber controller
 case-fan-restore-preflight-target-v9|macros|is_macros|Heated-bed deformation preflight now restores the prior chamber-fan target before clearing the shared fan output
 fluidd-release-source-v1|fluidd|is_fluidd|Align Fluidd release metadata with the preserved Rcpilot33 update source
+chamber-fan-output-resync-v1|macros|is_macros|Resynchronize the chamber thermostat output after releasing Creality's direct case-fan request
 EOF
 }
