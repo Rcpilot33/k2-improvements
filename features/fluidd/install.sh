@@ -38,7 +38,7 @@ rm -fr fluidd
 
 mkdir -p fluidd
 cd fluidd
-python3 ${SCRIPT_DIR}/get_latest_release.py Jacob10383/fluidd
+python3 ${SCRIPT_DIR}/get_latest_release.py Rcpilot33/fluidd
 unzip fluidd.zip
 rm -f fluidd.zip
 cd ..
