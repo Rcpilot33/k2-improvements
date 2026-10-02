@@ -22,6 +22,8 @@ case "$fluidd_target" in
 esac
 
 if [ "$(cat "$fluidd_target/k2-ui-overlay-support.txt" 2>/dev/null || true)" = "$OVERLAY_VERSION" ]; then
+    python3 "$SCRIPT_DIR/../../../features/fluidd/set_release_source.py" \
+        "$fluidd_target/release_info.json" Rcpilot33 fluidd
     chmod -R a+rX "$fluidd_target"
     echo "I: shared Fluidd settings controls are already installed"
     exit 0
@@ -52,6 +54,8 @@ cleanup_swap() {
 trap cleanup_swap EXIT INT TERM
 
 unzip -oq "$FLUIDD_ARCHIVE" -d "$staging"
+python3 "$SCRIPT_DIR/../../../features/fluidd/set_release_source.py" \
+    "$staging/release_info.json" Rcpilot33 fluidd
 # Ensure nginx can read the static files even if an archive was built on a
 # platform that recorded owner-only permissions for its entries.
 chmod -R a+rX "$staging"

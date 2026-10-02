@@ -93,7 +93,8 @@ class FluiddBundleTests(unittest.TestCase):
         self.assertIn("fluidd-v1.37.4.zip", installer)
         self.assertIn('chmod -R a+rX "$staging"', installer)
         self.assertIn('chmod -R a+rX "$fluidd_target"', installer)
-        self.assertNotIn("Rcpilot33/fluidd", installer)
+        self.assertIn("set_release_source.py", installer)
+        self.assertIn("Rcpilot33 fluidd", installer)
 
 
 if __name__ == "__main__":

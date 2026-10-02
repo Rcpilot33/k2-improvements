@@ -11,6 +11,7 @@ UPDATE_MENU = HERE.parent / "menus" / "update.sh"
 MAIN_MENU = HERE.parent / "menus" / "main.sh"
 
 KNOWN_COMPONENTS = {
+    "fluidd",
     "cartographer",
     "macros",
     "save-config-restart",
@@ -30,6 +31,7 @@ KNOWN_COMPONENTS = {
 }
 
 EXPECTED_DETECTORS = {
+    "fluidd": "is_fluidd",
     "cartographer": "is_cartographer",
     "macros": "is_macros",
     "save-config-restart": "is_save_config_restart",
@@ -545,6 +547,21 @@ class MigrationCatalogTests(unittest.TestCase):
             restart_case.group(1),
             r"(?:^|\|)macros(?:\||\))[^\n]*\n\s*echo code",
         )
+
+    def test_fluidd_metadata_repair_only_requires_moonraker(self):
+        menu = UPDATE_MENU.read_text(encoding="utf-8")
+        restart_case = re.search(
+            r"migration_component_restart_kind\(\) \{(.*?)\n\}",
+            menu,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(restart_case)
+        self.assertRegex(
+            restart_case.group(1),
+            r"fluidd\)[^\n]*\n\s*echo moonraker",
+        )
+        self.assertIn("migration_restart_moonraker", menu)
+        self.assertIn("moonraker_restart_required=1", menu)
 
     def test_updater_can_back_up_and_restore_tracked_local_edits(self):
         menu = UPDATE_MENU.read_text(encoding="utf-8")
