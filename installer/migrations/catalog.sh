@@ -118,11 +118,13 @@ global-touch-offsets-category-v3|global-touch-offsets|is_global_touch_offsets|Gl
 global-touch-offsets-shared-ui-v4|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets now shares one safe Fluidd overlay with the material editor
 global-touch-offsets-fluidd-namespace-bootstrap-v1|global-touch-offsets|is_global_touch_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Global Touch Offset layout setup
 global-touch-offsets-fluidd-post-restart-layout-v2|global-touch-offsets|is_global_touch_offsets|Reapply and verify persistent Global Carto Touch Fluidd grouping after the upgraded macros are active
+global-touch-offsets-live-save-v5|global-touch-offsets|is_global_touch_offsets|Saving Global Carto Touch Z offsets now updates live Cartographer models without restarting
 material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor and automatic material registration are available
 material-z-offsets-start-print-bridge-v2|material-z-offsets|is_material_z_offsets|Material Z Offsets now refreshes and verifies its START_PRINT handoff
 material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets|Newly discovered materials now start with a zero Z offset instead of inheriting the former 0.050 mm seed
 material-z-offsets-fluidd-namespace-bootstrap-v1|material-z-offsets|is_material_z_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Material Z Offset layout setup
 material-z-offsets-fluidd-post-restart-layout-v2|material-z-offsets|is_material_z_offsets|Reapply and verify persistent Material Z Offset Fluidd grouping after the upgraded macros are active
+material-z-offsets-live-save-v4|material-z-offsets|is_material_z_offsets|Saving Material Z offsets now updates live START_PRINT variables without restarting
 macros-preserve-carto-surface-wrapper-v1|macros|is_macros|Macro repairs now preserve an installed Cartographer surface-selection wrapper
 case-fan-runtime-state-v2|macros|is_macros|The guarded pre-print case-fan release now applies independently of firmware version
 case-fan-any-direct-request-v3|macros|is_macros|Pre-print now releases any nonzero direct case-fan request while preserving chamber cooling

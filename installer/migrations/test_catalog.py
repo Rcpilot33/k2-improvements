@@ -273,6 +273,21 @@ class MigrationCatalogTests(unittest.TestCase):
             {"material-z-offsets"},
         )
 
+    def test_live_offset_saves_are_offered_to_installed_editors(self):
+        catalog_ids = {entry[0] for entry in entries()}
+        cases = {
+            "global-touch-offsets-live-save-v5": "global-touch-offsets",
+            "material-z-offsets-live-save-v4": "material-z-offsets",
+        }
+        for update_id, component in cases.items():
+            with self.subTest(update_id=update_id):
+                self.assertIn(update_id, catalog_ids)
+                previously_completed = catalog_ids - {update_id}
+                self.assertEqual(
+                    recommended({component}, previously_completed),
+                    {component},
+                )
+
     def test_deformation_preflight_case_fan_fix_is_offered_once(self):
         update_id = "case-fan-deformation-preflight-v7"
         catalog_ids = {entry[0] for entry in entries()}
