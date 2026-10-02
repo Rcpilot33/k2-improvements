@@ -573,6 +573,20 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertIn("migration_restart_moonraker", menu)
         self.assertIn("moonraker_restart_required=1", menu)
 
+    def test_fluidd_metadata_verification_does_not_run_macro_layout_verifier(self):
+        menu = UPDATE_MENU.read_text(encoding="utf-8")
+        reconcile = re.search(
+            r"migration_reconcile_fluidd_layout\(\) \{(.*?)\n\}",
+            menu,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(reconcile)
+        self.assertRegex(
+            reconcile.group(1),
+            r'(?s)fluidd\).*?release\.get\("project_owner"\).*?\nPY\n'
+            r'(?:\s*#[^\n]*\n)*\s*return \$\?\n\s*;;',
+        )
+
     def test_updater_can_back_up_and_restore_tracked_local_edits(self):
         menu = UPDATE_MENU.read_text(encoding="utf-8")
         self.assertIn("migration_restore_tracked_checkout", menu)

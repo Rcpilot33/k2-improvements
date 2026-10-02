@@ -509,6 +509,9 @@ with open(sys.argv[1], encoding="utf-8") as source:
 if release.get("project_owner") != "Rcpilot33" or release.get("project_name") != "fluidd":
     raise SystemExit(1)
 PY
+            # Fluidd source metadata has its own verifier; it is not a macro
+            # layout component accepted by verify_fluidd_layout.py.
+            return $?
             ;;
         *)
             return 0
