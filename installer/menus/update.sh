@@ -397,10 +397,16 @@ migration_repair_component() {
             python3 "$INSTALLER_DIR/features/fluidd/set_release_source.py" \
                 /usr/share/fluidd/release_info.json Rcpilot33 fluidd &&
             mkdir -p "$pwd_home/printer_data/config/updates" &&
+            python3 "$INSTALLER_DIR/features/fluidd/reset_update_cache.py" restore \
+                "$pwd_home/printer_data/config/updates/fluidd.cfg" &&
             cp "$INSTALLER_DIR/features/fluidd/update-manager.cfg" \
                 "$pwd_home/printer_data/config/updates/fluidd.cfg" &&
             HOME="$pwd_home" python3 \
-                "$INSTALLER_DIR/scripts/moonraker_include.py" updates/fluidd.cfg
+                "$INSTALLER_DIR/scripts/moonraker_include.py" updates/fluidd.cfg || return 1
+            if ! migration_is_complete fluidd-stale-update-cache-v2; then
+                migration_reset_fluidd_update_cache \
+                    "$pwd_home/printer_data/config/updates/fluidd.cfg"
+            fi
             ;;
         better-init)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
@@ -443,6 +449,27 @@ migration_restart_moonraker() {
         sleep 1
     done
 }
+
+# Moonraker persists each web updater's remote version and download URL. A
+# refresh against a fork with no releases leaves the previous repo's values in
+# place. Start once without the Fluidd updater so Moonraker prunes that single
+# saved entry, then restore its config for the normal final restart.
+migration_reset_fluidd_update_cache() (
+    local config helper
+    config="$1"
+    helper="$INSTALLER_DIR/features/fluidd/reset_update_cache.py"
+    if ! python3 "$helper" disable "$config"; then
+        python3 "$helper" restore "$config" || true
+        return 1
+    fi
+    trap 'python3 "$helper" restore "$config" || warn "Fluidd updater config could not be restored"; migration_restart_moonraker || warn "Moonraker recovery restart failed"' 0
+    trap 'exit 1' 1 2 15
+    printf '\n--- Clearing stale Fluidd updater release state ---\n'
+    migration_restart_moonraker || return 1
+    python3 "$helper" check-absent || return 1
+    python3 "$helper" restore "$config" || return 1
+    trap - 0 1 2 15
+)
 
 migration_record_refreshed_component() {
     local component succeeded_file dependencies dependency
@@ -509,9 +536,13 @@ with open(sys.argv[1], encoding="utf-8") as source:
 if release.get("project_owner") != "Rcpilot33" or release.get("project_name") != "fluidd":
     raise SystemExit(1)
 PY
+            [ "$?" -eq 0 ] || return 1
+            if ! migration_is_complete fluidd-stale-update-cache-v2; then
+                python3 "$INSTALLER_DIR/features/fluidd/reset_update_cache.py" check-fresh || return 1
+            fi
             # Fluidd source metadata has its own verifier; it is not a macro
             # layout component accepted by verify_fluidd_layout.py.
-            return $?
+            return 0
             ;;
         *)
             return 0

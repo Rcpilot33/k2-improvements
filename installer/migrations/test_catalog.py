@@ -573,6 +573,29 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertIn("migration_restart_moonraker", menu)
         self.assertIn("moonraker_restart_required=1", menu)
 
+    def test_stale_fluidd_release_cache_reset_is_offered_once(self):
+        update_id = "fluidd-stale-update-cache-v2"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(recommended({"fluidd"}, previously_completed), {"fluidd"})
+
+    def test_fluidd_cache_reset_restores_updater_before_final_restart(self):
+        menu = UPDATE_MENU.read_text(encoding="utf-8")
+        reset = re.search(
+            r"migration_reset_fluidd_update_cache\(\) \((.*?)\n\)",
+            menu,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(reset)
+        body = reset.group(1)
+        self.assertLess(body.index('disable "$config"'), body.index("migration_restart_moonraker"))
+        self.assertLess(body.index("check-absent"), body.index('restore "$config" || return 1'))
+        self.assertIn("trap", body)
+        self.assertIn("migration_restart_moonraker || warn", body)
+        self.assertIn('migration_reset_fluidd_update_cache \\', menu)
+        self.assertIn("if ! migration_is_complete fluidd-stale-update-cache-v2; then", menu)
+
     def test_fluidd_metadata_verification_does_not_run_macro_layout_verifier(self):
         menu = UPDATE_MENU.read_text(encoding="utf-8")
         reconcile = re.search(
@@ -584,7 +607,10 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertRegex(
             reconcile.group(1),
             r'(?s)fluidd\).*?release\.get\("project_owner"\).*?\nPY\n'
-            r'(?:\s*#[^\n]*\n)*\s*return \$\?\n\s*;;',
+            r'\s*\[ "\$\?" -eq 0 \] \|\| return 1\n'
+            r'\s*if ! migration_is_complete fluidd-stale-update-cache-v2; then\n'
+            r'\s*python3 .*? check-fresh \|\| return 1\n'
+            r'\s*fi\n(?:\s*#[^\n]*\n)*\s*return 0\n\s*;;',
         )
 
     def test_updater_can_back_up_and_restore_tracked_local_edits(self):
