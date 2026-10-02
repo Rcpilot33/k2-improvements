@@ -222,6 +222,13 @@ class K2M191SettingsEditor:
         if self.settings is None:
             raise gcmd.error("Open Bed_Assist before saving settings")
 
+    def _live_variables(self, gcmd, section, keys):
+        macro = self.printer.lookup_object(section, None)
+        variables = getattr(macro, "variables", None)
+        if not isinstance(variables, dict) or any(key not in variables for key in keys):
+            raise gcmd.error("%s live variables are unavailable; nothing was saved" % section)
+        return variables
+
     def cmd_open(self, gcmd):
         if self._printing_or_paused():
             raise gcmd.error("Bed Assist settings cannot be edited during a print")
@@ -267,13 +274,13 @@ class K2M191SettingsEditor:
     def cmd_save(self, gcmd):
         self._require_session(gcmd)
         if self._printing_or_paused():
-            raise gcmd.error("Save & Restart is not allowed during a print")
+            raise gcmd.error("Saving Bed Assist settings is not allowed during a print")
         text = self._read(gcmd)
         if file_digest(text) != self.session_digest:
             raise gcmd.error(
                 "overrides.cfg changed while the editor was open; cancel and reopen it"
             )
-        changed = any(item["current"] != item["original"] for item in self.settings)
+        changed = [item for item in self.settings if item["current"] != item["original"]]
         if not changed:
             self.settings = None
             self.session_digest = None
@@ -285,11 +292,18 @@ class K2M191SettingsEditor:
             updated = rewrite_settings(text, values)
         except (TypeError, ValueError) as exc:
             raise gcmd.error("Could not update M191 settings: %s" % exc)
+        live_by_section = {}
+        for section in (SECTION_NAME, START_PRINT_SECTION_NAME):
+            keys = [item["key"] for item in changed if section_for_key(item["key"]) == section]
+            if keys:
+                live_by_section[section] = self._live_variables(gcmd, section, keys)
         self._write(gcmd, updated)
+        for item in changed:
+            live_by_section[section_for_key(item["key"])][item["key"]] = item["current"]
         self.settings = None
         self.session_digest = None
         self._close()
-        self.gcode.run_script_from_command("FIRMWARE_RESTART")
+        gcmd.respond_info("Bed Assist settings saved and active; no restart needed")
 
 
 def load_config(config):

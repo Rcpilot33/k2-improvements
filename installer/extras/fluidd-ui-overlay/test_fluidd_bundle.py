@@ -21,7 +21,7 @@ class FluiddBundleTests(unittest.TestCase):
             info = json.loads(archive.read("release_info.json"))
             self.assertEqual(info["project_owner"], "Jacob10383")
             self.assertEqual(info["version"], "v1.37.4")
-            self.assertEqual(archive.read("k2-ui-overlay-support.txt").decode().strip(), "5")
+            self.assertEqual(archive.read("k2-ui-overlay-support.txt").decode().strip(), "6")
             self.assertNotIn("global-touch-offsets-support.txt", archive.namelist())
 
     def test_entry_points_reference_files_in_the_archive(self):
@@ -40,10 +40,7 @@ class FluiddBundleTests(unittest.TestCase):
 
     def test_contains_all_live_settings_dialogs(self):
         with zipfile.ZipFile(ARCHIVE) as archive:
-            scripts = b"\n".join(
-                archive.read(name) for name in archive.namelist()
-                if name.startswith("assets/") and name.endswith(".js")
-            )
+            scripts = archive.read("assets/index-B6qRjk0F.js")
         for value in (
             b"global_touch_offsets_",
             b"material_z_offsets_",
@@ -58,12 +55,13 @@ class FluiddBundleTests(unittest.TestCase):
 
         self.assertEqual(scripts.count(b'"save-button-text":`Save`'), 2)
         self.assertNotIn(b'"save-button-text":`Save & Restart`', scripts)
-        self.assertIn(b' Save & Restart ', scripts)  # Bed Assist still restarts.
+        self.assertNotIn(b' Save & Restart ', scripts)
+        self.assertIn(b' Save ', scripts)
 
     def test_changed_dialog_asset_is_refreshed_by_service_worker(self):
         with zipfile.ZipFile(ARCHIVE) as archive:
             self.assertIn(
-                b'{"revision":"offset-live-5","url":"assets/index-B6qRjk0F.js"}',
+                b'{"revision":"bed-assist-live-6","url":"assets/index-B6qRjk0F.js"}',
                 archive.read("sw.js"),
             )
 

@@ -65,9 +65,11 @@ than being duplicated under `_M191_VARS`; the editor simply manages both
 sections in the same `custom/overrides.cfg` file.
 
 Only the setting list scrolls. The Bed Assist title, increment selector,
-Down/Up controls, Cancel, and Save & Restart remain fixed. Cancel discards the
-session. Save & Restart writes only changed values to `custom/overrides.cfg`
-and restarts Klipper. The editor is unavailable while printing or paused.
+Down/Up controls, Cancel, and Save remain fixed. Cancel discards the session.
+Save writes changed values to `custom/overrides.cfg` and activates them in the
+running M191 and START_PRINT macro variables without restarting Klipper. The
+saved values load again after a firmware restart or power cycle. The editor is
+unavailable while printing or paused.
 
 ## Bed-assist target selection
 

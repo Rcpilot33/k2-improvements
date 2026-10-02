@@ -288,6 +288,13 @@ class MigrationCatalogTests(unittest.TestCase):
                     {component},
                 )
 
+    def test_bed_assist_live_save_is_offered_to_installed_macros(self):
+        update_id = "m191-bed-assist-live-save-v3"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(recommended({"macros"}, previously_completed), {"macros"})
+
     def test_deformation_preflight_case_fan_fix_is_offered_once(self):
         update_id = "case-fan-deformation-preflight-v7"
         catalog_ids = {entry[0] for entry in entries()}
