@@ -214,16 +214,27 @@ class K2MaterialZOffsetEditor:
             if str(key).lower().startswith("offset_")
         }
 
+    def _live_variables(self, gcmd):
+        macro = self.printer.lookup_object("gcode_macro _START_PRINT_VARS", None)
+        variables = getattr(macro, "variables", None)
+        if not isinstance(variables, dict):
+            raise gcmd.error("_START_PRINT_VARS live variables are unavailable; nothing was saved")
+        return variables
+
     def _register_unknown(self, gcmd, material):
         text = self._read(gcmd)
         try:
             offsets = parse_material_offsets(text)
         except (TypeError, ValueError) as exc:
             raise gcmd.error("Could not parse material offsets: %s" % exc)
-        if material in dict(offsets):
+        saved_offsets = dict(offsets)
+        variables = self._live_variables(gcmd)
+        if material in saved_offsets:
+            variables["offset_" + material.lower()] = saved_offsets[material]
             return False
         offsets.insert(len(offsets) - 1, (material, DEFAULT_NEW_OFFSET))
         self._write(gcmd, rewrite_material_offsets(text, offsets))
+        variables["offset_" + material.lower()] = DEFAULT_NEW_OFFSET
         logging.info(
             "%s added variable_offset_%s=%s to overrides.cfg",
             LOG_PREFIX, material, format_offset(DEFAULT_NEW_OFFSET),
@@ -258,8 +269,8 @@ class K2MaterialZOffsetEditor:
                     material, format_offset(DEFAULT_NEW_OFFSET)
                 )
             else:
-                message += "; its saved entry is not active yet"
-            message += " and will activate after Save & Restart"
+                message += "; its saved entry is active for the next print"
+            message += "; the current print still uses DEFAULT"
             gcmd.respond_info(message)
         self.gcode.run_script_from_command(
             "SET_GCODE_OFFSET Z=%s" % format_offset(value)
@@ -301,7 +312,7 @@ class K2MaterialZOffsetEditor:
     def cmd_save(self, gcmd):
         self._require_session(gcmd)
         if self._printing_or_paused():
-            raise gcmd.error("Save & Restart is not allowed during a print")
+            raise gcmd.error("Saving offsets is not allowed during a print")
         text = self._read(gcmd)
         if file_digest(text) != self.session_digest:
             raise gcmd.error(
@@ -321,11 +332,15 @@ class K2MaterialZOffsetEditor:
             text,
             [(material["name"], material["current"]) for material in self.materials],
         )
+        variables = self._live_variables(gcmd)
         self._write(gcmd, updated)
+        for material in self.materials:
+            if material["current"] != material["original"]:
+                variables["offset_" + material["name"].lower()] = material["current"]
         self.materials = None
         self.session_digest = None
         self._close_prompt()
-        self.gcode.run_script_from_command("FIRMWARE_RESTART")
+        gcmd.respond_info("Material Z offsets saved and active; no restart needed")
 
 
 def load_config(config):

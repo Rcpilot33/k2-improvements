@@ -21,7 +21,7 @@ class FluiddBundleTests(unittest.TestCase):
             info = json.loads(archive.read("release_info.json"))
             self.assertEqual(info["project_owner"], "Jacob10383")
             self.assertEqual(info["version"], "v1.37.4")
-            self.assertEqual(archive.read("k2-ui-overlay-support.txt").decode().strip(), "4")
+            self.assertEqual(archive.read("k2-ui-overlay-support.txt").decode().strip(), "5")
             self.assertNotIn("global-touch-offsets-support.txt", archive.namelist())
 
     def test_entry_points_reference_files_in_the_archive(self):
@@ -49,6 +49,17 @@ class FluiddBundleTests(unittest.TestCase):
             b"Bed Assist",
         ):
             self.assertIn(value, scripts)
+
+        self.assertEqual(scripts.count(b'"save-button-text":`Save`'), 2)
+        self.assertNotIn(b'"save-button-text":`Save & Restart`', scripts)
+        self.assertIn(b' Save & Restart ', scripts)  # Bed Assist still restarts.
+
+    def test_changed_dialog_asset_is_refreshed_by_service_worker(self):
+        with zipfile.ZipFile(ARCHIVE) as archive:
+            self.assertIn(
+                b'{"revision":"offset-live-5","url":"assets/index-B6qRjk0F.js"}',
+                archive.read("sw.js"),
+            )
 
     def test_preserves_creality_camera_component(self):
         with zipfile.ZipFile(ARCHIVE) as archive:
