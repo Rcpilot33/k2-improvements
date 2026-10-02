@@ -22,6 +22,7 @@ case "$fluidd_target" in
 esac
 
 if [ "$(cat "$fluidd_target/k2-ui-overlay-support.txt" 2>/dev/null || true)" = "$OVERLAY_VERSION" ]; then
+    chmod -R a+rX "$fluidd_target"
     echo "I: shared Fluidd settings controls are already installed"
     exit 0
 fi

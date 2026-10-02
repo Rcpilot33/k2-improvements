@@ -94,6 +94,7 @@ class FluiddBundleTests(unittest.TestCase):
         self.assertIn("WebrtcCrealityk2RtcCamera.vue", patch)
         self.assertIn("fluidd-v1.37.4.zip", installer)
         self.assertIn('chmod -R a+rX "$staging"', installer)
+        self.assertIn('chmod -R a+rX "$fluidd_target"', installer)
         self.assertNotIn("Rcpilot33/fluidd", installer)
 
 
