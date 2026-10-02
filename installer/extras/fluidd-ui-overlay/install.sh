@@ -51,6 +51,9 @@ cleanup_swap() {
 trap cleanup_swap EXIT INT TERM
 
 unzip -oq "$FLUIDD_ARCHIVE" -d "$staging"
+# Ensure nginx can read the static files even if an archive was built on a
+# platform that recorded owner-only permissions for its entries.
+chmod -R a+rX "$staging"
 [ "$(cat "$staging/.version" 2>/dev/null || true)" = "$FLUIDD_VERSION" ] &&
     [ -f "$staging/index.html" ] &&
     [ -f "$staging/sw.js" ] &&

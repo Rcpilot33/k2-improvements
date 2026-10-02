@@ -32,6 +32,12 @@ class FluiddBundleTests(unittest.TestCase):
             for asset in re.findall(r'(?:src|href)="\./(assets/[^"#?]+)', index):
                 self.assertIn(asset, names)
 
+    def test_static_files_are_readable_by_nginx(self):
+        with zipfile.ZipFile(ARCHIVE) as archive:
+            for entry in archive.infolist():
+                with self.subTest(path=entry.filename):
+                    self.assertEqual(entry.external_attr >> 16 & 0o777, 0o644)
+
     def test_contains_all_live_settings_dialogs(self):
         with zipfile.ZipFile(ARCHIVE) as archive:
             scripts = b"\n".join(
@@ -87,6 +93,7 @@ class FluiddBundleTests(unittest.TestCase):
         self.assertIn("M191SettingsDialog.vue", patch)
         self.assertIn("WebrtcCrealityk2RtcCamera.vue", patch)
         self.assertIn("fluidd-v1.37.4.zip", installer)
+        self.assertIn('chmod -R a+rX "$staging"', installer)
         self.assertNotIn("Rcpilot33/fluidd", installer)
 
 
