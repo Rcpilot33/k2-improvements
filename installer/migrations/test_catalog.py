@@ -74,6 +74,7 @@ class MigrationCatalogTests(unittest.TestCase):
         update_ids = {
             "cartographer-final-z-mode-macros-v1": "macros",
             "cartographer-final-z-mode-plate-v1": "cartographer-plate-workflow",
+            "cartographer-scan-only-load-v1": "cartographer-plate-workflow",
         }
         catalog_ids = {entry[0] for entry in entries()}
         self.assertTrue(set(update_ids) <= catalog_ids)
