@@ -21,6 +21,8 @@ prime-tower-scan-timer-kamp-v1|kamp-adaptive-purge|is_kamp|Reload prime-tower sc
 cartographer-slicer-colors-v1|cartographer-plate-workflow|is_carto_plate_workflow|Refresh Fluidd plate colors: green for Creality Print and Default, purple for Orca
 cartographer-dual-slicer-plates-v1|cartographer-plate-workflow|is_carto_plate_workflow|Add persistent Creality Print, OrcaSlicer, or Both plate selectors while preserving existing calibration models
 macro-user-comment-spacing-v1|macros|is_macros|Keep START_PRINT setting comments separated from their values so configuration editors expose every setting
+cartographer-final-z-mode-macros-v1|macros|is_macros|Add a persistent Touch or Scan final Z choice to START_PRINT while keeping Touch as the default
+cartographer-final-z-mode-plate-v1|cartographer-plate-workflow|is_carto_plate_workflow|Load a Touch plate model only when Touch is selected for final Z
 audit-cartographer-config-runtime-safety-v1|cartographer|is_cartographer|Back up managed Cartographer settings and restore configured motion limits automatically after an aborted mesh
 audit-memory-diagnostics-worker-v1|memory-diagnostics|is_memory_diagnostics|Move procfs sampling and UDISK logging off Klipper's motion reactor
 audit-abort-homing-patcher-safety-v1|abort_homing|is_abort_homing|Back up webhooks.py, reject partial patches, and replace it atomically

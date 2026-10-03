@@ -56,7 +56,9 @@ dropping { next }
     print "  # === BEGIN surface-selection wrapper ==="
     print "  {% set SURFACE = params.SURFACE|default(\047default\047)|lower %}"
     print "  CARTOGRAPHER_SCAN_MODEL LOAD={SURFACE}"
-    print "  CARTOGRAPHER_TOUCH_MODEL LOAD={SURFACE}"
+    print "  {% if CARTO_FINAL_Z_MODE == \047touch\047 %}"
+    print "    CARTOGRAPHER_TOUCH_MODEL LOAD={SURFACE}"
+    print "  {% endif %}"
     print "  # === END surface-selection wrapper ==="
     print ""
     inserted=1

@@ -80,6 +80,13 @@ bed before chamber heating. For passive chamber requests at or below 35 C, it
 begins after the bed reaches its requested temperature. `SOAK_TIME=<minutes>`
 on `START_PRINT` overrides the configured value for one print.
 
+For Cartographer, `variable_carto_final_z_mode` in `custom/overrides.cfg` can
+be `"touch"` (the default) or `"scan"`. Both choices retain Scan-based Z
+homing, tilt adjustment, and bed meshing. The setting chooses only the final Z
+reference after nozzle cleaning: Touch Home or another Scan `G28 Z`. The Scan
+choice requires a calibrated Scan model and may need its own first-layer Z
+offset tuning. Existing `overrides.cfg` selections survive macro updates.
+
 ## Slicer setup
 
 Pass nozzle, bed, chamber, and material values from the slicer:
