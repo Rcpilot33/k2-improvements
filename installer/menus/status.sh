@@ -65,7 +65,7 @@ show_status() {
         else
             printf '  %-43s %s\n' 'Cartographer plate workflow' "$(state_not_installed)"
         fi
-        status_line 'Global Carto Touch Z Offsets' is_global_touch_offsets
+        status_line 'Global Carto Z Offsets' is_global_touch_offsets
 
         printf '\n Maintenance\n'
         if is_prtouch_clean; then

@@ -21,7 +21,7 @@ class FluiddBundleTests(unittest.TestCase):
             info = json.loads(archive.read("release_info.json"))
             self.assertEqual(info["project_owner"], "Jacob10383")
             self.assertEqual(info["version"], "v1.37.4")
-            self.assertEqual(archive.read("k2-ui-overlay-support.txt").decode().strip(), "6")
+            self.assertEqual(archive.read("k2-ui-overlay-support.txt").decode().strip(), "7")
             self.assertNotIn("global-touch-offsets-support.txt", archive.namelist())
 
     def test_entry_points_reference_files_in_the_archive(self):
@@ -40,9 +40,14 @@ class FluiddBundleTests(unittest.TestCase):
 
     def test_contains_all_live_settings_dialogs(self):
         with zipfile.ZipFile(ARCHIVE) as archive:
-            scripts = archive.read("assets/index-B6qRjk0F.js")
+            index = archive.read("index.html").decode("utf-8")
+            asset = re.search(r'\./(assets/index-[^"#?]+\.js)', index)
+            self.assertIsNotNone(asset)
+            scripts = archive.read(asset.group(1))
         for value in (
-            b"global_touch_offsets_",
+            b"global_carto_offsets_",
+            b"Global Carto Scan Z Offsets",
+            b"Global Carto Touch Z Offsets",
             b"material_z_offsets_",
             b"K2_CARTOGRAPHER_GLOBAL_Z_STAGE",
             b"K2_MATERIAL_Z_STAGE",
@@ -60,8 +65,11 @@ class FluiddBundleTests(unittest.TestCase):
 
     def test_changed_dialog_asset_is_refreshed_by_service_worker(self):
         with zipfile.ZipFile(ARCHIVE) as archive:
+            index = archive.read("index.html").decode("utf-8")
+            asset = re.search(r'\./(assets/index-[^"#?]+\.js)', index)
+            self.assertIsNotNone(asset)
             self.assertIn(
-                b'{"revision":"bed-assist-live-6","url":"assets/index-B6qRjk0F.js"}',
+                ('"url":"%s"' % asset.group(1)).encode(),
                 archive.read("sw.js"),
             )
 
@@ -87,6 +95,7 @@ class FluiddBundleTests(unittest.TestCase):
         patch = PATCH.read_text(encoding="utf-8")
         installer = INSTALLER.read_text(encoding="utf-8")
         self.assertIn("GlobalTouchOffsetsDialog.vue", patch)
+        self.assertIn("Global Carto Scan Z Offsets", patch)
         self.assertIn("MaterialZOffsetsDialog.vue", patch)
         self.assertIn("M191SettingsDialog.vue", patch)
         self.assertIn("WebrtcCrealityk2RtcCamera.vue", patch)

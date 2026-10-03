@@ -292,6 +292,7 @@ class MigrationCatalogTests(unittest.TestCase):
         catalog_ids = {entry[0] for entry in entries()}
         cases = {
             "global-touch-offsets-live-save-v5": "global-touch-offsets",
+            "global-carto-scan-offsets-v1": "global-touch-offsets",
             "material-z-offsets-live-save-v4": "material-z-offsets",
         }
         for update_id, component in cases.items():
