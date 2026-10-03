@@ -32,7 +32,8 @@ class FakeConfigFile:
     def __init__(self):
         self.raw_config = {
             "cartographer touch_model custom": {"z_offset": "-0.070"},
-            "cartographer scan_model default": {"z_offset": "0"},
+            "cartographer scan_model default": {"z_offset": "-0.300"},
+            "cartographer scan_model high_temp": {"z_offset": "0.000"},
             "cartographer touch_model default": {"z_offset": "-0.060"},
             "cartographer touch_model textured_pei": {"z_offset": "-0.050"},
         }
@@ -46,15 +47,15 @@ class FakeConfigFile:
 
 
 @dataclass(frozen=True)
-class FakeTouchModel:
+class FakeModel:
     name: str
     z_offset: float
 
 
-class FakeTouchMode:
-    def __init__(self, models):
+class FakeModelMode:
+    def __init__(self, models, loaded="default"):
         self._models = models
-        self._loaded_model = models["default"]
+        self._loaded_model = models[loaded]
 
     def has_model(self):
         return self._loaded_model is not None
@@ -71,10 +72,24 @@ class FakeCartographer:
         self.config = type("Config", (), {})()
         self.config.touch = type("Touch", (), {})()
         self.config.touch.models = {
-            name: FakeTouchModel(name, value)
+            name: FakeModel(name, value)
             for name, value in (("default", -0.060), ("textured_pei", -0.050), ("custom", -0.070))
         }
-        self.touch_mode = FakeTouchMode(self.config.touch.models)
+        self.config.scan = type("Scan", (), {})()
+        self.config.scan.models = {
+            name: FakeModel(name, value)
+            for name, value in (("default", -0.300), ("high_temp", 0.000))
+        }
+        self.touch_mode = FakeModelMode(self.config.touch.models)
+        self.scan_mode = FakeModelMode(self.config.scan.models, loaded="high_temp")
+
+
+class FakeStartPrintVars:
+    def __init__(self, mode="touch"):
+        self.mode = mode
+
+    def get_status(self, eventtime):
+        return {"carto_final_z_mode": self.mode}
 
 
 class FakePrintStats:
@@ -86,13 +101,16 @@ class FakePrintStats:
 
 
 class FakePrinter:
-    def __init__(self, state="standby"):
+    def __init__(self, state="standby", mode="touch"):
         self.gcode = FakeGCode()
         self.configfile = FakeConfigFile()
         self.print_stats = FakePrintStats(state)
         self.cartographer = FakeCartographer()
+        self.start_print_vars = FakeStartPrintVars(mode)
 
     def lookup_object(self, name, default=None):
+        if name == "gcode_macro _START_PRINT_VARS":
+            return self.start_print_vars
         return getattr(self, name, default)
 
 
@@ -133,8 +151,8 @@ class FakeGCmd:
 
 
 class OffsetEditorTests(unittest.TestCase):
-    def make_editor(self, state="standby"):
-        printer = FakePrinter(state)
+    def make_editor(self, state="standby", mode="touch"):
+        printer = FakePrinter(state, mode)
         return MODULE.K2CartographerOffsetEditor(FakeConfig(printer)), printer
 
     def test_discovers_touch_models_and_emits_live_editor_rows(self):
@@ -146,8 +164,8 @@ class OffsetEditorTests(unittest.TestCase):
             ["default", "textured_pei", "custom"],
         )
         output = "\n".join(printer.gcode.responses)
-        self.assertIn("// action:global_touch_offsets_begin", output)
-        self.assertIn("// action:global_touch_offsets_model DEFAULT|-0.060|0", output)
+        self.assertIn("// action:global_carto_offsets_begin touch", output)
+        self.assertIn("// action:global_carto_offsets_model DEFAULT|-0.060|0", output)
         self.assertIn("TEXTURED_PEI|-0.050|1", output)
         self.assertNotIn("scan_model", output)
 
@@ -168,6 +186,46 @@ class OffsetEditorTests(unittest.TestCase):
         editor.cmd_open(FakeGCmd())
         with self.assertRaisesRegex(RuntimeError, "above maximum"):
             editor.cmd_stage(FakeGCmd(INDEX=0, VALUE=0.005))
+
+    def test_scan_mode_discovers_only_scan_models_and_rejects_positive_offsets(self):
+        editor, printer = self.make_editor(mode="scan")
+        editor.cmd_open(FakeGCmd())
+        self.assertEqual([model["name"] for model in editor.models], ["default", "high_temp"])
+        output = "\n".join(printer.gcode.responses)
+        self.assertIn("// action:global_carto_offsets_begin scan", output)
+        self.assertIn("// action:global_carto_offsets_model DEFAULT|-0.300|0", output)
+        self.assertIn("HIGH_TEMP|0.000|1", output)
+        editor.cmd_stage(FakeGCmd(INDEX=1, VALUE=-0.125))
+        self.assertEqual(editor.models[1]["current"], -0.125)
+        with self.assertRaisesRegex(RuntimeError, "above maximum"):
+            editor.cmd_stage(FakeGCmd(INDEX=1, VALUE=0.001))
+
+    def test_scan_save_refreshes_loaded_scan_model_without_touch_changes(self):
+        editor, printer = self.make_editor(mode="scan")
+        editor.cmd_open(FakeGCmd())
+        editor.cmd_stage(FakeGCmd(INDEX=1, VALUE=-0.175))
+        printer.start_print_vars.mode = "touch"
+        editor.cmd_save(FakeGCmd())
+        self.assertEqual(
+            printer.configfile.saved,
+            [("cartographer scan_model high_temp", "z_offset", "-0.175")],
+        )
+        self.assertEqual(printer.gcode.scripts, ["CXSAVE_CONFIG"])
+        self.assertEqual(printer.cartographer.scan_mode.get_model().z_offset, -0.175)
+        self.assertEqual(printer.cartographer.touch_mode.get_model().z_offset, -0.060)
+
+    def test_scan_only_setup_does_not_require_touch_models(self):
+        editor, printer = self.make_editor(mode="scan")
+        printer.cartographer.config.touch.models.clear()
+        editor.cmd_open(FakeGCmd())
+        editor.cmd_stage(FakeGCmd(INDEX=0, VALUE=-0.350))
+        editor.cmd_save(FakeGCmd())
+        self.assertEqual(printer.cartographer.config.scan.models["default"].z_offset, -0.350)
+
+    def test_invalid_mode_rejected_before_opening_editor(self):
+        editor, _printer = self.make_editor(mode="unknown")
+        with self.assertRaisesRegex(RuntimeError, "touch or scan"):
+            editor.cmd_open(FakeGCmd())
 
     def test_save_writes_changed_model_and_activates_without_restart(self):
         editor, printer = self.make_editor()
@@ -214,7 +272,7 @@ class OffsetEditorTests(unittest.TestCase):
         save = FakeGCmd()
         editor.cmd_save(save)
         self.assertEqual(printer.gcode.scripts, [])
-        self.assertEqual(save.info, ["No Global Carto Touch Z Offset changes to save"])
+        self.assertEqual(save.info, ["No Global Carto Z Offset changes to save"])
 
     def test_open_and_save_are_blocked_during_print(self):
         editor, printer = self.make_editor("printing")
