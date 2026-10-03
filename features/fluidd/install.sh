@@ -41,6 +41,7 @@ cd fluidd
 python3 ${SCRIPT_DIR}/get_latest_release.py Rcpilot33/fluidd
 unzip fluidd.zip
 rm -f fluidd.zip
+python3 ${SCRIPT_DIR}/set_release_source.py release_info.json Rcpilot33 fluidd
 cd ..
 
 # replace the existing Fluidd

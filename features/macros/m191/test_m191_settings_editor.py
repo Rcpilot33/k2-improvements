@@ -77,5 +77,117 @@ class ParseAndRewriteTests(unittest.TestCase):
             self.assertEqual(path.read_text(), "replacement\n")
 
 
+class FakeCommand:
+    def __init__(self):
+        self.messages = []
+
+    def error(self, message):
+        return RuntimeError(message)
+
+    def respond_info(self, message):
+        self.messages.append(message)
+
+
+class FakeGcode:
+    def __init__(self):
+        self.commands = {}
+        self.actions = []
+        self.scripts = []
+
+    def register_command(self, name, handler, **kwargs):
+        self.commands[name] = handler
+
+    def respond_raw(self, message):
+        self.actions.append(message)
+
+    def run_script_from_command(self, script):
+        self.scripts.append(script)
+
+
+class FakeMacro:
+    def __init__(self, variables):
+        self.variables = variables
+
+
+class FakePrinter:
+    def __init__(self, objects):
+        self.objects = objects
+
+    def lookup_object(self, name, default=None):
+        return self.objects.get(name, default)
+
+
+class FakeConfig:
+    def __init__(self, printer, path):
+        self.printer = printer
+        self.path = path
+
+    def get_printer(self):
+        return self.printer
+
+    def get(self, name, default=None):
+        return str(self.path) if name == "overrides_path" else default
+
+
+class LiveSaveTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.path = pathlib.Path(self.directory.name) / "overrides.cfg"
+        self.path.write_text(sample_text())
+        self.gcode = FakeGcode()
+        values = MODULE.parse_settings(sample_text())
+        self.m191 = FakeMacro({key: value for key, value in values.items() if key != "heat_soak"})
+        self.start_print = FakeMacro({"heat_soak": values["heat_soak"]})
+        self.printer = FakePrinter({
+            "gcode": self.gcode,
+            MODULE.SECTION_NAME: self.m191,
+            MODULE.START_PRINT_SECTION_NAME: self.start_print,
+        })
+        self.editor = MODULE.K2M191SettingsEditor(FakeConfig(self.printer, self.path))
+        self.command = FakeCommand()
+        self.editor.cmd_open(self.command)
+
+    def change(self, key, value):
+        next(item for item in self.editor.settings if item["key"] == key)["current"] = value
+
+    def test_save_updates_both_live_macros_and_file_without_restart(self):
+        self.change("bed_assist_bed_target", 110.0)
+        self.change("heat_soak", 8.0)
+        self.editor.cmd_save(self.command)
+        self.assertEqual(self.m191.variables["bed_assist_bed_target"], 110.0)
+        self.assertEqual(self.start_print.variables["heat_soak"], 8.0)
+        self.assertEqual(MODULE.parse_settings(self.path.read_text())["heat_soak"], 8.0)
+        self.assertEqual(MODULE.parse_settings(self.path.read_text())["bed_assist_bed_target"], 110.0)
+        self.assertEqual(self.gcode.scripts, [])
+        self.assertIn("no restart needed", self.command.messages[-1])
+
+    def test_missing_live_variable_does_not_write_file(self):
+        self.change("heat_soak", 8.0)
+        del self.start_print.variables["heat_soak"]
+        with self.assertRaisesRegex(RuntimeError, "nothing was saved"):
+            self.editor.cmd_save(self.command)
+        self.assertEqual(self.path.read_text(), sample_text())
+
+    def test_external_change_prevents_file_and_live_update(self):
+        self.change("bed_assist_bed_target", 110.0)
+        self.path.write_text(sample_text() + "# external change\n")
+        with self.assertRaisesRegex(RuntimeError, "changed while the editor was open"):
+            self.editor.cmd_save(self.command)
+        self.assertEqual(self.m191.variables["bed_assist_bed_target"], 105.0)
+
+    def test_no_changes_close_without_restart(self):
+        self.editor.cmd_save(self.command)
+        self.assertIsNone(self.editor.settings)
+        self.assertEqual(self.gcode.scripts, [])
+
+    def test_invalid_combination_does_not_write_or_update(self):
+        self.change("circulation_fan_high_speed", 10.0)
+        with self.assertRaisesRegex(RuntimeError, "must be at least"):
+            self.editor.cmd_save(self.command)
+        self.assertEqual(self.path.read_text(), sample_text())
+        self.assertEqual(self.m191.variables["circulation_fan_high_speed"], 100.0)
+
+
 if __name__ == "__main__":
     unittest.main()

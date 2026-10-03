@@ -1,6 +1,7 @@
 """Live Fluidd editor for saved Cartographer Touch-model Z offsets."""
 
 import logging
+from dataclasses import replace
 
 
 LOG_PREFIX = "[K2_CARTOGRAPHER_OFFSET_EDITOR]"
@@ -58,6 +59,9 @@ class K2CartographerOffsetEditor:
 
     def _load_models(self, gcmd):
         raw_config = self.configfile.get_status(0.0).get("config", {})
+        cartographer = self.printer.lookup_object("cartographer", None)
+        touch_config = getattr(getattr(cartographer, "config", None), "touch", None)
+        live_models = getattr(touch_config, "models", None) or {}
         models = []
         for section, options in raw_config.items():
             if not section.lower().startswith(MODEL_PREFIX):
@@ -67,6 +71,8 @@ class K2CartographerOffsetEditor:
                 continue
             try:
                 offset = round(float(options["z_offset"]), 3)
+                if name in live_models:
+                    offset = round(float(live_models[name].z_offset), 3)
             except (TypeError, ValueError):
                 raise gcmd.error(
                     "Invalid z_offset in [%s]: %s"
@@ -128,7 +134,7 @@ class K2CartographerOffsetEditor:
     def cmd_save(self, gcmd):
         self._require_session(gcmd)
         if self._printing_or_paused():
-            raise gcmd.error("Save & Restart is not allowed during a print")
+            raise gcmd.error("Saving offsets is not allowed during a print")
 
         changed = [
             model for model in self.models if model["current"] != model["original"]
@@ -138,6 +144,29 @@ class K2CartographerOffsetEditor:
             self._close_prompt()
             gcmd.respond_info("No Global Carto Touch Z Offset changes to save")
             return
+
+        cartographer = self.printer.lookup_object("cartographer", None)
+        touch_mode = getattr(cartographer, "touch_mode", None)
+        touch_config = getattr(getattr(cartographer, "config", None), "touch", None)
+        live_models = getattr(touch_config, "models", None)
+        if (
+            not isinstance(live_models, dict)
+            or touch_mode is None
+            or getattr(touch_mode, "_models", None) is not live_models
+        ):
+            raise gcmd.error("Cartographer live Touch models are unavailable; nothing was saved")
+        if not all(model["name"] in live_models for model in changed):
+            raise gcmd.error("A Cartographer Touch model changed; reopen the editor")
+        try:
+            replacements = {
+                model["name"]: replace(
+                    live_models[model["name"]], z_offset=model["current"]
+                )
+                for model in changed
+            }
+            active_name = touch_mode.get_model().name if touch_mode.has_model() else None
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise gcmd.error("Could not prepare live Cartographer offsets: %s" % exc)
 
         for model in changed:
             value = self._format_offset(model["current"])
@@ -149,9 +178,13 @@ class K2CartographerOffsetEditor:
                 value,
             )
 
+        self.gcode.run_script_from_command("CXSAVE_CONFIG")
+        live_models.update(replacements)
+        if active_name in replacements:
+            touch_mode.load_model(active_name)
         self.models = None
         self._close_prompt()
-        self.gcode.run_script_from_command("CXSAVE_CONFIG\nFIRMWARE_RESTART")
+        gcmd.respond_info("Global Carto Touch Z offsets saved and active; no restart needed")
 
 
 def load_config(config):

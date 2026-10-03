@@ -25,6 +25,7 @@ migration_component_label() {
         material-z-offsets) echo 'Material Z Offsets' ;;
         plate-aware-mesh) echo 'Plate-aware saved meshes' ;;
         nozzle-camera) echo 'Stock nozzle camera stream' ;;
+        fluidd) echo 'Fluidd update source metadata' ;;
         better-init) echo 'Improved Init service management' ;;
         start-print-fast-stop) echo 'START_PRINT Fast Stop (firmware 1.1.5.5+)' ;;
         *) echo "$1" ;;
@@ -48,6 +49,7 @@ migration_component_installed() {
         material-z-offsets) is_material_z_offsets ;;
         plate-aware-mesh) is_plate_aware_mesh ;;
         nozzle-camera) is_nozzle_camera ;;
+        fluidd) is_fluidd ;;
         better-init) is_better_init ;;
         start-print-fast-stop) is_start_print_fast_stop ;;
         *) return 1 ;;
@@ -141,7 +143,7 @@ migration_capture_installed_components() {
     : > "$temporary"
     for component in cartographer save-config-restart virtual-sdcard-guard abort_homing \
         screws_tilt_adjust macros r3men-bed kamp-adaptive-purge \
-        axis_twist_compensation cartographer-plate-workflow global-touch-offsets material-z-offsets plate-aware-mesh nozzle-camera better-init start-print-fast-stop; do
+        axis_twist_compensation cartographer-plate-workflow global-touch-offsets material-z-offsets plate-aware-mesh nozzle-camera fluidd better-init start-print-fast-stop; do
         if migration_component_installed "$component" 2>/dev/null ||
            migration_component_present "$component" 2>/dev/null; then
             printf '%s\n' "$component" >> "$temporary"
@@ -169,7 +171,7 @@ migration_pending_components() {
     entries=$(migration_pending_entries)
     for component in cartographer save-config-restart virtual-sdcard-guard abort_homing \
         screws_tilt_adjust macros r3men-bed kamp-adaptive-purge \
-        axis_twist_compensation cartographer-plate-workflow global-touch-offsets material-z-offsets plate-aware-mesh nozzle-camera better-init start-print-fast-stop; do
+        axis_twist_compensation cartographer-plate-workflow global-touch-offsets material-z-offsets plate-aware-mesh nozzle-camera fluidd better-init start-print-fast-stop; do
         if printf '%s\n' "$entries" | grep -q "^[^|]*|$component|"; then
             printf '%s\n' "$component"
         fi
@@ -391,6 +393,21 @@ migration_repair_component() {
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/plate-aware-mesh/install.sh" --no-restart
             ;;
+        fluidd)
+            python3 "$INSTALLER_DIR/features/fluidd/set_release_source.py" \
+                /usr/share/fluidd/release_info.json Rcpilot33 fluidd &&
+            mkdir -p "$pwd_home/printer_data/config/updates" &&
+            python3 "$INSTALLER_DIR/features/fluidd/reset_update_cache.py" restore \
+                "$pwd_home/printer_data/config/updates/fluidd.cfg" &&
+            cp "$INSTALLER_DIR/features/fluidd/update-manager.cfg" \
+                "$pwd_home/printer_data/config/updates/fluidd.cfg" &&
+            HOME="$pwd_home" python3 \
+                "$INSTALLER_DIR/scripts/moonraker_include.py" updates/fluidd.cfg || return 1
+            if ! migration_is_complete fluidd-stale-update-cache-v2; then
+                migration_reset_fluidd_update_cache \
+                    "$pwd_home/printer_data/config/updates/fluidd.cfg"
+            fi
+            ;;
         better-init)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/features/better-init/install.sh"
@@ -411,11 +428,48 @@ migration_component_restart_kind() {
         cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|axis_twist_compensation|global-touch-offsets|material-z-offsets|start-print-fast-stop)
             echo code
             ;;
+        fluidd)
+            echo moonraker
+            ;;
         *)
             echo config
             ;;
     esac
 }
+
+migration_restart_moonraker() {
+    /etc/init.d/moonraker restart || return 1
+    count=0
+    while ! nc -z 127.0.0.1 7125; do
+        if [ "$count" -ge 60 ]; then
+            warn 'Moonraker did not return after its restart'
+            return 1
+        fi
+        count=$((count + 1))
+        sleep 1
+    done
+}
+
+# Moonraker persists each web updater's remote version and download URL. A
+# refresh against a fork with no releases leaves the previous repo's values in
+# place. Start once without the Fluidd updater so Moonraker prunes that single
+# saved entry, then restore its config for the normal final restart.
+migration_reset_fluidd_update_cache() (
+    local config helper
+    config="$1"
+    helper="$INSTALLER_DIR/features/fluidd/reset_update_cache.py"
+    if ! python3 "$helper" disable "$config"; then
+        python3 "$helper" restore "$config" || true
+        return 1
+    fi
+    trap 'python3 "$helper" restore "$config" || warn "Fluidd updater config could not be restored"; migration_restart_moonraker || warn "Moonraker recovery restart failed"' 0
+    trap 'exit 1' 1 2 15
+    printf '\n--- Clearing stale Fluidd updater release state ---\n'
+    migration_restart_moonraker || return 1
+    python3 "$helper" check-absent || return 1
+    python3 "$helper" restore "$config" || return 1
+    trap - 0 1 2 15
+)
 
 migration_record_refreshed_component() {
     local component succeeded_file dependencies dependency
@@ -473,6 +527,23 @@ migration_reconcile_fluidd_layout() {
             layout="$INSTALLER_DIR/installer/extras/material-z-offsets/configure_fluidd_layout.py"
             HOME="$pwd_home" python3 "$layout" || return 1
             ;;
+        fluidd)
+            python3 - /usr/share/fluidd/release_info.json <<'PY'
+import json
+import sys
+with open(sys.argv[1], encoding="utf-8") as source:
+    release = json.load(source)
+if release.get("project_owner") != "Rcpilot33" or release.get("project_name") != "fluidd":
+    raise SystemExit(1)
+PY
+            [ "$?" -eq 0 ] || return 1
+            if ! migration_is_complete fluidd-stale-update-cache-v2; then
+                python3 "$INSTALLER_DIR/features/fluidd/reset_update_cache.py" check-fresh || return 1
+            fi
+            # Fluidd source metadata has its own verifier; it is not a macro
+            # layout component accepted by verify_fluidd_layout.py.
+            return 0
+            ;;
         *)
             return 0
             ;;
@@ -482,7 +553,7 @@ migration_reconcile_fluidd_layout() {
 }
 
 migration_apply_components() {
-    local components_file succeeded activated failures component restart_kind restart_script
+    local components_file succeeded activated failures component restart_kind restart_script moonraker_restart_required component_restart_kind
     components_file="$1"
     migration_require_idle || return 1
     succeeded="/tmp/k2-update-succeeded.$$"
@@ -490,7 +561,8 @@ migration_apply_components() {
     : > "$succeeded"
     : > "$activated"
     failures=0
-    restart_kind=config
+    restart_kind=none
+    moonraker_restart_required=0
 
     # Read the plan on fd 3 so child installers retain the terminal on stdin.
     # KAMP uses that terminal to offer its settings and firmware-retraction
@@ -504,9 +576,15 @@ migration_apply_components() {
         printf '\n--- Refreshing %s ---\n' "$(migration_component_label "$component")"
         if migration_repair_component "$component"; then
             migration_record_refreshed_component "$component" "$succeeded"
-            if [ "$(migration_component_restart_kind "$component")" = code ]; then
-                restart_kind=code
+            component_restart_kind=$(migration_component_restart_kind "$component")
+            if [ "$component_restart_kind" = moonraker ]; then
+                moonraker_restart_required=1
             fi
+            case "$component_restart_kind:$restart_kind" in
+                code:*) restart_kind=code ;;
+                config:none|config:moonraker) restart_kind=config ;;
+                moonraker:none) restart_kind=moonraker ;;
+            esac
         else
             warn "$(migration_component_label "$component") refresh failed; it remains pending"
             failures=$((failures + 1))
@@ -519,14 +597,34 @@ migration_apply_components() {
         return 1
     fi
 
-    printf '\n--- Final protected restart ---\n'
+    if [ -f /tmp/k2-klippy-code-restart-required ]; then
+        restart_kind=code
+    fi
+
+    if [ "$moonraker_restart_required" -eq 1 ] && \
+       [ "$restart_kind" != moonraker ]; then
+        printf '\n--- Restarting Moonraker before the protected restart ---\n'
+        if ! migration_restart_moonraker; then
+            rm -f "$succeeded" "$activated"
+            warn 'Moonraker restart failed; completed repairs remain pending for verification'
+            return 1
+        fi
+    fi
+
+    if [ "$restart_kind" = moonraker ]; then
+        printf '\n--- Restarting Moonraker ---\n'
+        restart_script=
+    else
+        printf '\n--- Final protected restart ---\n'
+    fi
     if [ "$restart_kind" = code ] || [ -f /tmp/k2-klippy-code-restart-required ]; then
         restart_script="$INSTALLER_DIR/scripts/klippy_code_restart.sh"
-    else
+    elif [ "$restart_kind" != moonraker ]; then
         restart_script="$INSTALLER_DIR/scripts/firmware_restart.sh"
     fi
 
-    if K2_DEFER_FIRMWARE_RESTART=0 sh "$restart_script"; then
+    if { [ "$restart_kind" = moonraker ] && migration_restart_moonraker; } || \
+       { [ "$restart_kind" != moonraker ] && K2_DEFER_FIRMWARE_RESTART=0 sh "$restart_script"; }; then
         printf '\n--- Verifying post-restart component state ---\n'
         while IFS= read -r component; do
             if migration_reconcile_fluidd_layout "$component"; then

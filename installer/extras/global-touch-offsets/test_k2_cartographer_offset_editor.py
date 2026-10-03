@@ -3,6 +3,7 @@
 import importlib.util
 import pathlib
 import unittest
+from dataclasses import dataclass
 
 
 MODULE_PATH = pathlib.Path(__file__).with_name("k2_cartographer_offset_editor.py")
@@ -44,6 +45,38 @@ class FakeConfigFile:
         self.saved.append((section, option, value))
 
 
+@dataclass(frozen=True)
+class FakeTouchModel:
+    name: str
+    z_offset: float
+
+
+class FakeTouchMode:
+    def __init__(self, models):
+        self._models = models
+        self._loaded_model = models["default"]
+
+    def has_model(self):
+        return self._loaded_model is not None
+
+    def get_model(self):
+        return self._loaded_model
+
+    def load_model(self, name):
+        self._loaded_model = self._models[name]
+
+
+class FakeCartographer:
+    def __init__(self):
+        self.config = type("Config", (), {})()
+        self.config.touch = type("Touch", (), {})()
+        self.config.touch.models = {
+            name: FakeTouchModel(name, value)
+            for name, value in (("default", -0.060), ("textured_pei", -0.050), ("custom", -0.070))
+        }
+        self.touch_mode = FakeTouchMode(self.config.touch.models)
+
+
 class FakePrintStats:
     def __init__(self, state="standby"):
         self.state = state
@@ -57,6 +90,7 @@ class FakePrinter:
         self.gcode = FakeGCode()
         self.configfile = FakeConfigFile()
         self.print_stats = FakePrintStats(state)
+        self.cartographer = FakeCartographer()
 
     def lookup_object(self, name, default=None):
         return getattr(self, name, default)
@@ -135,7 +169,7 @@ class OffsetEditorTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "above maximum"):
             editor.cmd_stage(FakeGCmd(INDEX=0, VALUE=0.005))
 
-    def test_save_writes_changed_model_without_save_config(self):
+    def test_save_writes_changed_model_and_activates_without_restart(self):
         editor, printer = self.make_editor()
         editor.cmd_open(FakeGCmd())
         editor.cmd_stage(FakeGCmd(INDEX=1, VALUE=-0.075))
@@ -147,10 +181,32 @@ class OffsetEditorTests(unittest.TestCase):
         )
         self.assertEqual(
             printer.gcode.scripts,
-            ["CXSAVE_CONFIG\nFIRMWARE_RESTART"],
+            ["CXSAVE_CONFIG"],
         )
+        self.assertEqual(printer.cartographer.config.touch.models["textured_pei"].z_offset, -0.075)
+        self.assertEqual(printer.cartographer.touch_mode.get_model().z_offset, -0.060)
         self.assertNotIn("\nSAVE_CONFIG", "\n".join(printer.gcode.scripts))
         self.assertIsNone(editor.models)
+
+        editor.cmd_open(FakeGCmd())
+        self.assertEqual(editor.models[1]["current"], -0.075)
+
+    def test_save_refreshes_currently_loaded_model(self):
+        editor, printer = self.make_editor()
+        editor.cmd_open(FakeGCmd())
+        editor.cmd_stage(FakeGCmd(INDEX=0, VALUE=-0.100))
+        editor.cmd_save(FakeGCmd())
+        self.assertEqual(printer.cartographer.touch_mode.get_model().z_offset, -0.100)
+
+    def test_missing_live_models_prevents_save(self):
+        editor, printer = self.make_editor()
+        editor.cmd_open(FakeGCmd())
+        editor.cmd_stage(FakeGCmd(INDEX=0, VALUE=-0.100))
+        printer.cartographer = None
+        with self.assertRaisesRegex(RuntimeError, "nothing was saved"):
+            editor.cmd_save(FakeGCmd())
+        self.assertEqual(printer.configfile.saved, [])
+        self.assertEqual(printer.gcode.scripts, [])
 
     def test_unchanged_save_closes_without_restart(self):
         editor, printer = self.make_editor()

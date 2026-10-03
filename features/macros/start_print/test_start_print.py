@@ -104,17 +104,17 @@ class StartPrintConfigTests(unittest.TestCase):
             self.config,
         )
         self.assertIn(
-            "SET_TEMPERATURE_FAN_TARGET TEMPERATURE_FAN=chamber_fan TARGET=35",
+            "K2_CHAMBER_FAN_RESYNC TARGET=35",
             self.config,
         )
         self.assertIn(
-            "SET_TEMPERATURE_FAN_TARGET TEMPERATURE_FAN=chamber_fan "
+            "K2_CHAMBER_FAN_RESYNC "
             "TARGET={CHAMBER_TEMP + CHAMBER_FAN_MARGIN}",
             self.config,
         )
         active = self.config.index("{% if CHAMBER_TEMP > 35 %}")
         active_fan_target = self.config.index(
-            "SET_TEMPERATURE_FAN_TARGET TEMPERATURE_FAN=chamber_fan "
+            "K2_CHAMBER_FAN_RESYNC "
             "TARGET={CHAMBER_TEMP + CHAMBER_FAN_MARGIN}",
             active,
         )
@@ -129,6 +129,7 @@ class StartPrintConfigTests(unittest.TestCase):
             "SET_TEMPERATURE_FAN_TARGET TEMPERATURE_FAN=chamber_fan TARGET=0",
             self.config,
         )
+        self.assertEqual(self.config.count("K2_CHAMBER_FAN_RESYNC"), 3)
         self.assertNotIn("M141 S{CHAMBER_TEMP}", self.config)
 
     def test_shared_fan_margin_is_validated(self):

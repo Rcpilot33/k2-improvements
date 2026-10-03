@@ -161,13 +161,25 @@ class MaterialEditorTests(unittest.TestCase):
         self.assertIn("material_z_offsets_material DEFAULT|0.050|2", output)
         self.assertTrue(output.endswith("material_z_offsets_show"))
 
-    def test_save_writes_file_then_only_firmware_restart(self):
+    def test_save_writes_file_and_activates_without_restart(self):
         editor, printer = self.make_editor()
         editor.cmd_open(FakeGCmd())
         editor.cmd_stage(FakeGCmd(INDEX=1, VALUE=0.1))
         editor.cmd_save(FakeGCmd())
         self.assertIn("variable_offset_PETG: 0.100", self.path.read_text(encoding="utf-8"))
-        self.assertEqual(printer.objects["gcode"].scripts, ["FIRMWARE_RESTART"])
+        self.assertEqual(printer.objects["gcode"].scripts, [])
+        self.assertEqual(printer.objects["gcode_macro _START_PRINT_VARS"].variables["offset_petg"], 0.1)
+        editor.cmd_apply(FakeGCmd(MATERIAL="PETG"))
+        self.assertEqual(printer.objects["gcode"].scripts, ["SET_GCODE_OFFSET Z=0.100"])
+
+    def test_missing_live_macro_prevents_save(self):
+        editor, printer = self.make_editor()
+        editor.cmd_open(FakeGCmd())
+        editor.cmd_stage(FakeGCmd(INDEX=1, VALUE=0.1))
+        printer.objects.pop("gcode_macro _START_PRINT_VARS")
+        with self.assertRaisesRegex(RuntimeError, "nothing was saved"):
+            editor.cmd_save(FakeGCmd())
+        self.assertEqual(self.path.read_text(encoding="utf-8"), BASE_CONFIG)
 
     def test_save_refuses_to_clobber_external_edit(self):
         editor, _printer = self.make_editor()
@@ -190,7 +202,24 @@ class MaterialEditorTests(unittest.TestCase):
         self.assertLess(text.index("variable_offset_PETG_CF"), text.index("variable_offset_DEFAULT"))
         self.assertIn("variable_offset_PETG_CF: 0.000", text)
         self.assertEqual(printer.objects["gcode"].scripts, ["SET_GCODE_OFFSET Z=0.050"])
-        self.assertIn("activate after Save & Restart", command.info[0])
+        self.assertEqual(printer.objects["gcode_macro _START_PRINT_VARS"].variables["offset_petg_cf"], 0.0)
+        self.assertIn("current print still uses DEFAULT", command.info[0])
+
+    def test_saved_material_missing_from_memory_becomes_active_for_next_print(self):
+        text = BASE_CONFIG.replace(
+            "variable_offset_DEFAULT: 0.050",
+            "variable_offset_PETG_CF: 0.025\nvariable_offset_DEFAULT: 0.050",
+        )
+        self.path.write_text(text, encoding="utf-8")
+        editor, printer = self.make_editor()
+        editor.cmd_apply(FakeGCmd(MATERIAL="PETG-CF"))
+        self.assertEqual(printer.objects["gcode"].scripts, ["SET_GCODE_OFFSET Z=0.050"])
+        self.assertEqual(
+            printer.objects["gcode_macro _START_PRINT_VARS"].variables["offset_petg_cf"],
+            0.025,
+        )
+        editor.cmd_apply(FakeGCmd(MATERIAL="PETG-CF"))
+        self.assertEqual(printer.objects["gcode"].scripts[-1], "SET_GCODE_OFFSET Z=0.025")
 
     def test_editor_is_blocked_while_printing_but_apply_is_allowed(self):
         editor, printer = self.make_editor("printing")

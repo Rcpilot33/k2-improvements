@@ -11,6 +11,7 @@ UPDATE_MENU = HERE.parent / "menus" / "update.sh"
 MAIN_MENU = HERE.parent / "menus" / "main.sh"
 
 KNOWN_COMPONENTS = {
+    "fluidd",
     "cartographer",
     "macros",
     "save-config-restart",
@@ -30,6 +31,7 @@ KNOWN_COMPONENTS = {
 }
 
 EXPECTED_DETECTORS = {
+    "fluidd": "is_fluidd",
     "cartographer": "is_cartographer",
     "macros": "is_macros",
     "save-config-restart": "is_save_config_restart",
@@ -273,6 +275,28 @@ class MigrationCatalogTests(unittest.TestCase):
             {"material-z-offsets"},
         )
 
+    def test_live_offset_saves_are_offered_to_installed_editors(self):
+        catalog_ids = {entry[0] for entry in entries()}
+        cases = {
+            "global-touch-offsets-live-save-v5": "global-touch-offsets",
+            "material-z-offsets-live-save-v4": "material-z-offsets",
+        }
+        for update_id, component in cases.items():
+            with self.subTest(update_id=update_id):
+                self.assertIn(update_id, catalog_ids)
+                previously_completed = catalog_ids - {update_id}
+                self.assertEqual(
+                    recommended({component}, previously_completed),
+                    {component},
+                )
+
+    def test_bed_assist_live_save_is_offered_to_installed_macros(self):
+        update_id = "m191-bed-assist-live-save-v3"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(recommended({"macros"}, previously_completed), {"macros"})
+
     def test_deformation_preflight_case_fan_fix_is_offered_once(self):
         update_id = "case-fan-deformation-preflight-v7"
         catalog_ids = {entry[0] for entry in entries()}
@@ -299,6 +323,16 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertEqual(
             recommended({"macros"}, previously_completed), {"macros"}
         )
+
+    def test_chamber_fan_output_resync_is_offered_once(self):
+        update_id = "chamber-fan-output-resync-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(
+            recommended({"macros"}, previously_completed), {"macros"}
+        )
+        self.assertEqual(recommended({"macros"}, catalog_ids), set())
 
     def test_safe_move_trigger_cleanup_is_offered_once(self):
         update_id = "cartographer-safe-move-trigger-cleanup-v1"
@@ -522,6 +556,61 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertRegex(
             restart_case.group(1),
             r"(?:^|\|)macros(?:\||\))[^\n]*\n\s*echo code",
+        )
+
+    def test_fluidd_metadata_repair_only_requires_moonraker(self):
+        menu = UPDATE_MENU.read_text(encoding="utf-8")
+        restart_case = re.search(
+            r"migration_component_restart_kind\(\) \{(.*?)\n\}",
+            menu,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(restart_case)
+        self.assertRegex(
+            restart_case.group(1),
+            r"fluidd\)[^\n]*\n\s*echo moonraker",
+        )
+        self.assertIn("migration_restart_moonraker", menu)
+        self.assertIn("moonraker_restart_required=1", menu)
+
+    def test_stale_fluidd_release_cache_reset_is_offered_once(self):
+        update_id = "fluidd-stale-update-cache-v2"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        previously_completed = catalog_ids - {update_id}
+        self.assertEqual(recommended({"fluidd"}, previously_completed), {"fluidd"})
+
+    def test_fluidd_cache_reset_restores_updater_before_final_restart(self):
+        menu = UPDATE_MENU.read_text(encoding="utf-8")
+        reset = re.search(
+            r"migration_reset_fluidd_update_cache\(\) \((.*?)\n\)",
+            menu,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(reset)
+        body = reset.group(1)
+        self.assertLess(body.index('disable "$config"'), body.index("migration_restart_moonraker"))
+        self.assertLess(body.index("check-absent"), body.index('restore "$config" || return 1'))
+        self.assertIn("trap", body)
+        self.assertIn("migration_restart_moonraker || warn", body)
+        self.assertIn('migration_reset_fluidd_update_cache \\', menu)
+        self.assertIn("if ! migration_is_complete fluidd-stale-update-cache-v2; then", menu)
+
+    def test_fluidd_metadata_verification_does_not_run_macro_layout_verifier(self):
+        menu = UPDATE_MENU.read_text(encoding="utf-8")
+        reconcile = re.search(
+            r"migration_reconcile_fluidd_layout\(\) \{(.*?)\n\}",
+            menu,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(reconcile)
+        self.assertRegex(
+            reconcile.group(1),
+            r'(?s)fluidd\).*?release\.get\("project_owner"\).*?\nPY\n'
+            r'\s*\[ "\$\?" -eq 0 \] \|\| return 1\n'
+            r'\s*if ! migration_is_complete fluidd-stale-update-cache-v2; then\n'
+            r'\s*python3 .*? check-fresh \|\| return 1\n'
+            r'\s*fi\n(?:\s*#[^\n]*\n)*\s*return 0\n\s*;;',
         )
 
     def test_updater_can_back_up_and_restore_tracked_local_edits(self):

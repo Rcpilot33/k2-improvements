@@ -7,7 +7,7 @@ SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
 FLUIDD_ROOT="${FLUIDD_DIR:-/usr/share/fluidd}"
 FLUIDD_ARCHIVE="$SCRIPT_DIR/fluidd-v1.37.4.zip"
 FLUIDD_VERSION=v1.37.4
-OVERLAY_VERSION=4
+OVERLAY_VERSION=6
 
 [ -f "$FLUIDD_ARCHIVE" ] || { echo "ERROR: bundled Fluidd UI archive is missing: $FLUIDD_ARCHIVE"; exit 1; }
 [ -d "$FLUIDD_ROOT" ] || { echo "ERROR: Fluidd is not installed at $FLUIDD_ROOT"; exit 1; }
@@ -22,6 +22,9 @@ case "$fluidd_target" in
 esac
 
 if [ "$(cat "$fluidd_target/k2-ui-overlay-support.txt" 2>/dev/null || true)" = "$OVERLAY_VERSION" ]; then
+    python3 "$SCRIPT_DIR/../../../features/fluidd/set_release_source.py" \
+        "$fluidd_target/release_info.json" Rcpilot33 fluidd
+    chmod -R a+rX "$fluidd_target"
     echo "I: shared Fluidd settings controls are already installed"
     exit 0
 fi
@@ -51,6 +54,11 @@ cleanup_swap() {
 trap cleanup_swap EXIT INT TERM
 
 unzip -oq "$FLUIDD_ARCHIVE" -d "$staging"
+python3 "$SCRIPT_DIR/../../../features/fluidd/set_release_source.py" \
+    "$staging/release_info.json" Rcpilot33 fluidd
+# Ensure nginx can read the static files even if an archive was built on a
+# platform that recorded owner-only permissions for its entries.
+chmod -R a+rX "$staging"
 [ "$(cat "$staging/.version" 2>/dev/null || true)" = "$FLUIDD_VERSION" ] &&
     [ -f "$staging/index.html" ] &&
     [ -f "$staging/sw.js" ] &&

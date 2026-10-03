@@ -118,17 +118,20 @@ global-touch-offsets-category-v3|global-touch-offsets|is_global_touch_offsets|Gl
 global-touch-offsets-shared-ui-v4|global-touch-offsets|is_global_touch_offsets|Global Carto Touch Z Offsets now shares one safe Fluidd overlay with the material editor
 global-touch-offsets-fluidd-namespace-bootstrap-v1|global-touch-offsets|is_global_touch_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Global Touch Offset layout setup
 global-touch-offsets-fluidd-post-restart-layout-v2|global-touch-offsets|is_global_touch_offsets|Reapply and verify persistent Global Carto Touch Fluidd grouping after the upgraded macros are active
+global-touch-offsets-live-save-v5|global-touch-offsets|is_global_touch_offsets|Saving Global Carto Touch Z offsets now updates live Cartographer models without restarting
 material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor and automatic material registration are available
 material-z-offsets-start-print-bridge-v2|material-z-offsets|is_material_z_offsets|Material Z Offsets now refreshes and verifies its START_PRINT handoff
 material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets|Newly discovered materials now start with a zero Z offset instead of inheriting the former 0.050 mm seed
 material-z-offsets-fluidd-namespace-bootstrap-v1|material-z-offsets|is_material_z_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Material Z Offset layout setup
 material-z-offsets-fluidd-post-restart-layout-v2|material-z-offsets|is_material_z_offsets|Reapply and verify persistent Material Z Offset Fluidd grouping after the upgraded macros are active
+material-z-offsets-live-save-v4|material-z-offsets|is_material_z_offsets|Saving Material Z offsets now updates live START_PRINT variables without restarting
 macros-preserve-carto-surface-wrapper-v1|macros|is_macros|Macro repairs now preserve an installed Cartographer surface-selection wrapper
 case-fan-runtime-state-v2|macros|is_macros|The guarded pre-print case-fan release now applies independently of firmware version
 case-fan-any-direct-request-v3|macros|is_macros|Pre-print now releases any nonzero direct case-fan request while preserving chamber cooling
 cartographer-default-controls-core-v1|cartographer|is_cartographer|Cartographer now installs default calibration controls while named plate selectors remain optional
 m191-configurable-settings-v1|macros|is_macros|M191 bed assistance and chamber waiting settings are now configurable
 m191-bed-assist-editor-v2|macros|is_macros|M191 settings can now be edited from the Fluidd Bed Assist control
+m191-bed-assist-live-save-v3|macros|is_macros|Saving Bed Assist settings now updates live M191 and START_PRINT variables without restarting
 axis-twist-probe-aware-range-v1|axis_twist_compensation|is_axis_twist|Axis Twist calibration now limits motion using the active probe offsets and toolhead range
 axis-twist-prtouch-registration-v2|axis_twist_compensation|is_axis_twist|Stock PR Touch now releases its internal alias so the full Axis Twist module can load
 axis-twist-prtouch-probe-params-v3|axis_twist_compensation|is_axis_twist|The legacy stock probe now exposes the parameter interface required by Axis Twist
@@ -151,5 +154,8 @@ m191-chamber-temperature-report-v1|macros|is_macros|M191 waits now report the ex
 case-fan-deformation-preflight-v7|macros|is_macros|Heated-bed deformation calibration no longer leaves Creality's direct pre-file case-fan request active
 case-fan-inherited-output-clear-v8|macros|is_macros|Heated-bed deformation preflight now also clears case-fan output inherited from an already-active chamber controller
 case-fan-restore-preflight-target-v9|macros|is_macros|Heated-bed deformation preflight now restores the prior chamber-fan target before clearing the shared fan output
+fluidd-release-source-v1|fluidd|is_fluidd|Align Fluidd release metadata with the preserved Rcpilot33 update source
+fluidd-stale-update-cache-v2|fluidd|is_fluidd|Clear the previous Fluidd repository's cached release and download URL before checking Rcpilot33/fluidd
+chamber-fan-output-resync-v1|macros|is_macros|Resynchronize the chamber thermostat output after releasing Creality's direct case-fan request
 EOF
 }
