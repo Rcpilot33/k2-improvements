@@ -469,6 +469,15 @@ class MigrationCatalogTests(unittest.TestCase):
             set(),
         )
 
+    def test_numpy_coil_calibration_reopens_only_installed_cartographer_once(self):
+        migration_id = "cartographer-coil-temperature-numpy-v1"
+        catalog_ids = {item_id for item_id, *_ in entries()}
+        self.assertIn(migration_id, catalog_ids)
+        previously_completed = catalog_ids - {migration_id}
+        self.assertEqual(recommended({"cartographer"}, previously_completed), {"cartographer"})
+        self.assertEqual(recommended(set(), previously_completed), set())
+        self.assertEqual(recommended({"cartographer"}, catalog_ids), set())
+
     def test_post_restart_fluidd_repairs_are_tracked_per_installed_component(self):
         expected = {
             "cartographer-fluidd-post-restart-layout-v2": "cartographer",

@@ -9,7 +9,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 FEATURE = ROOT / "features/cartographer"
-BRANCH = "main"
+BRANCH = "coil-temperature-numpy-testing"
 INTEGRATION_BRANCH = "k2-cartographer-upstream-integration"
 URL = "https://github.com/Rcpilot33/cartographer3d-plugin.git"
 BASH = shutil.which("bash") or "C:/Program Files/Git/bin/bash.exe"
@@ -38,6 +38,9 @@ class PluginInstallTests(unittest.TestCase):
         self.integration = self.git("rev-parse", "HEAD").stdout.strip()
         self.git("branch", INTEGRATION_BRANCH)
         self.git("commit", "--allow-empty", "-m", "release")
+        self.main_target = self.git("rev-parse", "HEAD").stdout.strip()
+        self.git("checkout", "-b", BRANCH)
+        self.git("commit", "--allow-empty", "-m", "coil calibration test")
         self.target = self.git("rev-parse", "HEAD").stdout.strip()
         self.git("config", "--global", "protocol.file.allow", "always")
         self.git("config", "--global", "url." + self.source.as_uri() + ".insteadOf", URL)
@@ -55,6 +58,10 @@ class PluginInstallTests(unittest.TestCase):
     def existing_integration(self):
         self.git("clone", "--branch", INTEGRATION_BRANCH, str(self.source), str(self.dest))
         self.git("branch", "main", self.old, cwd=self.dest)
+        self.git("remote", "set-url", "origin", URL, cwd=self.dest)
+
+    def existing_main(self):
+        self.git("clone", "--branch", "main", str(self.source), str(self.dest))
         self.git("remote", "set-url", "origin", URL, cwd=self.dest)
 
     def install(self, success=True):
@@ -89,17 +96,24 @@ class PluginInstallTests(unittest.TestCase):
         self.install()
         self.install()
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.dest).stdout.strip(), self.target)
-        self.assertEqual(self.git("rev-parse", "main", cwd=self.dest).stdout.strip(), self.target)
+        self.assertEqual(self.git("rev-parse", BRANCH, cwd=self.dest).stdout.strip(), self.target)
         self.assertEqual(self.git("rev-parse", "--abbrev-ref", "@{upstream}", cwd=self.dest).stdout.strip(),
                          "origin/" + BRANCH)
         self.assertEqual(self.git("remote", "get-url", "origin", cwd=self.dest).stdout.strip(),
                          self.source.as_uri())
 
-    def test_integration_branch_migrates_to_main(self):
+    def test_integration_branch_migrates_to_test_branch(self):
         self.existing_integration()
         self.install()
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.dest).stdout.strip(), self.target)
         self.assertEqual(self.git("rev-parse", INTEGRATION_BRANCH, cwd=self.dest).stdout.strip(), self.integration)
+        self.assertEqual(self.git("rev-parse", "--abbrev-ref", "HEAD", cwd=self.dest).stdout.strip(), BRANCH)
+
+    def test_existing_main_migrates_to_test_branch_without_rewriting_main(self):
+        self.existing_main()
+        self.install()
+        self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.dest).stdout.strip(), self.target)
+        self.assertEqual(self.git("rev-parse", "main", cwd=self.dest).stdout.strip(), self.main_target)
         self.assertEqual(self.git("rev-parse", "--abbrev-ref", "HEAD", cwd=self.dest).stdout.strip(), BRANCH)
 
     def test_dirty_checkout_is_preserved(self):
@@ -145,7 +159,7 @@ class PluginInstallTests(unittest.TestCase):
     def test_divergent_destination_branch_is_preserved(self):
         self.existing()
         self.git("checkout", "-b", "working-state", cwd=self.dest)
-        self.git("checkout", BRANCH, cwd=self.dest)
+        self.git("checkout", "-b", BRANCH, self.old, cwd=self.dest)
         self.git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
                  "commit", "--allow-empty", "-m", "local branch", cwd=self.dest)
         before = self.git("rev-parse", "HEAD", cwd=self.dest).stdout

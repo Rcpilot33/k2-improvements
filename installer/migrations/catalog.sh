@@ -42,6 +42,7 @@ cartographer-active-disconnect-cleanup-v1|cartographer|is_cartographer|Refresh C
 cartographer-integration-review-v1|cartographer|is_cartographer|Refresh Cartographer integration warning cleanup and branch discovery, then reload through the protected restart
 cartographer-plugin-runtime-artifacts-v2|cartographer|is_cartographer|Migrate the Cartographer plugin checkout while preserving harmless untracked runtime bytecode and operator files
 cartographer-plugin-main-promotion-v1|cartographer|is_cartographer|Migrate the Cartographer plugin checkout from the integration branch to released main, then reload through the protected restart
+cartographer-coil-temperature-numpy-v1|cartographer|is_cartographer|Update Cartographer to the test branch with SciPy-free coil temperature calibration, then reload through the protected restart
 cartographer-fluidd-post-restart-layout-v2|cartographer|is_cartographer|Reapply and verify persistent Cartographer Fluidd grouping after the upgraded macros are active
 main-451901d-cartographer-temperatures|cartographer|is_cartographer|Cartographer touch-home temperature diagnostics changed
 main-eb60d34-cartographer-touch-defaults|cartographer|is_cartographer|Cartographer touch calibration defaults changed
