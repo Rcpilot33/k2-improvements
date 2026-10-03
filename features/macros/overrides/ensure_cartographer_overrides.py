@@ -200,6 +200,17 @@ def ensure_defaults(contents: str) -> Tuple[str, bool]:
         )
     blocks[bed_index] = _normalize_bed_mesh_presentation(blocks[bed_index])
 
+    start_print_index = _find(blocks, START_PRINT)
+    if start_print_index is None:
+        blocks.append("[%s]%sgcode:%s" % (START_PRINT, newline, newline))
+        start_print_index = len(blocks) - 1
+    if not _has_option(blocks[start_print_index], "variable_carto_final_z_mode"):
+        blocks[start_print_index] = _add_option(
+            blocks[start_print_index],
+            'variable_carto_final_z_mode: "touch"         # Final Z reference: "touch" or "scan"',
+            after="variable_carto_touch_calibrate_start",
+        )
+
     touch_index = _ensure_section(blocks, CARTOGRAPHER_TOUCH, newline)
     if not _has_option(blocks[touch_index], "max_noisy_samples"):
         blocks[touch_index] = _add_option(

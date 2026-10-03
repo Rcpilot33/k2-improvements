@@ -10,14 +10,17 @@ installed together with the predefined
 The same optional workflow supports Creality Print, OrcaSlicer, or Both; choose
 visible selectors in Extras. See the [plate mapping](../cartographer-macros/README.md#slicer-choice-and-orca-mapping)
 and [four Orca templates](../kamp-adaptive-purge/slicer-templates/README.md).
-New surface models need saved Scan and Touch calibrations. Orca's unknown-plate
+New surface models need a saved Scan calibration and, when final Z uses Touch,
+a matching Touch calibration. Orca's unknown-plate
 fallback is `default`. Changing visible selectors preserves saved models.
 
-The slicer passes `SURFACE=<name>` to `START_PRINT`. The wrapper loads the scan
-and touch models with that name:
+The slicer passes `SURFACE=<name>` to `START_PRINT`. The wrapper loads the Scan
+model with that name and loads the Touch model only when
+`variable_carto_final_z_mode` is `"touch"`:
 
 ```gcode
 CARTOGRAPHER_SCAN_MODEL LOAD=<name>
+; Touch final Z only:
 CARTOGRAPHER_TOUCH_MODEL LOAD=<name>
 ```
 
@@ -30,7 +33,8 @@ The Creality Print 7.1 workflow uses:
 | Textured PEI Plate | `textured_pei` |
 | Customized Plate | `custom` |
 
-The selected `SURFACE` must have matching saved scan and touch models. The
+The selected `SURFACE` must have a saved Scan model and, for Touch final Z, a
+matching saved Touch model. The
 wrapper falls back to `default` when `SURFACE` is omitted; the supplied
 Creality Print template explicitly falls back to `textured_pei` for an
 unrecognized bed type.

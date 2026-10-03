@@ -70,6 +70,18 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_final_z_mode_updates_are_offered_once(self):
+        update_ids = {
+            "cartographer-final-z-mode-macros-v1": "macros",
+            "cartographer-final-z-mode-plate-v1": "cartographer-plate-workflow",
+        }
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertTrue(set(update_ids) <= catalog_ids)
+        for update_id, component in update_ids.items():
+            previously_completed = catalog_ids - {update_id}
+            self.assertEqual(recommended({component}, previously_completed), {component})
+            self.assertEqual(recommended({component}, catalog_ids), set())
+
     def test_save_and_managed_backup_fixes_are_offered_exactly_once(self):
         expected = {
             "save-config-cxsave-retention-v1": "save-config-restart",

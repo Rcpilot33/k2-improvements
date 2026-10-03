@@ -59,6 +59,7 @@ class CartographerOverridesTests(unittest.TestCase):
         self.assertNotIn("[cartographer ", text)
         for material in ("PLA", "PETG", "ABS", "ASA", "DEFAULT"):
             self.assertIn(f"variable_offset_{material}: 0.00", text)
+        self.assertIn('variable_carto_final_z_mode: "touch"', text)
 
     def test_adds_presented_cartographer_defaults(self):
         original = (
@@ -76,6 +77,7 @@ class CartographerOverridesTests(unittest.TestCase):
         self.assertIn("max_noisy_samples: 2", updated)
         self.assertIn("mesh_runs: 1", updated)
         self.assertIn("mesh_path: spiral", updated)
+        self.assertIn('variable_carto_final_z_mode: "touch"', updated)
         self.assertIn(
             "# Spiral scan; change to snake for the default path",
             updated,
@@ -174,6 +176,9 @@ class CartographerOverridesTests(unittest.TestCase):
     def test_preserves_existing_user_choices(self):
         original = (
             "[bed_mesh]\nspeed: 200 # user choice\n\n"
+            "[gcode_macro _START_PRINT_VARS]\n"
+            'variable_carto_final_z_mode: "scan" # user choice\n'
+            "gcode:\n\n"
             "[cartographer touch]\nmax_noisy_samples: 0\n\n"
             "[cartographer scan]\nmesh_runs: 3\nmesh_path: hilbert\n"
         )
@@ -187,7 +192,15 @@ class CartographerOverridesTests(unittest.TestCase):
         self.assertIn("max_noisy_samples: 0", updated)
         self.assertIn("mesh_runs: 3", updated)
         self.assertIn("mesh_path: hilbert", updated)
+        self.assertIn('variable_carto_final_z_mode: "scan" # user choice', updated)
+        self.assertEqual(updated.count("variable_carto_final_z_mode:"), 1)
         self.assertNotIn("speed: 150", updated)
+
+    def test_creates_valid_start_print_section_when_missing(self):
+        updated, _ = MODULE.ensure_defaults("[bed_mesh]\nprobe_count: 50,50\n")
+        start_section = updated.split("[gcode_macro _START_PRINT_VARS]", 1)[1]
+        self.assertIn('variable_carto_final_z_mode: "touch"', start_section)
+        self.assertIn("gcode:", start_section.split("[cartographer touch]", 1)[0])
 
     def test_normalizes_bed_mesh_comments_without_changing_values(self):
         original = (
