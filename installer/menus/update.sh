@@ -552,6 +552,23 @@ PY
     HOME="$pwd_home" python3 "$verifier" "$component"
 }
 
+# A full setup installs Fluidd before its shared final restart. Finish the
+# updater-cache migration here as well, so a fresh install does not immediately
+# offer the same Fluidd repair action in the update menu.
+migration_mark_fresh_setup_component_current() {
+    local component pwd_home
+    component="$1"
+    if [ "$component" = fluidd ]; then
+        pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+        [ -n "$pwd_home" ] || pwd_home="$HOME"
+        migration_reset_fluidd_update_cache \
+            "$pwd_home/printer_data/config/updates/fluidd.cfg" || return 1
+        migration_restart_moonraker || return 1
+        migration_reconcile_fluidd_layout fluidd || return 1
+    fi
+    migration_mark_component_current "$component"
+}
+
 migration_apply_components() {
     local components_file succeeded activated failures component restart_kind restart_script moonraker_restart_required component_restart_kind
     components_file="$1"
