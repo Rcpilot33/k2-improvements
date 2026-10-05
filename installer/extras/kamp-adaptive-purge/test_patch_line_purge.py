@@ -90,6 +90,21 @@ class LinePurgePatchTests(unittest.TestCase):
         self.assertIn("G0 X{break_end_x}", result)
         self.assertIn("G0 Y{break_end_y}", result)
 
+    def test_cfs_exit_precedes_purge_without_feed_only_move(self):
+        result = self.patch()
+
+        self.assertNotIn("G0 F{travel_speed}", result)
+        self.assertIn("{% set pos = printer.toolhead.position %}", result)
+        self.assertIn("G0 Y{axis_y_max - 2.0} F{travel_speed}", result)
+        self.assertIn("G0 Y{axis_y_min + 2.0} F{travel_speed}", result)
+        self.assertIn(
+            "G0 X{purge_start_x} Y{purge_start_y} F{travel_speed}", result
+        )
+        self.assertLess(result.index("G90\n        {% if pos.y > axis_y_max %}"),
+                        result.index("G0 Y{axis_y_max - 2.0}"))
+        self.assertLess(result.index("G0 Y{axis_y_max - 2.0}"),
+                        result.index("G0 X{purge_start_x} Y{purge_start_y}"))
+
     def test_patch_is_idempotent(self):
         once = self.patch()
         twice = PATCHER.add_prime_tower_wait_wrapper(

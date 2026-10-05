@@ -45,7 +45,7 @@ them later without reinstalling KAMP.
 It intentionally does not install KAMP Smart Park or Adaptive Meshing. The
 project's `START_PRINT` and Cartographer flow already provide those functions.
 
-The installed `Line_Purge.cfg` makes four compatibility corrections to the
+The installed `Line_Purge.cfg` makes five compatibility corrections to the
 upstream macro:
 
 1. `G10` and `G11` are quoted when stored as Jinja strings for firmware
@@ -63,6 +63,10 @@ upstream macro:
 4. Actual first-layer extrusion is added to the occupied boundary before the
    purge location is selected. This covers brims, skirts, supports, models,
    and prime towers, even without exclude-object geometry.
+5. If a CFS wipe leaves Y just outside the normal travel limit, the first
+   purge motion moves straight to 2 mm inside that limit before traveling to
+   the selected purge start. The travel feed rate is set on that move rather
+   than on a feed-only `G0`, which would check the still-out-of-range position.
 
 Creality Print's **Prime tower -> No sparse layers (beta)** option is not
 supported on the K2 Plus. It can delay the tower until a color change, then

@@ -138,6 +138,18 @@ class MigrationCatalogTests(unittest.TestCase):
             self.assertEqual(recommended({component}, ids), set())
         self.assertEqual(recommended({"macros"}, completed), set())
 
+    def test_cfs_wipe_exit_upgrade_is_offered_only_for_installed_kamp(self):
+        migration = "kamp-cfs-wipe-exit-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(migration, catalog_ids)
+        completed = catalog_ids - {migration}
+        self.assertEqual(recommended({"kamp-adaptive-purge"}, completed),
+                         {"kamp-adaptive-purge"})
+        self.assertEqual(recommended({"kamp-adaptive-purge"}, catalog_ids), set())
+        self.assertEqual(recommended({"cartographer", "macros"}, completed), set())
+        self.assertEqual(next(row[2] for row in entries() if row[0] == migration),
+                         "is_kamp")
+
     def test_mesh_bounds_report_is_offered_exactly_once(self):
         ids = {entry[0] for entry in entries()}
         updates = {"kamp-mesh-bounds-report-carto-v1",

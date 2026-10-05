@@ -13,6 +13,7 @@ start-print-fast-stop-waits-v1|start-print-fast-stop|is_start_print_fast_stop|Al
 start-print-fast-stop-1155-v1|start-print-fast-stop|is_start_print_fast_stop|Enable cancel-aware START_PRINT execution on Creality firmware 1.1.5.5 and newer
 kamp-first-layer-footprint-carto-v1|cartographer|is_cartographer|Replace whole-file prime-tower scanning with complete first-layer extrusion bounds for adaptive meshes
 kamp-first-layer-footprint-kamp-v1|kamp-adaptive-purge|is_kamp|Replace whole-file prime-tower scanning with complete first-layer extrusion bounds for KAMP mesh and purge placement
+kamp-cfs-wipe-exit-v1|kamp-adaptive-purge|is_kamp|Move straight inside the Y travel limit after a CFS wipe before crossing to the KAMP purge start
 kamp-mesh-bounds-report-carto-v1|cartographer|is_cartographer|Reload scanner support for console mesh-boundary reports
 kamp-mesh-bounds-report-kamp-v1|kamp-adaptive-purge|is_kamp|Reload scanner support for console mesh-boundary reports
 kamp-mesh-bounds-report-macros-v1|macros|is_macros|Report combined geometry and requested mesh bounds with scan duration before Cartographer meshing
