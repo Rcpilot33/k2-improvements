@@ -178,7 +178,14 @@ Cartographer is detected.
 | 4 | Install optional hardware, print-workflow, and security extras. |
 | 5 | Open component repair, protected restart, update review, PR Touch cleanup, and factory-reset tools. |
 | 6 | Update installer files, review applicable component migrations, and apply selected repairs. |
+| 7 | Check for newer installer files without downloading or installing them. |
 | 0 | Exit. |
+
+The installer does not contact GitHub automatically when opening the main
+menu. Item 6 initially shows `NOT CHECKED`; use item 7 to refresh its installer
+update status. Pending component actions remain visible alongside that result.
+A failed or timed-out check shows `CHECK FAILED`, not an up-to-date result.
+Changing the local branch or commit resets the check status to `NOT CHECKED`.
 
 States are displayed as words so they remain meaningful without terminal
 color:

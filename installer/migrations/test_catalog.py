@@ -562,7 +562,9 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertIn("ACTION(S) PENDING", menu)
         self.assertIn("INSTALLER UPDATE AVAILABLE", menu)
         self.assertIn("UP TO DATE", menu)
-        self.assertIn("REMOTE CHECK UNAVAILABLE", menu)
+        self.assertIn("NOT CHECKED", menu)
+        self.assertIn("CHECK FAILED", menu)
+        self.assertIn("Check for installer updates", menu)
         self.assertIn("ls-remote --heads origin", menu)
         self.assertIn("Update installer / apply updates", menu)
 
