@@ -76,6 +76,14 @@ class AxisTwistCompensation:
         self.printer.register_event_handler("probe:update_results",
                                             self._update_z_compensation_value)
 
+    def get_status(self, eventtime):
+        # Creality subscribes to this object name for PR Touch's on_turb and
+        # g28_nacc flags. Preserve its full live status, including future fields.
+        native = self.printer.lookup_object('k2_prtouch_axis_twist_status', None)
+        if native is None:
+            return {}
+        return dict(native.get_status(eventtime))
+
     def _update_z_compensation_value(self, pos):
         if self.z_compensations:
             pos[2] += self._get_interpolated_z_compensation(

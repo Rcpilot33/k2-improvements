@@ -9,8 +9,8 @@ echo "Installing axis_twist_compensation"
 rm -f /usr/share/klipper/klippy/extras/probe.py*
 
 # Stock prtouch_v3 publishes a small compensation shim under the same object
-# name as Klipper's full Axis Twist module.  Release only that alias; the
-# compiled PR Touch endstop and the probe object remain active.
+# name as Klipper's full Axis Twist module. Rename that alias so our module can
+# forward its live status to Creality while the endstop and probe stay active.
 if [ -e /usr/share/klipper/klippy/extras/prtouch_v3.py ]; then
     python ${SCRIPT_DIR}/patch_prtouch_registration.py \
         /usr/share/klipper/klippy/extras/prtouch_v3.py

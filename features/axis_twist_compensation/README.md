@@ -13,8 +13,13 @@ calibration boundary in the corresponding direction.
 
 On the stock-probe path, Creality's `prtouch_v3` normally reserves the
 `axis_twist_compensation` object name for its internal probe correction shim.
-The installer releases that alias so the full Axis Twist module can load while
-leaving PR Touch itself active. The original `prtouch_v3.py` is retained beside
+The installer renames that alias to `k2_prtouch_axis_twist_status` so the full
+Axis Twist module can load while leaving PR Touch itself active. Axis Twist
+forwards the native object's complete live status under the original name.
+This preserves Creality's `on_turb` fan-check suppression during intentional
+fan shutdowns for homing and probing, along with `g28_nacc` and other fields.
+Existing installs with the old registration-removal patch are upgraded in place.
+The original `prtouch_v3.py` is retained beside
 the installed file with a `.k2-axis-twist.bak` suffix.
 
 The installed legacy probe bridge also exposes Klipper's current probe-parameter
