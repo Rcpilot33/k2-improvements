@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Release prtouch_v3's axis-twist object name for the full ATC module."""
+"""Preserve PR Touch status while releasing its conflicting ATC object name."""
 
 import pathlib
 import shutil
@@ -13,9 +13,13 @@ REGISTRATION = (
     "    config.get_printer().add_object"
     "('axis_twist_compensation', prtouch)"
 )
-PATCHED_REGISTRATION = (
+LEGACY_REGISTRATION = (
     "    # K2-Improvements supplies the full axis-twist object when this "
     "optional feature is installed."
+)
+PATCHED_REGISTRATION = (
+    "    config.get_printer().add_object"
+    "('k2_prtouch_axis_twist_status', prtouch)"
 )
 
 
@@ -23,9 +27,14 @@ def patch_file(target):
     target = pathlib.Path(target)
     source = target.read_text(encoding="utf-8")
 
-    if PATCHED_REGISTRATION in source:
+    if (source.count(PATCHED_REGISTRATION) == 1
+            and REGISTRATION not in source and LEGACY_REGISTRATION not in source):
         return False
-    if source.count(REGISTRATION) != 1:
+    registration = (LEGACY_REGISTRATION if LEGACY_REGISTRATION in source
+                    else REGISTRATION)
+    if (source.count(registration) != 1
+            or PATCHED_REGISTRATION in source
+            or (registration == LEGACY_REGISTRATION and REGISTRATION in source)):
         raise RuntimeError(
             "expected exactly one prtouch_v3 axis-twist registration in %s"
             % (target,)
@@ -33,10 +42,16 @@ def patch_file(target):
 
     backup = target.with_name(target.name + ".k2-axis-twist.bak")
     if not backup.exists():
-        shutil.copy2(str(target), str(backup))
+        if registration == LEGACY_REGISTRATION:
+            # An old install may have lost its backup. Reconstruct only the
+            # registration we previously removed, preserving all other code.
+            backup.write_text(source.replace(registration, REGISTRATION),
+                              encoding="utf-8")
+        else:
+            shutil.copy2(str(target), str(backup))
 
     target.write_text(
-        source.replace(REGISTRATION, PATCHED_REGISTRATION),
+        source.replace(registration, PATCHED_REGISTRATION),
         encoding="utf-8",
     )
     return True
