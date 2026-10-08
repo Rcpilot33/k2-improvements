@@ -8,12 +8,14 @@ import unittest
 try:
     from .patch_prtouch_registration import (
         PATCHED_REGISTRATION,
+        LEGACY_REGISTRATION,
         REGISTRATION,
         patch_file,
     )
 except ImportError:
     from patch_prtouch_registration import (
         PATCHED_REGISTRATION,
+        LEGACY_REGISTRATION,
         REGISTRATION,
         patch_file,
     )
@@ -62,6 +64,53 @@ class PRTouchRegistrationPatchTests(unittest.TestCase):
             target = self.make_target(directory, "def load_config(config):\n    pass\n")
             with self.assertRaises(RuntimeError):
                 patch_file(target)
+
+    def test_upgrade_old_patch_preserves_stock_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self.make_target(
+                directory, STOCK_SOURCE.replace(REGISTRATION, LEGACY_REGISTRATION))
+            backup = target.with_name(target.name + ".k2-axis-twist.bak")
+            backup.write_text(STOCK_SOURCE, encoding="utf-8")
+            self.assertTrue(patch_file(target))
+            self.assertIn(PATCHED_REGISTRATION, target.read_text(encoding="utf-8"))
+            self.assertEqual(backup.read_text(encoding="utf-8"), STOCK_SOURCE)
+            self.assertFalse(patch_file(target))
+
+    def test_upgrade_without_backup_reconstructs_stock_registration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self.make_target(
+                directory, STOCK_SOURCE.replace(REGISTRATION, LEGACY_REGISTRATION))
+            self.assertTrue(patch_file(target))
+            backup = target.with_name(target.name + ".k2-axis-twist.bak")
+            self.assertEqual(backup.read_text(encoding="utf-8"), STOCK_SOURCE)
+
+    def test_patched_loader_registers_the_same_native_instance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self.make_target(directory)
+            patch_file(target)
+            objects = {}
+            native = object()
+            class Printer:
+                def add_object(self, name, value):
+                    objects[name] = value
+            class Config:
+                def get_printer(self):
+                    return Printer()
+            class Wrapper:
+                @staticmethod
+                def PRTouchEndstopWrapper(config):
+                    return native
+            class Probes:
+                @staticmethod
+                def PrinterProbe(config, endstop):
+                    return endstop
+            namespace = {'prtouch_v3_wrapper': Wrapper, 'probes': Probes}
+            source = target.read_text(encoding="utf-8")
+            exec(source[source.index('def load_config'):], namespace)
+            self.assertIs(namespace['load_config'](Config()), native)
+            self.assertIs(objects['k2_prtouch_axis_twist_status'], native)
+            self.assertIs(objects['probe'], native)
+            self.assertNotIn('axis_twist_compensation', objects)
 
 
 if __name__ == "__main__":
