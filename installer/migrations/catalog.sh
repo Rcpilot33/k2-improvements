@@ -156,6 +156,7 @@ prtouch-safe-xy-followup-preserve-v5|macros|is_macros|Stock PR Touch safety clea
 m141-print-target-preserve-v1|macros|is_macros|Layer-time chamber commands now preserve the configured chamber-fan ceiling during active prints
 m141-command-interceptor-v2|macros|is_macros|The chamber-fan target guard now wraps Creality's macro through a compatible Klippy command interceptor
 m191-circulation-cycle-v3|macros|is_macros|Bed assist now cycles low and high circulation speeds, actively cools the restored bed, and heat soaks at final print temperatures
+m191-circulation-bed-move-wait-v1|macros|is_macros|Finish the physical bed-assist move before starting circulation fans and their timer to avoid premature model-fan RPM warnings
 m191-chamber-temperature-report-v1|macros|is_macros|M191 waits now report the exact chamber temperature and requested target
 case-fan-deformation-preflight-v7|macros|is_macros|Heated-bed deformation calibration no longer leaves Creality's direct pre-file case-fan request active
 case-fan-inherited-output-clear-v8|macros|is_macros|Heated-bed deformation preflight now also clears case-fan output inherited from an already-active chamber controller

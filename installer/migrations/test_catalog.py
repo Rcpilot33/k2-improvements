@@ -814,6 +814,19 @@ class MigrationCatalogTests(unittest.TestCase):
             },
         )
 
+    def test_m191_bed_move_wait_is_offered_once_to_installed_macros(self):
+        update_id = "m191-circulation-bed-move-wait-v1"
+        self.assertIn(
+            (update_id, "macros", "is_macros"),
+            {entry[:3] for entry in entries()},
+        )
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertEqual(
+            recommended({"macros"}, catalog_ids - {update_id}), {"macros"}
+        )
+        self.assertEqual(recommended({"macros"}, catalog_ids), set())
+        self.assertEqual(recommended(set(), catalog_ids - {update_id}), set())
+
     def test_macros_track_immediate_case_fan_release(self):
         self.assertIn(
             "case-fan-immediate-start-release-v5",

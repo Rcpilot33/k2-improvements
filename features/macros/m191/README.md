@@ -84,8 +84,11 @@ below the measured bed temperature. It also never lowers a hotter bed target
 already commanded by the slicer.
 
 When assistance is needed, M191 homes when necessary, moves the bed to the
-configured heating Z height, and raises the bed only when required. Both the
-model and side/auxiliary fans start at the low circulation speed. They alternate
+configured heating Z height, and waits for that physical move to finish before
+starting circulation. This prevents a premature model-fan RPM warning while
+fan output is still queued behind the bed move. It raises the bed heater target
+only when required. Both the model and side/auxiliary fans start at the low
+circulation speed, with the low-phase timer beginning after the move. They alternate
 between the configured low and high speeds, using the two durations in seconds,
 until the chamber reaches its target.
 
