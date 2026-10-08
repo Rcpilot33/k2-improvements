@@ -157,25 +157,58 @@ migration_is_complete() {
 }
 
 migration_pending_entries() {
-    local id component detector reason
-    migration_catalog | while IFS='|' read -r id component detector reason; do
-        [ -n "$id" ] || continue
-        migration_component_applicable "$component" || continue
-        migration_is_complete "$id" && continue
-        printf '%s|%s|%s\n' "$id" "$component" "$reason"
-    done
+    local id component detector reason applicable_components inapplicable_components
+    # Read completion state once and discard acknowledged entries before any
+    # installation probes. Most menu redraws have no outstanding migrations.
+    # A missing/unreadable completion file still means nothing is acknowledged.
+    migration_catalog | awk -F '|' -v completed_file="$MIGRATION_COMPLETED" '
+        BEGIN {
+            while ((getline id < completed_file) > 0)
+                completed[id] = 1
+            close(completed_file)
+        }
+        $1 != "" && !($1 in completed)
+    ' | {
+        applicable_components='|'
+        inapplicable_components='|'
+        while IFS='|' read -r id component detector reason; do
+            [ -n "$id" ] || continue
+            # Cache positive AND negative applicability only within this scan.
+            # The next scan must see installs, repairs and firmware-gate changes.
+            case "$applicable_components" in
+                *"|$component|"*) ;;
+                *)
+                    case "$inapplicable_components" in
+                        *"|$component|"*) continue ;;
+                    esac
+                    if migration_component_applicable "$component"; then
+                        applicable_components="$applicable_components$component|"
+                    else
+                        inapplicable_components="$inapplicable_components$component|"
+                        continue
+                    fi
+                    ;;
+            esac
+            printf '%s|%s|%s\n' "$id" "$component" "$reason"
+        done
+    }
 }
 
 migration_pending_components() {
-    local entries component
-    entries=$(migration_pending_entries)
-    for component in cartographer save-config-restart virtual-sdcard-guard abort_homing \
-        screws_tilt_adjust macros r3men-bed kamp-adaptive-purge \
-        axis_twist_compensation cartographer-plate-workflow global-touch-offsets material-z-offsets plate-aware-mesh nozzle-camera fluidd better-init start-print-fast-stop; do
-        if printf '%s\n' "$entries" | grep -q "^[^|]*|$component|"; then
-            printf '%s\n' "$component"
-        fi
-    done
+    # Keep the existing repair order without launching a grep per component.
+    migration_pending_entries | awk -F '|' '
+        NF >= 2 { pending[$2] = 1 }
+        END {
+            count = split("cartographer save-config-restart virtual-sdcard-guard abort_homing " \
+                "screws_tilt_adjust macros r3men-bed kamp-adaptive-purge " \
+                "axis_twist_compensation cartographer-plate-workflow global-touch-offsets " \
+                "material-z-offsets plate-aware-mesh nozzle-camera fluidd better-init " \
+                "start-print-fast-stop", components, " ")
+            for (i = 1; i <= count; i++)
+                if (components[i] in pending)
+                    print components[i]
+        }
+    '
 }
 
 migration_has_pending() {
