@@ -103,6 +103,12 @@ the same key is not already present in `overrides.cfg`.
 
 ## Activation
 
-Run `FIRMWARE_RESTART` after switching and wait for the complete K2 startup
-sequence before the next home operation. If the restart fails, power-cycle the
-printer before homing.
+After a standalone mount change, the picker automatically performs the protected
+`FIRMWARE_RESTART` and waits for Klipper and K2 motor initialization before
+returning. It refuses changes while printing or paused, or if Moonraker cannot
+confirm an idle state. Cancel and no-change selections do not restart anything.
+
+During full Cartographer setup, activation is deferred to the workflow's one
+final protected restart. If a restart fails, the saved settings remain on disk;
+check Fluidd and power-cycle before homing. Reapplying those same saved settings
+is a no-op, so use Maintenance's protected restart action to retry activation.

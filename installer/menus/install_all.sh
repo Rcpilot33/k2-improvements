@@ -134,7 +134,7 @@ menu_install_all() {
         if confirm "Open the Cartographer offset picker now?"; then
             pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
             [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
-            HOME="$pwd_home" \
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/cartographer-offset-setup/install.sh" || true
         else
             printf '\n%s\n\n' "$(c_yellow 'Skipped - run it later from Cartographer tools.')"

@@ -6,6 +6,8 @@
 
 set -eu
 
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+RESTART_SCRIPT="$SCRIPT_DIR/../../../scripts/firmware_restart.sh"
 CFG_ROOT="${PRINTER_CFG_DIR:-/mnt/UDISK/printer_data/config}"
 PRINTER_CFG="$CFG_ROOT/printer.cfg"
 CARTO_CFG="$CFG_ROOT/custom/cartographer.cfg"
@@ -267,8 +269,40 @@ if [ "$PROFILE" = "jamin" ] || { [ "$PROFILE" = "custom" ] && [ "$CUSTOM_STEPPER
 fi
 
 if cmp -s "$OVERRIDES_CFG" "$NEW_CFG"; then
-    echo "I: $LABEL is already active - no change"
+    echo "I: $LABEL is already configured - no change"
     exit 0
+fi
+
+# A mount change alters homing coordinates as well as mesh limits. Standalone
+# use must not interrupt a print, and an unavailable API is not proof of idle.
+# Full setup already requires an idle printer and defers its one final restart.
+[ -f "$RESTART_SCRIPT" ] || { echo "ERROR: protected restart helper not found"; exit 1; }
+if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" != "1" ]; then
+    if [ -n "${K2_CURL:-}" ]; then
+        CURL=$K2_CURL
+    elif [ -x /opt/bin/curl ]; then
+        CURL=/opt/bin/curl
+    elif command -v curl >/dev/null 2>&1; then
+        CURL=$(command -v curl)
+    else
+        echo "ERROR: cannot confirm printer is idle; curl is required"
+        exit 1
+    fi
+    if ! ACTIVITY=$("$CURL" -fsS --max-time 3 \
+        "${MOONRAKER_URL:-http://127.0.0.1:7125}/printer/objects/query?print_stats=state" \
+        2>/dev/null); then
+        echo "ERROR: could not confirm printer is idle; mount settings were not changed"
+        exit 1
+    fi
+    if printf '%s' "$ACTIVITY" | grep -qE '"state"[[:space:]]*:[[:space:]]*"(printing|paused)"'; then
+        echo "ERROR: cannot change mount settings while printing or paused"
+        exit 1
+    fi
+    if ! printf '%s' "$ACTIVITY" | grep -q '"print_stats"' || \
+       ! printf '%s' "$ACTIVITY" | grep -qE '"state"[[:space:]]*:[[:space:]]*"(standby|complete|cancelled|error)"'; then
+        echo "ERROR: could not confirm printer is idle; mount settings were not changed"
+        exit 1
+    fi
 fi
 
 BACKUP="${OVERRIDES_CFG}.before-cartographer-offset-$(date +%s)"
@@ -293,4 +327,11 @@ echo
 echo "I: applied $LABEL"
 echo "I: cartographer.cfg was not changed"
 echo "I: backup at $BACKUP"
-echo "I: active after FIRMWARE_RESTART"
+if ! sh "$RESTART_SCRIPT"; then
+    echo "ERROR: mount settings were saved, but the protected restart failed" >&2
+    echo "ERROR: check Fluidd and power-cycle before homing" >&2
+    exit 1
+fi
+if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" != "1" ]; then
+    echo "I: mount settings are active; protected restart completed"
+fi
