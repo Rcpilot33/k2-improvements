@@ -12,6 +12,9 @@ PYTHON="${K2_PYTHON:-python3}"
 BIN_DIR="/mnt/UDISK/bin"
 SHELL_EXTRA="$KLIPPER_EXTRAS/gcode_shell_command.py"
 
+. "$REPO_ROOT/scripts/stock_nozzle_camera.sh"
+stock_nozzle_camera_require_available
+
 [ -x /usr/bin/nozzle_cam_power.sh ] || {
     echo "ERROR: Creality's stock nozzle-camera power control was not found." >&2
     echo "This extra supports only the factory K2 Plus nozzle camera." >&2

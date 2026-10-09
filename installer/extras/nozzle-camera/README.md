@@ -44,6 +44,20 @@ again to start another 10-minute viewing period.
 ## Safety and compatibility
 
 - This supports only the stock K2 Plus nozzle camera.
+- All JimmyV Cartographer mounts replace that camera. The optional-extra menu
+  and direct installer refuse stock-camera streaming on those profiles.
+- Selecting a JimmyV profile removes an installed managed stock-camera extra,
+  cancels its automatic shutoff, and stops only its stream. The shared USB rail
+  is not switched off. Existing JimmyV installations receive the same cleanup
+  through **Update installer / apply updates**.
+- Removal keeps recovery backups, shared shell-command support, and ffmpeg.
+  Unfamiliar or modified camera files are not automatically deleted. Remove
+  any manually added stock-camera entry from Fluidd's camera settings yourself.
+- Switching back to Jamin/default makes the extra available again, but does
+  not reinstall it automatically. Refit the factory camera before reinstalling.
+- This compatibility cleanup does not yet disable Creality's camera-dependent
+  AI features or keep the camera USB rail enabled at boot. Those are separate
+  requirements when powering Cartographer through that connector.
 - The camera LED becomes hot. The 10-minute shutdown is intentional.
 - Creality's normal first-layer camera routine remains available when this
   stream is off.

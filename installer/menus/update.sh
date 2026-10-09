@@ -25,6 +25,7 @@ migration_component_label() {
         material-z-offsets) echo 'Material Z Offsets' ;;
         plate-aware-mesh) echo 'Plate-aware saved meshes' ;;
         nozzle-camera) echo 'Stock nozzle camera stream' ;;
+        nozzle-camera-mount-compatibility) echo 'Remove stock camera from JimmyV mount' ;;
         fluidd) echo 'Fluidd update source metadata' ;;
         better-init) echo 'Improved Init service management' ;;
         start-print-fast-stop) echo 'START_PRINT Fast Stop (firmware 1.1.5.5+)' ;;
@@ -49,6 +50,7 @@ migration_component_installed() {
         material-z-offsets) is_material_z_offsets ;;
         plate-aware-mesh) is_plate_aware_mesh ;;
         nozzle-camera) is_nozzle_camera ;;
+        nozzle-camera-mount-compatibility) is_nozzle_camera_mount_compatible ;;
         fluidd) is_fluidd ;;
         better-init) is_better_init ;;
         start-print-fast-stop) is_start_print_fast_stop ;;
@@ -57,6 +59,11 @@ migration_component_installed() {
 }
 
 migration_component_applicable() {
+    if [ "$1" = nozzle-camera-mount-compatibility ]; then
+        _load_stock_nozzle_camera_helpers &&
+            stock_nozzle_camera_is_jimmyv && stock_nozzle_camera_present
+        return
+    fi
     # A pre-update snapshot must never override the firmware safety gate.
     if [ "$1" = start-print-fast-stop ]; then
         is_start_print_fast_stop_eligible
@@ -202,7 +209,7 @@ migration_pending_components() {
             count = split("cartographer save-config-restart virtual-sdcard-guard abort_homing " \
                 "screws_tilt_adjust macros r3men-bed kamp-adaptive-purge " \
                 "axis_twist_compensation cartographer-plate-workflow global-touch-offsets " \
-                "material-z-offsets plate-aware-mesh nozzle-camera fluidd better-init " \
+                "material-z-offsets plate-aware-mesh nozzle-camera nozzle-camera-mount-compatibility fluidd better-init " \
                 "start-print-fast-stop", components, " ")
             for (i = 1; i <= count; i++)
                 if (components[i] in pending)
@@ -425,6 +432,10 @@ migration_repair_component() {
         plate-aware-mesh)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/plate-aware-mesh/install.sh" --no-restart
+            ;;
+        nozzle-camera-mount-compatibility)
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
+                sh "$INSTALLER_DIR/installer/extras/nozzle-camera/uninstall.sh" --no-restart
             ;;
         fluidd)
             python3 "$INSTALLER_DIR/features/fluidd/set_release_source.py" \

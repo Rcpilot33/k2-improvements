@@ -26,6 +26,7 @@ class MountActivationTests(unittest.TestCase):
         )
         scripts = self.base / "scripts"
         scripts.mkdir()
+        shutil.copyfile(ROOT / "scripts/stock_nozzle_camera.sh", scripts / "stock_nozzle_camera.sh")
         (scripts / "firmware_restart.sh").write_text(
             'if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" = 1 ]; then\n'
             ' echo "I: deferring FIRMWARE_RESTART until the full setup is complete"\n'

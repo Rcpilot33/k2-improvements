@@ -93,7 +93,11 @@ the same key is not already present in `overrides.cfg`.
 
 - Existing unrelated settings, including `[bed_mesh] probe_count`, are kept.
 - The picker can be rerun at any time to switch profiles.
-- Reapplying the active profile is a no-op.
+- Reapplying the active profile is a no-op unless a JimmyV profile still has
+  the incompatible stock nozzle-camera extra installed.
+- Every JimmyV profile locks out the stock nozzle-camera stream. Selecting
+  one removes that managed extra, with recovery backups, without switching
+  off the shared USB rail. The 3DO camera and enclosure camera are untouched.
 - Before a change, `overrides.cfg` is backed up beside the file with a
   `.before-cartographer-offset-<timestamp>` suffix.
 - After a successful change, only the two newest backups created by this
@@ -106,7 +110,8 @@ the same key is not already present in `overrides.cfg`.
 After a standalone mount change, the picker automatically performs the protected
 `FIRMWARE_RESTART` and waits for Klipper and K2 motor initialization before
 returning. It refuses changes while printing or paused, or if Moonraker cannot
-confirm an idle state. Cancel and no-change selections do not restart anything.
+confirm an idle state. Cancel and no-change selections do not restart anything
+unless incompatible stock-camera removal is needed.
 
 During full Cartographer setup, activation is deferred to the workflow's one
 final protected restart. If a restart fails, the saved settings remain on disk;

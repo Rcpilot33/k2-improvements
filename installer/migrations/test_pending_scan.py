@@ -44,6 +44,11 @@ is_start_print_fast_stop_eligible() {
     printf 'eligible\\n' >> "$CALLS"
     [ "$ELIGIBLE" = 1 ]
 }
+_load_stock_nozzle_camera_helpers() { return 0; }
+stock_nozzle_camera_is_jimmyv() {
+    grep -qxF nozzle-camera-mount-compatibility "$MIGRATION_STATE_DIR/installed"
+}
+stock_nozzle_camera_present() { stock_nozzle_camera_is_jimmyv; }
 # The scan must not reopen the completion list through this per-id helper.
 migration_is_complete() {
     printf 'per-id-completion\\n' >> "$CALLS"

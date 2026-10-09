@@ -28,6 +28,7 @@ KNOWN_COMPONENTS = {
     "memory-diagnostics",
     "better-init",
     "start-print-fast-stop",
+    "nozzle-camera-mount-compatibility",
 }
 
 EXPECTED_DETECTORS = {
@@ -48,6 +49,7 @@ EXPECTED_DETECTORS = {
     "memory-diagnostics": "is_memory_diagnostics",
     "better-init": "is_better_init",
     "start-print-fast-stop": "is_start_print_fast_stop",
+    "nozzle-camera-mount-compatibility": "is_nozzle_camera_mount_compatible",
 }
 
 

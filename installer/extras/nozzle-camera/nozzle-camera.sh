@@ -8,6 +8,7 @@ HEIGHT="${NOZZLE_CAM_HEIGHT:-720}"
 FPS="${NOZZLE_CAM_FPS:-5}"
 DEVICE="${NOZZLE_CAM_DEVICE:-/dev/video2}"
 PIDFILE=/var/run/k2-nozzle-camera.pid
+PIDFILE="${NOZZLE_CAM_PIDFILE:-$PIDFILE}"
 LOGFILE=/tmp/k2-nozzle-camera.log
 POWER=/usr/bin/nozzle_cam_power.sh
 FFMPEG=/opt/bin/ffmpeg
@@ -52,6 +53,9 @@ wait_for_stock_camera() {
 
 case "${1:-}" in
     on)
+        SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+        . "$SCRIPT_DIR/../../../scripts/stock_nozzle_camera.sh"
+        stock_nozzle_camera_require_available
         [ -x "$POWER" ] || { echo "ERROR: stock camera power control is missing"; exit 1; }
         [ -x "$FFMPEG" ] || { echo "ERROR: ffmpeg is not installed"; exit 1; }
         stop_stream
@@ -99,8 +103,16 @@ case "${1:-}" in
         ;;
     off)
         stop_stream
+        SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+        . "$SCRIPT_DIR/../../../scripts/stock_nozzle_camera.sh"
+        # Stale macros/timers must never cut power to a JimmyV USB probe.
+        stock_nozzle_camera_require_available
         "$POWER" off
         echo "OFF"
+        ;;
+    stop)
+        stop_stream
+        echo "STOPPED (USB rail power unchanged)"
         ;;
     status)
         pid=$(stream_pid 2>/dev/null || true)
@@ -111,7 +123,7 @@ case "${1:-}" in
         fi
         ;;
     *)
-        echo "Usage: $0 {on|off|status}" >&2
+        echo "Usage: $0 {on|off|stop|status}" >&2
         exit 2
         ;;
 esac

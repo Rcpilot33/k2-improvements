@@ -8,6 +8,7 @@ set -eu
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 RESTART_SCRIPT="$SCRIPT_DIR/../../../scripts/firmware_restart.sh"
+. "$SCRIPT_DIR/../../../scripts/stock_nozzle_camera.sh"
 CFG_ROOT="${PRINTER_CFG_DIR:-/mnt/UDISK/printer_data/config}"
 PRINTER_CFG="$CFG_ROOT/printer.cfg"
 CARTO_CFG="$CFG_ROOT/custom/cartographer.cfg"
@@ -268,7 +269,16 @@ if [ "$PROFILE" = "jamin" ] || { [ "$PROFILE" = "custom" ] && [ "$CUSTOM_STEPPER
     mv "$CLEAN_CFG" "$NEW_CFG"
 fi
 
-if cmp -s "$OVERRIDES_CFG" "$NEW_CFG"; then
+REMOVE_STOCK_CAMERA=0
+case "$PROFILE" in
+    jimmyv_*)
+        if stock_nozzle_camera_present; then
+            REMOVE_STOCK_CAMERA=1
+            echo "I: JimmyV mounts replace the factory nozzle camera; its installed stream will be removed"
+        fi
+        ;;
+esac
+if cmp -s "$OVERRIDES_CFG" "$NEW_CFG" && [ "$REMOVE_STOCK_CAMERA" -eq 0 ]; then
     echo "I: $LABEL is already configured - no change"
     exit 0
 fi
@@ -303,6 +313,13 @@ if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" != "1" ]; then
         echo "ERROR: could not confirm printer is idle; mount settings were not changed"
         exit 1
     fi
+fi
+
+if [ "$REMOVE_STOCK_CAMERA" -eq 1 ]; then
+    sh "$SCRIPT_DIR/../nozzle-camera/uninstall.sh" --no-restart || {
+        echo "ERROR: stock-camera removal failed; mount settings were not changed" >&2
+        exit 1
+    }
 fi
 
 BACKUP="${OVERRIDES_CFG}.before-cartographer-offset-$(date +%s)"

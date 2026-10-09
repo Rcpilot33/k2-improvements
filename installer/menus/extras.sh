@@ -17,7 +17,7 @@ r3men-bed|is_r3men_bed|R3MEN graphite-bed thermistor profile|features/r3men-bed/
 
 if [ -f "$INSTALLER_DIR/installer/extras/nozzle-camera/install.sh" ]; then
     _EXTRAS="${_EXTRAS}
-nozzle-camera|is_nozzle_camera|Stream the factory nozzle camera in Fluidd|installer/extras/nozzle-camera/install.sh|"
+nozzle-camera|is_nozzle_camera|Stream the factory nozzle camera in Fluidd|installer/extras/nozzle-camera/install.sh|is_stock_nozzle_camera_available"
 fi
 
 # Keep this conditional so older checkouts without the KAMP extra do not
@@ -34,6 +34,7 @@ _extras_requires_label() {
         is_cartographer) echo "needs Cartographer" ;;
         is_stock_probe)  echo "stock PR Touch only" ;;
         is_macros)       echo "needs Macros" ;;
+        is_stock_nozzle_camera_available) echo "JimmyV mounts have no factory nozzle camera" ;;
         *)               echo "blocked: $1" ;;
     esac
 }
@@ -49,7 +50,9 @@ extra_state() {
     det=$(printf '%s' "$line" | cut -d'|' -f2)
     req=$(printf '%s' "$line" | cut -d'|' -f5)
 
-    if "$det" 2>/dev/null; then
+    if [ "$req" = is_stock_nozzle_camera_available ] && ! "$req" 2>/dev/null; then
+        c_yellow 'UNAVAILABLE (JIMMYV MOUNT)'
+    elif "$det" 2>/dev/null; then
         state_installed
     elif [ -n "$req" ] && ! "$req" 2>/dev/null; then
         case "$req" in

@@ -1,6 +1,17 @@
 #!/bin/sh
 # Per-feature install detection. Each function returns 0 if installed, 1 if not.
 
+_load_stock_nozzle_camera_helpers() {
+    command -v stock_nozzle_camera_available >/dev/null 2>&1 ||
+        . "${INSTALLER_DIR:-${SCRIPT_DIR:-/mnt/UDISK/root/k2-improvements}}/scripts/stock_nozzle_camera.sh"
+}
+is_stock_nozzle_camera_available() {
+    _load_stock_nozzle_camera_helpers && stock_nozzle_camera_available
+}
+is_nozzle_camera_mount_compatible() {
+    _load_stock_nozzle_camera_helpers && stock_nozzle_camera_mount_compatible
+}
+
 is_entware()       { [ -x /opt/bin/opkg ]; }
 is_better_root()   { grep -q '^root:.*:/mnt/UDISK/root:' /etc/passwd 2>/dev/null; }
 is_cartographer() {
