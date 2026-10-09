@@ -50,6 +50,7 @@ show_status() {
     status_line 'secure-auth' is_secure_auth
     status_line 'R3MEN bed thermistor profile' is_r3men_bed
     status_line 'Stock nozzle camera stream' is_nozzle_camera
+    status_line 'Nozzle-camera AI / USB protection' is_nozzle_usb_cartographer
     if [ -f "$INSTALLER_DIR/installer/extras/kamp-adaptive-purge/install.sh" ]; then
         status_line 'KAMP adaptive purge' is_kamp
     fi

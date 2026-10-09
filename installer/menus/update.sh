@@ -25,6 +25,7 @@ migration_component_label() {
         material-z-offsets) echo 'Material Z Offsets' ;;
         plate-aware-mesh) echo 'Plate-aware saved meshes' ;;
         nozzle-camera) echo 'Stock nozzle camera stream' ;;
+        nozzle-usb-cartographer) echo 'Nozzle-camera AI / USB protection' ;;
         nozzle-camera-mount-compatibility) echo 'Remove stock camera from JimmyV mount' ;;
         fluidd) echo 'Fluidd update source metadata' ;;
         better-init) echo 'Improved Init service management' ;;
@@ -50,6 +51,7 @@ migration_component_installed() {
         material-z-offsets) is_material_z_offsets ;;
         plate-aware-mesh) is_plate_aware_mesh ;;
         nozzle-camera) is_nozzle_camera ;;
+        nozzle-usb-cartographer) is_nozzle_usb_cartographer ;;
         nozzle-camera-mount-compatibility) is_nozzle_camera_mount_compatible ;;
         fluidd) is_fluidd ;;
         better-init) is_better_init ;;
@@ -132,6 +134,9 @@ migration_component_present() {
             [ -e "$custom/nozzle_camera.cfg" ] ||
                 [ -e /mnt/UDISK/bin/nozzle-camera.sh ]
             ;;
+        nozzle-usb-cartographer)
+            [ -e "$custom/k2_nozzle_camera_guard.cfg" ]
+            ;;
         better-init)
             [ -e /etc/profile.d/better-init.sh ] ||
                 [ -e /mnt/UDISK/bin/supervisorctl ]
@@ -150,7 +155,7 @@ migration_capture_installed_components() {
     : > "$temporary"
     for component in cartographer save-config-restart virtual-sdcard-guard abort_homing \
         screws_tilt_adjust macros r3men-bed kamp-adaptive-purge \
-        axis_twist_compensation cartographer-plate-workflow global-touch-offsets material-z-offsets plate-aware-mesh nozzle-camera fluidd better-init start-print-fast-stop; do
+        axis_twist_compensation cartographer-plate-workflow global-touch-offsets material-z-offsets plate-aware-mesh nozzle-camera nozzle-usb-cartographer fluidd better-init start-print-fast-stop; do
         if migration_component_installed "$component" 2>/dev/null ||
            migration_component_present "$component" 2>/dev/null; then
             printf '%s\n' "$component" >> "$temporary"
@@ -209,7 +214,7 @@ migration_pending_components() {
             count = split("cartographer save-config-restart virtual-sdcard-guard abort_homing " \
                 "screws_tilt_adjust macros r3men-bed kamp-adaptive-purge " \
                 "axis_twist_compensation cartographer-plate-workflow global-touch-offsets " \
-                "material-z-offsets plate-aware-mesh nozzle-camera nozzle-camera-mount-compatibility fluidd better-init " \
+                "material-z-offsets plate-aware-mesh nozzle-camera nozzle-camera-mount-compatibility nozzle-usb-cartographer fluidd better-init " \
                 "start-print-fast-stop", components, " ")
             for (i = 1; i <= count; i++)
                 if (components[i] in pending)
@@ -437,6 +442,10 @@ migration_repair_component() {
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/nozzle-camera/uninstall.sh" --no-restart
             ;;
+        nozzle-usb-cartographer)
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
+                sh "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/install.sh" --refresh
+            ;;
         fluidd)
             python3 "$INSTALLER_DIR/features/fluidd/set_release_source.py" \
                 /usr/share/fluidd/release_info.json Rcpilot33 fluidd &&
@@ -469,7 +478,7 @@ migration_repair_component() {
 
 migration_component_restart_kind() {
     case "$1" in
-        cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|axis_twist_compensation|global-touch-offsets|material-z-offsets|start-print-fast-stop)
+        cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|axis_twist_compensation|global-touch-offsets|material-z-offsets|start-print-fast-stop|nozzle-usb-cartographer)
             echo code
             ;;
         fluidd)

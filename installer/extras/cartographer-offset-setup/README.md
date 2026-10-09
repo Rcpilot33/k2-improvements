@@ -1,5 +1,11 @@
 # Cartographer Mount Offset Setup
 
+After selecting a JimmyV mount, configure **Optional extras -> JimmyV AI /
+nozzle USB power protection** to disable factory nozzle-camera AI. Explicitly
+enable its USB-power mode only if Cartographer is wired to the switched
+factory nozzle-camera USB connector. A mount selection alone does not imply
+that wiring choice.
+
 Switches among the Jamin/default, JimmyV legacy, and JimmyV final Cartographer
 mounts by editing only `custom/overrides.cfg`. It never modifies
 `custom/cartographer.cfg` or `printer.cfg`.

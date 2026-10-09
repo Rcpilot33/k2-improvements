@@ -1,0 +1,14 @@
+#!/bin/sh /etc/rc.common
+# k2-improvements: Cartographer nozzle USB startup
+START=53
+STOP=10
+
+start() {
+    # board_init (20) has exported the GPIO; Klipper starts at 55.
+    /usr/bin/nozzle_cam_power.sh on
+}
+
+stop() {
+    # Never disconnect a probe as a side effect of stopping this service.
+    return 0
+}

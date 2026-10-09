@@ -11,6 +11,19 @@ is_stock_nozzle_camera_available() {
 is_nozzle_camera_mount_compatible() {
     _load_stock_nozzle_camera_helpers && stock_nozzle_camera_mount_compatible
 }
+is_nozzle_usb_cartographer() {
+    local custom="${PRINTER_CFG_DIR:-/mnt/UDISK/printer_data/config}/custom"
+    local klipper="${KLIPPER_DIR:-/usr/share/klipper}"
+    [ -e "$custom/k2_nozzle_camera_guard.cfg" ] &&
+    [ -e "$klipper/klippy/extras/k2_nozzle_camera_guard.py" ] &&
+    grep -q '^\[include k2_nozzle_camera_guard\.cfg\]$' "$custom/main.cfg" 2>/dev/null
+    [ "$?" -eq 0 ] || return 1
+    if grep -q '^# usb_power_hold: 1$' "$custom/k2_nozzle_camera_guard.cfg"; then
+        grep -q 'k2-improvements: Cartographer nozzle USB power guard' \
+            "${K2_SYSTEM_ROOT:-}/usr/bin/nozzle_cam_power.sh" 2>/dev/null &&
+        [ -e "${K2_SYSTEM_ROOT:-}/etc/rc.d/S53k2-nozzle-usb" ]
+    fi
+}
 
 is_entware()       { [ -x /opt/bin/opkg ]; }
 is_better_root()   { grep -q '^root:.*:/mnt/UDISK/root:' /etc/passwd 2>/dev/null; }

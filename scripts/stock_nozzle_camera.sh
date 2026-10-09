@@ -36,7 +36,12 @@ stock_nozzle_camera_is_jimmyv() {
     }'
 }
 
-stock_nozzle_camera_available() { ! stock_nozzle_camera_is_jimmyv; }
+stock_nozzle_camera_available() {
+    # An explicit camera-removal/wiring option stays active until removed,
+    # even if the user changes mount profiles before physically rewiring.
+    [ ! -e "${PRINTER_CFG_DIR:-/mnt/UDISK/printer_data/config}/custom/k2_nozzle_camera_guard.cfg" ] &&
+        ! stock_nozzle_camera_is_jimmyv
+}
 
 stock_nozzle_camera_present() {
     local custom bin

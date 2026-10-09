@@ -55,9 +55,10 @@ again to start another 10-minute viewing period.
   any manually added stock-camera entry from Fluidd's camera settings yourself.
 - Switching back to Jamin/default makes the extra available again, but does
   not reinstall it automatically. Refit the factory camera before reinstalling.
-- This compatibility cleanup does not yet disable Creality's camera-dependent
-  AI features or keep the camera USB rail enabled at boot. Those are separate
-  requirements when powering Cartographer through that connector.
+- For camera-dependent AI and persistent power when Cartographer uses that
+  connector, configure **JimmyV AI / nozzle USB power protection** separately.
+  That option preserves enclosure-camera AI settings and requires an explicit
+  wiring choice; stock-camera removal alone does not enable it.
 - The camera LED becomes hot. The 10-minute shutdown is intentional.
 - Creality's normal first-layer camera routine remains available when this
   stream is off.

@@ -192,7 +192,9 @@ menu_extras() {
             ui_menu_item 7 'Material Z Offsets' "$(extra_state material-z-offsets)"
             printf '\n Security\n'
             ui_menu_item 8 'Secure Auth' "$(extra_state secure-auth)"
-            printf '\n  0. Back\n\nSelect [0-8]: '
+            printf '\n Nozzle-camera replacement\n'
+            ui_menu_item 9 'JimmyV AI / nozzle USB power protection' "$(if is_nozzle_usb_cartographer; then state_installed; else state_not_installed; fi)"
+            printf '\n  0. Back\n\nSelect [0-9]: '
         else
             ui_menu_item 5 'Plate-aware saved meshes' "$(extra_state plate-aware-mesh)"
             ui_menu_item 6 'Material Z Offsets' "$(extra_state material-z-offsets)"
@@ -229,6 +231,17 @@ menu_extras() {
                 ;;
             8)
                 if is_cartographer; then run_extra_name secure-auth; fi
+                ;;
+            9)
+                if is_cartographer; then
+                    show_feature_readme nozzle-usb-cartographer "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/README.md"
+                    if sh "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/install.sh"; then
+                        if is_nozzle_usb_cartographer; then
+                            migration_mark_component_current nozzle-usb-cartographer
+                        fi
+                    fi
+                    press_enter
+                fi
                 ;;
             0|b|B|q|Q) return ;;
             *) ;;
