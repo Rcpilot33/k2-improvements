@@ -27,11 +27,11 @@ index 18415da..7a49e7c 100644
      VCard: typeof import('vuetify/lib')['VCard']
 diff --git a/public/k2-ui-overlay-support.txt b/public/k2-ui-overlay-support.txt
 new file mode 100644
-index 0000000..b8626c4
+index 0000000..7f8f011
 --- /dev/null
 +++ b/public/k2-ui-overlay-support.txt
 @@ -0,0 +1 @@
-+6
++7
 diff --git a/src/App.vue b/src/App.vue
 index 2344eab..7a14b40 100644
 --- a/src/App.vue
@@ -68,14 +68,14 @@ index 2344eab..7a14b40 100644
    }
 diff --git a/src/components/common/GlobalTouchOffsetsDialog.vue b/src/components/common/GlobalTouchOffsetsDialog.vue
 new file mode 100644
-index 0000000..0ae6307
+index 0000000..f2d7eb5
 --- /dev/null
 +++ b/src/components/common/GlobalTouchOffsetsDialog.vue
-@@ -0,0 +1,159 @@
+@@ -0,0 +1,163 @@
 +<template>
 +  <app-dialog
 +    v-model="open"
-+    title="Global Carto Touch Z Offsets"
++    :title="mode === 'scan' ? 'Global Carto Scan Z Offsets' : 'Global Carto Touch Z Offsets'"
 +    cancel-button-text="Cancel"
 +    save-button-text="Save"
 +    max-width="450"
@@ -84,7 +84,7 @@ index 0000000..0ae6307
 +  >
 +    <v-card-text>
 +      <div class="text-body-2 mb-3">
-+        Select a Touch model and increment. Bed down makes the offset more negative.
++        Select a {{ mode === 'scan' ? 'Scan' : 'Touch' }} model and increment. Bed down makes the offset more negative.
 +      </div>
 +
 +      <v-row
@@ -156,7 +156,7 @@ index 0000000..0ae6307
 +import { Component, Mixins, Watch } from 'vue-property-decorator'
 +import StateMixin from '@/mixins/state'
 +import type { GlobalTouchOffsetModel } from '@/store/console/types'
-+import { adjustTouchOffset, buildTouchOffsetSaveCommands } from '@/util/global-touch-offsets'
++import { adjustCartographerOffset, buildTouchOffsetSaveCommands } from '@/util/global-touch-offsets'
 +
 +@Component({})
 +export default class GlobalTouchOffsetsDialog extends Mixins(StateMixin) {
@@ -171,6 +171,10 @@ index 0000000..0ae6307
 +
 +  get models (): GlobalTouchOffsetModel[] {
 +    return this.dialog.models
++  }
++
++  get mode (): 'touch' | 'scan' {
++    return this.dialog.mode
 +  }
 +
 +  get open (): boolean {
@@ -211,7 +215,7 @@ index 0000000..0ae6307
 +    Vue.set(
 +      this.workingOffsets,
 +      this.selectedModelIndex,
-+      adjustTouchOffset(value, delta)
++      adjustCartographerOffset(value, delta)
 +    )
 +  }
 +
@@ -233,7 +237,7 @@ index 0000000..0ae6307
 +</style>
 diff --git a/src/components/common/M191SettingsDialog.vue b/src/components/common/M191SettingsDialog.vue
 new file mode 100644
-index 0000000..8d50a39
+index 0000000..f786d46
 --- /dev/null
 +++ b/src/components/common/M191SettingsDialog.vue
 @@ -0,0 +1,208 @@
@@ -447,7 +451,7 @@ index 0000000..8d50a39
 +</style>
 diff --git a/src/components/common/MaterialZOffsetsDialog.vue b/src/components/common/MaterialZOffsetsDialog.vue
 new file mode 100644
-index 0000000..fa48c38
+index 0000000..b5c9aaa
 --- /dev/null
 +++ b/src/components/common/MaterialZOffsetsDialog.vue
 @@ -0,0 +1,165 @@
@@ -749,7 +753,7 @@ index 0000000..b904777
 +}
 +</script>
 diff --git a/src/store/console/actions.ts b/src/store/console/actions.ts
-index 90385cb..2464e80 100644
+index 90385cb..e1d15c9 100644
 --- a/src/store/console/actions.ts
 +++ b/src/store/console/actions.ts
 @@ -1,6 +1,6 @@
@@ -770,14 +774,14 @@ index 90385cb..2464e80 100644
    },
  
    /**
-@@ -160,6 +163,118 @@ export const actions = {
+@@ -160,6 +163,121 @@ export const actions = {
      }
    },
  
 +  async onUpdateGlobalTouchOffsetsDialog ({ commit }, payload: ConsoleEntry) {
 +    const parsedMessage = (
 +      payload.type === 'action' &&
-+      /^\/\/ action:global_touch_offsets_([^ ]+)(?: (.+))?/.exec(payload.message)
++      /^\/\/ action:global_carto_offsets_([^ ]+)(?: (.+))?/.exec(payload.message)
 +    )
 +
 +    if (!parsedMessage) return
@@ -786,6 +790,9 @@ index 90385cb..2464e80 100644
 +    switch (type) {
 +      case 'begin':
 +        commit('setResetGlobalTouchOffsetsDialog')
++        if (param === 'touch' || param === 'scan') {
++          commit('setGlobalTouchOffsetsDialogMode', param)
++        }
 +        break
 +
 +      case 'model': {
@@ -890,7 +897,7 @@ index 90385cb..2464e80 100644
     * Klipper provides us with a list of available gcode commands
     * based on the current configuration.
 diff --git a/src/store/console/mutations.ts b/src/store/console/mutations.ts
-index 400e40b..0c1566e 100644
+index 400e40b..fe92e19 100644
 --- a/src/store/console/mutations.ts
 +++ b/src/store/console/mutations.ts
 @@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
@@ -902,15 +909,20 @@ index 400e40b..0c1566e 100644
  import { escapeRegExp } from 'lodash-es'
  
  const compileExpression = (filter: ConsoleFilter): RegExp => {
-@@ -71,6 +71,51 @@ export const mutations = {
+@@ -71,6 +71,56 @@ export const mutations = {
      state.promptDialog.open = payload
    },
  
 +  setResetGlobalTouchOffsetsDialog (state) {
 +    state.globalTouchOffsetsDialog = {
 +      open: false,
++      mode: 'touch',
 +      models: []
 +    }
++  },
++
++  setGlobalTouchOffsetsDialogMode (state, payload: 'touch' | 'scan') {
++    state.globalTouchOffsetsDialog.mode = payload
 +  },
 +
 +  setGlobalTouchOffsetModel (state, payload: GlobalTouchOffsetModel) {
@@ -955,15 +967,16 @@ index 400e40b..0c1566e 100644
     * Defines the list of available commands
     */
 diff --git a/src/store/console/state.ts b/src/store/console/state.ts
-index 417f8d8..56dc7b7 100644
+index 417f8d8..2df40bb 100644
 --- a/src/store/console/state.ts
 +++ b/src/store/console/state.ts
-@@ -15,6 +15,18 @@ export const defaultState = (): ConsoleState => {
+@@ -15,6 +15,19 @@ export const defaultState = (): ConsoleState => {
        items: [],
        footerButtons: []
      },
 +    globalTouchOffsetsDialog: {
 +      open: false,
++      mode: 'touch',
 +      models: []
 +    },
 +    materialZOffsetsDialog: {
@@ -978,7 +991,7 @@ index 417f8d8..56dc7b7 100644
      consoleFiltersRegexp: []
    }
 diff --git a/src/store/console/types.ts b/src/store/console/types.ts
-index 2eddc92..bd6473c 100644
+index 2eddc92..6ee3a9d 100644
 --- a/src/store/console/types.ts
 +++ b/src/store/console/types.ts
 @@ -9,6 +9,9 @@ export interface ConsoleState {
@@ -991,7 +1004,7 @@ index 2eddc92..bd6473c 100644
    consoleFilters: ConsoleFilter[];
    consoleFiltersRegexp: RegExp[];
  }
-@@ -48,6 +51,45 @@ export interface PromptDialogItemButton extends PromptDialogButton {
+@@ -48,6 +51,46 @@ export interface PromptDialogItemButton extends PromptDialogButton {
    type: 'button';
  }
  
@@ -1003,6 +1016,7 @@ index 2eddc92..bd6473c 100644
 +
 +export interface GlobalTouchOffsetsDialog {
 +  open: boolean;
++  mode: 'touch' | 'scan';
 +  models: GlobalTouchOffsetModel[];
 +}
 +
@@ -1039,20 +1053,26 @@ index 2eddc92..bd6473c 100644
    command?: string;
 diff --git a/src/util/__tests__/global-touch-offsets.spec.ts b/src/util/__tests__/global-touch-offsets.spec.ts
 new file mode 100644
-index 0000000..f188ecb
+index 0000000..d03ad0d
 --- /dev/null
 +++ b/src/util/__tests__/global-touch-offsets.spec.ts
-@@ -0,0 +1,24 @@
-+import { adjustTouchOffset, buildTouchOffsetSaveCommands } from '../global-touch-offsets'
+@@ -0,0 +1,30 @@
++import { adjustCartographerOffset, buildTouchOffsetSaveCommands } from '../global-touch-offsets'
 +
 +describe('global touch offsets', () => {
 +  it('moves up toward zero and prevents a positive touch offset', () => {
-+    expect(adjustTouchOffset(-0.05, 0.025)).toBe(-0.025)
-+    expect(adjustTouchOffset(-0.005, 0.01)).toBe(0)
++    expect(adjustCartographerOffset(-0.05, 0.025)).toBe(-0.025)
++    expect(adjustCartographerOffset(-0.005, 0.01)).toBe(0)
 +  })
 +
 +  it('moves down to a more-negative touch offset', () => {
-+    expect(adjustTouchOffset(-0.05, -0.025)).toBe(-0.075)
++    expect(adjustCartographerOffset(-0.05, -0.025)).toBe(-0.075)
++  })
++
++  it('keeps scan offsets non-positive within the backend range', () => {
++    expect(adjustCartographerOffset(0, 0.025)).toBe(0)
++    expect(adjustCartographerOffset(-0.3, -0.05)).toBe(-0.35)
++    expect(adjustCartographerOffset(-4.99, -0.05)).toBe(-5)
 +  })
 +
 +  it('stages only changed models before saving', () => {
@@ -1140,18 +1160,21 @@ index 0000000..8d1dc9a
 +})
 diff --git a/src/util/global-touch-offsets.ts b/src/util/global-touch-offsets.ts
 new file mode 100644
-index 0000000..8370d98
+index 0000000..7876b4a
 --- /dev/null
 +++ b/src/util/global-touch-offsets.ts
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,27 @@
 +interface TouchOffsetModel {
 +  index: number;
 +  value: number;
 +}
 +
-+export const adjustTouchOffset = (value: number, delta: number): number => {
++export const adjustCartographerOffset = (
++  value: number,
++  delta: number
++): number => {
 +  const adjusted = Math.round((value + delta) * 1000) / 1000
-+  return Math.min(0, adjusted)
++  return Math.max(-5, Math.min(0, adjusted))
 +}
 +
 +export const buildTouchOffsetSaveCommands = (

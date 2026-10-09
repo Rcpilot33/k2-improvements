@@ -108,6 +108,21 @@ class M191WorkflowTests(unittest.TestCase):
         circulation = MACRO.index("K2_M191_CIRCULATION_WAIT", move)
         self.assertLess(move, circulation)
 
+    def test_assist_finishes_bed_move_before_starting_fans_and_timer(self):
+        assist = MACRO.index("{% if USE_BED_ASSIST %}")
+        move = MACRO.index("G1 Z{BED_ASSIST_Z_HEIGHT} F600", assist)
+        wait = MACRO.index("\n            M400\n", move)
+        announcement = MACRO.index(
+            'RESPOND MSG="Starting model and side fan circulation', wait
+        )
+        circulation = MACRO.index("K2_M191_CIRCULATION_WAIT", announcement)
+        assist_end = MACRO.index("{% elif WAIT_FOR_CHAMBER", move)
+        self.assertLess(move, wait)
+        self.assertLess(wait, announcement)
+        self.assertLess(announcement, assist_end)
+        self.assertLess(announcement, circulation)
+        self.assertNotIn("M106", MACRO[move:wait])
+
     def test_z_height_range_is_30_through_330(self):
         self.assertIn(
             "BED_ASSIST_Z_HEIGHT < 30.0 or BED_ASSIST_Z_HEIGHT > 330.0",

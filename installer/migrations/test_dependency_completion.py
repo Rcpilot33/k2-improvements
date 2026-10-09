@@ -12,6 +12,37 @@ BASH = shutil.which("bash") or "C:/Program Files/Git/bin/bash.exe"
 
 @unittest.skipUnless(Path(BASH).exists(), "bash required")
 class DependencyCompletionTests(unittest.TestCase):
+    def test_fresh_setup_completes_fluidd_cache_migration_before_marking(self):
+        for failed_step in ("", "reset", "restart", "verify", "mark"):
+            with self.subTest(failed_step=failed_step):
+                script = '''
+. "$UPDATE_SCRIPT"
+migration_reset_fluidd_update_cache() { echo reset; [ "$FAILED_STEP" != reset ]; }
+migration_restart_moonraker() { echo restart; [ "$FAILED_STEP" != restart ]; }
+migration_reconcile_fluidd_layout() { echo verify; [ "$FAILED_STEP" != verify ]; }
+migration_mark_component_current() { echo mark; [ "$FAILED_STEP" != mark ]; }
+migration_mark_fresh_setup_component_current fluidd
+'''
+                result = subprocess.run(
+                    [BASH, "-c", script], capture_output=True, text=True,
+                    env=dict(os.environ,
+                             UPDATE_SCRIPT=(ROOT / "installer/menus/update.sh").as_posix(),
+                             FAILED_STEP=failed_step),
+                )
+                events = result.stdout.splitlines()
+                expected = ["reset", "restart", "verify", "mark"]
+                if failed_step:
+                    expected = expected[: expected.index(failed_step) + 1]
+                self.assertEqual(events, expected)
+                self.assertEqual(result.returncode == 0, not failed_step)
+
+    def test_both_full_setup_flows_track_fluidd_completion(self):
+        for menu in ("install_all.sh", "install_no_carto.sh"):
+            with self.subTest(menu=menu):
+                source = (ROOT / "installer/menus" / menu).read_text()
+                self.assertRegex(source, r"better-init\|fluidd\|screws_tilt_adjust")
+                self.assertIn('migration_mark_fresh_setup_component_current "$name"', source)
+
     def test_untracked_component_completion_is_a_clean_noop(self):
         script = '''
 . "$UPDATE_SCRIPT"

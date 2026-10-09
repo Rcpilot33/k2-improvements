@@ -8,7 +8,7 @@ _EXTRAS='prtouch-cleanup|is_prtouch_clean|Remove orphan [prtouch_v3] SAVE_CONFIG
 surface-selection-wrapper|is_surface_wrap|START_PRINT SURFACE= param loads matching scan/touch model|installer/extras/surface-selection-wrapper/install.sh|is_cartographer
 cartographer-offset-setup|is_carto_offset_set|Cartographer mount offset profiles/custom|installer/extras/cartographer-offset-setup/install.sh|is_cartographer
 cartographer-macros|is_carto_macros|CARTO_* Fluidd buttons (profiles/calibration/load)|installer/extras/cartographer-macros/install.sh|is_cartographer
-global-touch-offsets|is_global_touch_offsets|Interactive Cartographer global Touch-offset editor|installer/extras/global-touch-offsets/install.sh|is_cartographer
+global-touch-offsets|is_global_touch_offsets|Interactive Cartographer global Scan/Touch offset editor|installer/extras/global-touch-offsets/install.sh|is_cartographer
 material-z-offsets|is_material_z_offsets|Interactive material Z-offset editor|installer/extras/material-z-offsets/install.sh|is_macros
 axis_twist_compensation|is_axis_twist|Optional Z-drift compensation across X|features/axis_twist_compensation/install.sh|
 plate-aware-mesh|is_plate_aware_mesh|Saved meshes selected by build plate and temperature|installer/extras/plate-aware-mesh/install.sh|is_stock_probe
@@ -185,7 +185,7 @@ menu_extras() {
         ui_menu_item 4 'Axis twist compensation' "$(extra_state axis_twist_compensation)"
         if is_cartographer; then
             ui_menu_item 5 'Cartographer plate workflow' "$(carto_plate_workflow_state)"
-            ui_menu_item 6 'Global Carto Touch Z Offsets' "$(extra_state global-touch-offsets)"
+            ui_menu_item 6 'Global Carto Z Offsets' "$(extra_state global-touch-offsets)"
             ui_menu_item 7 'Material Z Offsets' "$(extra_state material-z-offsets)"
             printf '\n Security\n'
             ui_menu_item 8 'Secure Auth' "$(extra_state secure-auth)"

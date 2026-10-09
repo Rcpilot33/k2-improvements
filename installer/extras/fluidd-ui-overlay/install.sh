@@ -7,7 +7,7 @@ SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
 FLUIDD_ROOT="${FLUIDD_DIR:-/usr/share/fluidd}"
 FLUIDD_ARCHIVE="$SCRIPT_DIR/fluidd-v1.37.4.zip"
 FLUIDD_VERSION=v1.37.4
-OVERLAY_VERSION=6
+OVERLAY_VERSION=7
 
 [ -f "$FLUIDD_ARCHIVE" ] || { echo "ERROR: bundled Fluidd UI archive is missing: $FLUIDD_ARCHIVE"; exit 1; }
 [ -d "$FLUIDD_ROOT" ] || { echo "ERROR: Fluidd is not installed at $FLUIDD_ROOT"; exit 1; }

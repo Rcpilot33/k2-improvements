@@ -80,6 +80,8 @@ class StartPrintConfigTests(unittest.TestCase):
             "when the printer is already heat soaked",
             "variable_carto_touch_calibrate_start: 500   # Cartographer A22 "
             "Touch calibration default",
+            'variable_carto_final_z_mode: "touch"         # Final Z reference: '
+            '"touch" or "scan"',
         )
         for line in expected:
             self.assertIn(line, self.config)
@@ -193,6 +195,25 @@ class StartPrintConfigTests(unittest.TestCase):
     def test_cartographer_detection_checks_object_membership(self):
         self.assertIn("{% if 'cartographer' in printer %}", self.config)
         self.assertNotIn("{% if printer.cartographer %}", self.config)
+
+    def test_final_z_mode_defaults_to_touch_and_selects_one_home(self):
+        self.assertIn('variable_carto_final_z_mode: "touch"', self.config)
+        self.assertIn("CARTO_FINAL_Z_MODE not in ['touch', 'scan']", self.config)
+        self.assertIn("{% if CARTO_FINAL_Z_MODE == 'touch' %}", self.config)
+        self.assertIn("_CARTOGRAPHER_TOUCH_HOME_WITH_TEMPS", self.config)
+        self.assertIn("_CARTOGRAPHER_SCAN_HOME_WITH_TEMPS", self.config)
+        scan = self.config.split("[gcode_macro _CARTOGRAPHER_SCAN_HOME_WITH_TEMPS]", 1)[1]
+        scan = scan.split("[gcode_macro _RELEASE_PREPRINT_CASE_FAN]", 1)[0]
+        self.assertIn('printer.cartographer.scan.current_model|default("none")', scan)
+        self.assertIn("G28 Z", scan)
+
+    def test_surface_wrapper_loads_touch_model_only_in_touch_mode(self):
+        wrapper = (
+            CONFIG.parents[3] / "installer" / "extras" / "surface-selection-wrapper" / "install.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn('print "  CARTOGRAPHER_SCAN_MODEL LOAD={SURFACE}"', wrapper)
+        self.assertIn("print \"  {% if CARTO_FINAL_Z_MODE == ", wrapper)
+        self.assertIn('print "    CARTOGRAPHER_TOUCH_MODEL LOAD={SURFACE}"', wrapper)
 
     def test_macro_repair_preserves_plate_surface_wrapper(self):
         installer = MACROS_INSTALLER.read_text(encoding="utf-8")

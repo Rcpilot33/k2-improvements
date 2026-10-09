@@ -25,7 +25,7 @@ class StatusMenuTests(unittest.TestCase):
     def test_global_touch_offsets_are_reported_only_for_cartographer(self):
         cartographer_branch = self.status.index("if is_cartographer; then")
         global_offsets = self.status.index(
-            "status_line 'Global Carto Touch Z Offsets' is_global_touch_offsets"
+            "status_line 'Global Carto Z Offsets' is_global_touch_offsets"
         )
         maintenance = self.status.index("printf '\\n Maintenance\\n'", cartographer_branch)
         self.assertLess(cartographer_branch, global_offsets)

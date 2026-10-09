@@ -82,7 +82,7 @@ menu_install_no_carto() {
         if HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 sh "$script"; then
             installed=$((installed+1))
             case "$name" in
-                better-init|screws_tilt_adjust|abort_homing|save-config-restart|virtual-sdcard-guard|macros)
+                better-init|fluidd|screws_tilt_adjust|abort_homing|save-config-restart|virtual-sdcard-guard|macros)
                     printf '%s\n' "$name" >> "$migration_installed_file"
                     ;;
             esac
@@ -112,9 +112,10 @@ menu_install_no_carto() {
     if ! K2_DEFER_FIRMWARE_RESTART=0 sh "$final_restart"; then
         warn "final protected restart failed"
         failed=$((failed+1))
-    elif command -v migration_mark_component_current >/dev/null 2>&1; then
+    elif command -v migration_mark_fresh_setup_component_current >/dev/null 2>&1; then
         while IFS= read -r name; do
-            migration_mark_component_current "$name" || true
+            migration_mark_fresh_setup_component_current "$name" || \
+                warn "$(migration_component_label "$name") update verification is incomplete; leaving its action pending"
         done < "$migration_installed_file"
     fi
     rm -f "$migration_installed_file"

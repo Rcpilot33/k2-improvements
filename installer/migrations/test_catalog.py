@@ -70,6 +70,19 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_final_z_mode_updates_are_offered_once(self):
+        update_ids = {
+            "cartographer-final-z-mode-macros-v1": "macros",
+            "cartographer-final-z-mode-plate-v1": "cartographer-plate-workflow",
+            "cartographer-scan-only-load-v1": "cartographer-plate-workflow",
+        }
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertTrue(set(update_ids) <= catalog_ids)
+        for update_id, component in update_ids.items():
+            previously_completed = catalog_ids - {update_id}
+            self.assertEqual(recommended({component}, previously_completed), {component})
+            self.assertEqual(recommended({component}, catalog_ids), set())
+
     def test_save_and_managed_backup_fixes_are_offered_exactly_once(self):
         expected = {
             "save-config-cxsave-retention-v1": "save-config-restart",
@@ -124,6 +137,18 @@ class MigrationCatalogTests(unittest.TestCase):
             self.assertEqual(recommended({component}, completed), {component})
             self.assertEqual(recommended({component}, ids), set())
         self.assertEqual(recommended({"macros"}, completed), set())
+
+    def test_cfs_wipe_exit_upgrade_is_offered_only_for_installed_kamp(self):
+        migration = "kamp-cfs-wipe-exit-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(migration, catalog_ids)
+        completed = catalog_ids - {migration}
+        self.assertEqual(recommended({"kamp-adaptive-purge"}, completed),
+                         {"kamp-adaptive-purge"})
+        self.assertEqual(recommended({"kamp-adaptive-purge"}, catalog_ids), set())
+        self.assertEqual(recommended({"cartographer", "macros"}, completed), set())
+        self.assertEqual(next(row[2] for row in entries() if row[0] == migration),
+                         "is_kamp")
 
     def test_mesh_bounds_report_is_offered_exactly_once(self):
         ids = {entry[0] for entry in entries()}
@@ -279,6 +304,7 @@ class MigrationCatalogTests(unittest.TestCase):
         catalog_ids = {entry[0] for entry in entries()}
         cases = {
             "global-touch-offsets-live-save-v5": "global-touch-offsets",
+            "global-carto-scan-offsets-v1": "global-touch-offsets",
             "material-z-offsets-live-save-v4": "material-z-offsets",
         }
         for update_id, component in cases.items():
@@ -536,7 +562,9 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertIn("ACTION(S) PENDING", menu)
         self.assertIn("INSTALLER UPDATE AVAILABLE", menu)
         self.assertIn("UP TO DATE", menu)
-        self.assertIn("REMOTE CHECK UNAVAILABLE", menu)
+        self.assertIn("NOT CHECKED", menu)
+        self.assertIn("CHECK FAILED", menu)
+        self.assertIn("Check for installer updates", menu)
         self.assertIn("ls-remote --heads origin", menu)
         self.assertIn("Update installer / apply updates", menu)
 
@@ -787,6 +815,19 @@ class MigrationCatalogTests(unittest.TestCase):
                 if component == "macros"
             },
         )
+
+    def test_m191_bed_move_wait_is_offered_once_to_installed_macros(self):
+        update_id = "m191-circulation-bed-move-wait-v1"
+        self.assertIn(
+            (update_id, "macros", "is_macros"),
+            {entry[:3] for entry in entries()},
+        )
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertEqual(
+            recommended({"macros"}, catalog_ids - {update_id}), {"macros"}
+        )
+        self.assertEqual(recommended({"macros"}, catalog_ids), set())
+        self.assertEqual(recommended(set(), catalog_ids - {update_id}), set())
 
     def test_macros_track_immediate_case_fan_release(self):
         self.assertIn(

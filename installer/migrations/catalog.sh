@@ -13,6 +13,7 @@ start-print-fast-stop-waits-v1|start-print-fast-stop|is_start_print_fast_stop|Al
 start-print-fast-stop-1155-v1|start-print-fast-stop|is_start_print_fast_stop|Enable cancel-aware START_PRINT execution on Creality firmware 1.1.5.5 and newer
 kamp-first-layer-footprint-carto-v1|cartographer|is_cartographer|Replace whole-file prime-tower scanning with complete first-layer extrusion bounds for adaptive meshes
 kamp-first-layer-footprint-kamp-v1|kamp-adaptive-purge|is_kamp|Replace whole-file prime-tower scanning with complete first-layer extrusion bounds for KAMP mesh and purge placement
+kamp-cfs-wipe-exit-v1|kamp-adaptive-purge|is_kamp|Move straight inside the Y travel limit after a CFS wipe before crossing to the KAMP purge start
 kamp-mesh-bounds-report-carto-v1|cartographer|is_cartographer|Reload scanner support for console mesh-boundary reports
 kamp-mesh-bounds-report-kamp-v1|kamp-adaptive-purge|is_kamp|Reload scanner support for console mesh-boundary reports
 kamp-mesh-bounds-report-macros-v1|macros|is_macros|Report combined geometry and requested mesh bounds with scan duration before Cartographer meshing
@@ -21,6 +22,9 @@ prime-tower-scan-timer-kamp-v1|kamp-adaptive-purge|is_kamp|Reload prime-tower sc
 cartographer-slicer-colors-v1|cartographer-plate-workflow|is_carto_plate_workflow|Refresh Fluidd plate colors: green for Creality Print and Default, purple for Orca
 cartographer-dual-slicer-plates-v1|cartographer-plate-workflow|is_carto_plate_workflow|Add persistent Creality Print, OrcaSlicer, or Both plate selectors while preserving existing calibration models
 macro-user-comment-spacing-v1|macros|is_macros|Keep START_PRINT setting comments separated from their values so configuration editors expose every setting
+cartographer-final-z-mode-macros-v1|macros|is_macros|Add a persistent Touch or Scan final Z choice to START_PRINT while keeping Touch as the default
+cartographer-final-z-mode-plate-v1|cartographer-plate-workflow|is_carto_plate_workflow|Load a Touch plate model only when Touch is selected for final Z
+cartographer-scan-only-load-v1|cartographer-plate-workflow|is_carto_plate_workflow|Let the Cartographer load button work without a Touch model in Scan final Z mode
 audit-cartographer-config-runtime-safety-v1|cartographer|is_cartographer|Back up managed Cartographer settings and restore configured motion limits automatically after an aborted mesh
 audit-memory-diagnostics-worker-v1|memory-diagnostics|is_memory_diagnostics|Move procfs sampling and UDISK logging off Klipper's motion reactor
 audit-abort-homing-patcher-safety-v1|abort_homing|is_abort_homing|Back up webhooks.py, reject partial patches, and replace it atomically
@@ -119,6 +123,7 @@ global-touch-offsets-shared-ui-v4|global-touch-offsets|is_global_touch_offsets|G
 global-touch-offsets-fluidd-namespace-bootstrap-v1|global-touch-offsets|is_global_touch_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Global Touch Offset layout setup
 global-touch-offsets-fluidd-post-restart-layout-v2|global-touch-offsets|is_global_touch_offsets|Reapply and verify persistent Global Carto Touch Fluidd grouping after the upgraded macros are active
 global-touch-offsets-live-save-v5|global-touch-offsets|is_global_touch_offsets|Saving Global Carto Touch Z offsets now updates live Cartographer models without restarting
+global-carto-scan-offsets-v1|global-touch-offsets|is_global_touch_offsets|Let the global Cartographer Z-offset editor select Scan or Touch models from the active final-Z mode
 material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor and automatic material registration are available
 material-z-offsets-start-print-bridge-v2|material-z-offsets|is_material_z_offsets|Material Z Offsets now refreshes and verifies its START_PRINT handoff
 material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets|Newly discovered materials now start with a zero Z offset instead of inheriting the former 0.050 mm seed
@@ -151,6 +156,7 @@ prtouch-safe-xy-followup-preserve-v5|macros|is_macros|Stock PR Touch safety clea
 m141-print-target-preserve-v1|macros|is_macros|Layer-time chamber commands now preserve the configured chamber-fan ceiling during active prints
 m141-command-interceptor-v2|macros|is_macros|The chamber-fan target guard now wraps Creality's macro through a compatible Klippy command interceptor
 m191-circulation-cycle-v3|macros|is_macros|Bed assist now cycles low and high circulation speeds, actively cools the restored bed, and heat soaks at final print temperatures
+m191-circulation-bed-move-wait-v1|macros|is_macros|Finish the physical bed-assist move before starting circulation fans and their timer to avoid premature model-fan RPM warnings
 m191-chamber-temperature-report-v1|macros|is_macros|M191 waits now report the exact chamber temperature and requested target
 case-fan-deformation-preflight-v7|macros|is_macros|Heated-bed deformation calibration no longer leaves Creality's direct pre-file case-fan request active
 case-fan-inherited-output-clear-v8|macros|is_macros|Heated-bed deformation preflight now also clears case-fan output inherited from an already-active chamber controller

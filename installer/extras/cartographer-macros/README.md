@@ -90,17 +90,19 @@ A23_CARTO_LOAD_SELECTED
 
 The selector only records the profile for the shared actions; it does **not**
 load a model. `A21` calibrates the selected Scan model, `A22` calibrates the
-selected Touch model, and `A23` loads both existing models. Each action
-explicitly uses the selected model instead of Fluidd's native calibration
-buttons, which use the `default` model when called without a `MODEL=`
-parameter.
+selected Touch model, and `A23` always loads the Scan model. It loads the Touch
+model only when `variable_carto_final_z_mode` is `"touch"`; Scan-only profiles
+do not need a Touch model. Each action explicitly uses the selected model
+instead of Fluidd's native calibration buttons, which use the `default` model
+when called without a `MODEL=` parameter.
 
 To calibrate a plate, install that physical plate, select its profile, run
 `A21_CARTO_SCAN_SELECTED`, and then separately run
-`A22_CARTO_TOUCH_SELECTED`. Use `A23_CARTO_LOAD_SELECTED` when an existing pair
-of saved models needs to be loaded. Run `SAVE_CONFIG` after calibration. After
-the protected firmware restart completes, select the profile again before
-loading it. Power-cycle before homing only if the restart reports an error.
+`A22_CARTO_TOUCH_SELECTED` when using Touch final Z. Use
+`A23_CARTO_LOAD_SELECTED` when the saved models need to be loaded. Run
+`SAVE_CONFIG` after calibration. After the protected firmware restart
+completes, select the profile again before loading it. Power-cycle before
+homing only if the restart reports an error.
 
 Touch calibration finds and verifies the detection threshold and model speed;
 it does not guarantee the final first-layer height. The Touch model's initial

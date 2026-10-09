@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install the optional live editor for saved Cartographer Touch-model Z offsets.
+# Install the optional live editor for saved Cartographer Scan/Touch Z offsets.
 
 set -eu
 
@@ -28,7 +28,7 @@ if ! "$PYTHON" "$SCRIPT_DIR/configure_fluidd_layout.py"; then
     echo "W: editor installed, but its Fluidd category metadata could not be configured"
 fi
 
-echo "I: optional Global Carto Touch Z Offsets editor installed"
+echo "I: optional Global Carto Z Offsets editor installed"
 if [ "${K2_SKIP_KLIPPY_RESTART:-0}" != "1" ]; then
     sh "$INSTALLER_BASE/scripts/klippy_code_restart.sh"
 fi

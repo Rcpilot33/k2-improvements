@@ -18,7 +18,7 @@ detect_installer_commit() {
 }
 
 detect_remote_commit_state() {
-    local branch local_commit remote_commit output_file status_file pid elapsed
+    local branch local_commit remote_commit output_file pid elapsed
     if [ ! -d "$INSTALLER_DIR/.git" ]; then
         echo unavailable
         return
@@ -32,31 +32,34 @@ detect_remote_commit_state() {
 
     # Keep an offline printer from delaying the menu indefinitely. This is a
     # read-only remote-head query; option 6 remains responsible for pulling.
-    output_file="/tmp/k2-installer-remote-head.$$"
-    status_file="/tmp/k2-installer-remote-status.$$"
-    rm -f "$output_file" "$status_file"
-    (
-        GIT_TERMINAL_PROMPT=0 git -C "$INSTALLER_DIR" ls-remote --heads origin \
-            "refs/heads/$branch" 2>/dev/null | awk 'NR == 1 { print $1 }' \
-            > "$output_file"
-        printf '%s\n' "$?" > "$status_file"
-    ) &
+    output_file=$(mktemp /tmp/k2-installer-remote-head.XXXXXX) || {
+        echo unavailable
+        return
+    }
+    # Run Git directly so wait sees its exit status, not a successful awk
+    # pipeline masking a failed query. On timeout, stop the query itself.
+    GIT_TERMINAL_PROMPT=0 git -C "$INSTALLER_DIR" ls-remote --heads origin \
+        "refs/heads/$branch" > "$output_file" 2>/dev/null &
     pid=$!
     elapsed=0
-    while [ ! -f "$status_file" ] && [ "$elapsed" -lt 5 ]; do
+    while kill -0 "$pid" 2>/dev/null && [ "$elapsed" -lt 5 ]; do
         sleep 1
         elapsed=$((elapsed + 1))
     done
-    if [ ! -f "$status_file" ]; then
+    if kill -0 "$pid" 2>/dev/null; then
         kill "$pid" 2>/dev/null || true
         wait "$pid" 2>/dev/null || true
-        rm -f "$output_file" "$status_file"
+        rm -f "$output_file"
         echo unavailable
         return
     fi
-    wait "$pid" 2>/dev/null || true
-    remote_commit=$(sed -n '1p' "$output_file" 2>/dev/null)
-    rm -f "$output_file" "$status_file"
+    if wait "$pid" 2>/dev/null; then
+        remote_commit=$(awk -v ref="refs/heads/$branch" '$2 == ref { print $1; exit }' \
+            "$output_file")
+    else
+        remote_commit=
+    fi
+    rm -f "$output_file"
     if [ -z "$remote_commit" ]; then
         echo unavailable
     elif [ "$remote_commit" = "$local_commit" ]; then
@@ -67,8 +70,9 @@ detect_remote_commit_state() {
 }
 
 main_menu() {
-    local remote_commit_state
-    remote_commit_state=
+    local remote_commit_state checked_revision
+    remote_commit_state=not_checked
+    checked_revision=
     while :; do
         clear
         local fw chw cfw setup branch commit pending_updates update_state
@@ -79,17 +83,21 @@ main_menu() {
         branch="$(detect_installer_branch)"
         commit="$(detect_installer_commit)"
         pending_updates="$(migration_pending_component_count)"
+        # A manual result belongs to the checked branch and local commit.
+        # Changing either requires another explicit check, never a network
+        # request during an ordinary menu redraw.
+        if [ -n "$checked_revision" ] && [ "$checked_revision" != "$branch:$commit" ]; then
+            remote_commit_state=not_checked
+            checked_revision=
+        fi
+        case "$remote_commit_state" in
+            not_checked) update_state="$(c_dim 'NOT CHECKED')" ;;
+            available) update_state="$(c_yellow 'INSTALLER UPDATE AVAILABLE')" ;;
+            current) update_state="$(c_green 'INSTALLER UP TO DATE')" ;;
+            *) update_state="$(c_yellow 'CHECK FAILED')" ;;
+        esac
         if [ "$pending_updates" -gt 0 ]; then
-            update_state="$(c_yellow "$pending_updates ACTION(S) PENDING")"
-        else
-            if [ -z "$remote_commit_state" ]; then
-                remote_commit_state="$(detect_remote_commit_state)"
-            fi
-            case "$remote_commit_state" in
-                available) update_state="$(c_yellow 'INSTALLER UPDATE AVAILABLE')" ;;
-                current) update_state="$(c_green 'UP TO DATE')" ;;
-                *) update_state="$(c_dim 'REMOTE CHECK UNAVAILABLE')" ;;
-            esac
+            update_state="$(c_yellow "$pending_updates ACTION(S) PENDING") | $update_state"
         fi
 
         ui_rule
@@ -115,7 +123,8 @@ main_menu() {
         ui_menu_item 4 'Optional extras'
         ui_menu_item 5 'Maintenance and recovery'
         ui_menu_item 6 'Update installer / apply updates' "$update_state"
-        printf '\n  0. Exit\n\nSelect [0-6]: '
+        ui_menu_item 7 'Check for installer updates'
+        printf '\n  0. Exit\n\nSelect [0-7]: '
         read_prompt c
         case "$c" in
             1) show_status ;;
@@ -124,6 +133,11 @@ main_menu() {
             4) menu_extras ;;
             5) menu_maintenance ;;
             6) menu_update_installer ;;
+            7)
+                printf '\nChecking installer updates for %s (up to 5 seconds)...\n' "$branch"
+                remote_commit_state="$(detect_remote_commit_state)"
+                checked_revision="$branch:$commit"
+                ;;
             0|q|Q) exit 0 ;;
             *) ;;
         esac

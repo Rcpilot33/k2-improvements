@@ -144,9 +144,16 @@ BOUNDARY_EXECUTION = r'''    # Calculate purge speed
 
         SAVE_GCODE_STATE NAME=Prepurge_State
         G92 E0
-        G0 F{travel_speed}
+        # The CFS wipe may leave Y just beyond the normal travel limit.
+        # Move straight into the machine envelope before crossing to the purge.
+        {% set pos = printer.toolhead.position %}
         G90
-        G0 X{purge_start_x} Y{purge_start_y}
+        {% if pos.y > axis_y_max %}
+            G0 Y{axis_y_max - 2.0} F{travel_speed}
+        {% elif pos.y < axis_y_min %}
+            G0 Y{axis_y_min + 2.0} F{travel_speed}
+        {% endif %}
+        G0 X{purge_start_x} Y{purge_start_y} F{travel_speed}
         G0 Z{purge_height}
         M83
         G1 E{tip_distance} F{purge_move_speed}

@@ -29,7 +29,7 @@ class InstallerFailureSafetyTests(unittest.TestCase):
             with self.subTest(script=relative_path):
                 text = (ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertIn(
-                    "better-init|screws_tilt_adjust|",
+                    "better-init|fluidd|screws_tilt_adjust|",
                     text,
                 )
 
