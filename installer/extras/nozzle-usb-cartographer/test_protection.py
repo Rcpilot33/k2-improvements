@@ -60,7 +60,11 @@ class ProtectionTests(unittest.TestCase):
         self.power.parent.mkdir(parents=True)
         (self.system / "etc/init.d").mkdir(parents=True)
         (self.system / "etc/init.d/board_init").write_text("START=20\n")
-        (self.system / "etc/init.d/klipper").write_text("START=55\n")
+        self.service = self.system / "etc/init.d/klipper"
+        self.service_text = ("#!/bin/sh /etc/rc.common\nSTART=55\nUSE_PROCD=1\n"
+                             "DEPEND=fstab,mcu_update\n\nstart_service() {\n"
+                             "    echo host-started\n}\n")
+        self.service.write_text(self.service_text, newline="\n")
         self.factory_text = ('#!/bin/sh\nUSB_P_EN3=162\n'
                              'echo 0 > /sys/class/gpio/gpio$USB_P_EN3/value\n'
                              'echo 1 > /sys/class/gpio/gpio$USB_P_EN3/value\n')
@@ -119,6 +123,9 @@ class ProtectionTests(unittest.TestCase):
         boot = self.system / "etc/rc.d/S53k2-nozzle-usb"
         self.assertTrue(boot.is_symlink())
         self.assertIn("START=53", boot.read_text())
+        self.assertIn("DEPEND=board_init", boot.read_text())
+        self.assertIn("DEPEND=fstab,mcu_update,k2-nozzle-usb", self.service.read_text())
+        self.assertIn(configure.PREFLIGHT, self.service.read_text())
         self.assertIn("# usb_power_hold: 1", (self.custom / "k2_nozzle_camera_guard.cfg").read_text())
 
     def test_power_script_modified_after_install_is_not_overwritten_on_refresh(self):
@@ -142,6 +149,7 @@ class ProtectionTests(unittest.TestCase):
         self.assertTrue(all(restored["ai_control"][key] == 1 for key in CAMERA_FLAGS))
         self.assertFalse((self.system / "etc/rc.d/S53k2-nozzle-usb").exists())
         self.assertFalse((self.custom / "k2_nozzle_camera_guard.cfg").exists())
+        self.assertEqual(self.service.read_text(), self.service_text)
         self.apply("remove")  # Idempotent cleanup.
 
     def test_switch_to_ai_only_restores_power_management_without_power_command(self):
@@ -149,6 +157,134 @@ class ProtectionTests(unittest.TestCase):
         self.apply("ai-only")
         self.assertEqual(self.power.read_text(), self.factory_text)
         self.assertTrue((self.custom / "k2_nozzle_camera_guard.cfg").exists())
+        self.assertEqual(self.service.read_text(), self.service_text)
+
+    def test_unknown_service_layout_refused_before_any_writes(self):
+        self.service.write_text("START=55\n# no recognizable dependencies or start\n")
+        with self.assertRaises(ValueError):
+            self.apply("power")
+        self.assertEqual(self.power.read_text(), self.factory_text)
+        self.assertEqual(json.loads(self.preferences.read_text()), self.original)
+
+    def test_boot_patch_preserves_unrelated_edits_and_refuses_modified_managed_block(self):
+        self.apply("power")
+        changed = self.service.read_text() + "# operator addition\n"
+        self.service.write_text(changed, newline="\n")
+        self.apply("refresh")
+        self.assertEqual(self.service.read_text(), changed)
+        self.apply("ai-only")
+        self.assertEqual(self.service.read_text(), self.service_text + "# operator addition\n")
+        self.apply("power")
+        self.service.write_text(self.service.read_text().replace(
+            "DEPEND=fstab,mcu_update,k2-nozzle-usb", "DEPEND=fstab,mcu_update,custom,k2-nozzle-usb"), newline="\n")
+        before = self.service.read_text()
+        with self.assertRaises(ValueError):
+            self.apply("remove")
+        self.assertEqual(self.service.read_text(), before)
+        self.assertIn(configure.POWER_MARKER, self.power.read_text())
+
+    @unittest.skipUnless(Path(BASH).exists(), "bash required")
+    def test_startup_gate_waits_for_usb_and_blocks_host_on_missing_rail(self):
+        self.apply("power")
+        hook = self.base / "hook.sh"
+        hook.write_text((HERE / "nozzle-usb.init").read_text(), newline="\n")
+        gpio = self.base / "gpio"
+        devices = self.base / "usb"
+        device = devices / "1-1.2.4"
+        device.mkdir(parents=True)
+        (device / "idVendor").write_text("1d50\n")
+        (device / "idProduct").write_text("614e\n")
+        power = self.base / "power.sh"
+        power.write_text('#!/bin/sh\n[ -f "$K2_NOZZLE_GPIO_VALUE" ] || exit 1\n'
+                         'printf 0 > "$K2_NOZZLE_GPIO_VALUE"\n', newline="\n")
+        gate = self.base / "gate.sh"
+        gate.write_text('#!/bin/sh\n. "$K2_TEST_HOOK"\nstart\n', newline="\n")
+        service = self.base / "service.sh"
+        service.write_text(self.service.read_text().replace(
+            "/etc/init.d/k2-nozzle-usb", gate.as_posix()), newline="\n")
+        subprocess.run([BASH, "-c", 'chmod +x "$1" "$2"', "test", power.as_posix(),
+                        gate.as_posix()], check=True)
+        env = dict(os.environ, K2_NOZZLE_GPIO_VALUE=gpio.as_posix(),
+                   K2_NOZZLE_POWER_SCRIPT=power.as_posix(), K2_NOZZLE_USB_DEVICES=devices.as_posix(),
+                   K2_TEST_HOOK=hook.as_posix(), K2_TEST_SERVICE=service.as_posix())
+        command = '. "$K2_TEST_SERVICE"; start_service'
+        failed = subprocess.run([BASH, "-c", command], env=env, capture_output=True)
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertNotIn(b"host-started", failed.stdout)
+        # Factory GPIO initialization completes; only then can the host start.
+        gpio.write_text("1\n")
+        good = subprocess.run([BASH, "-c", command], env=env, capture_output=True)
+        self.assertEqual(good.returncode, 0, good.stderr)
+        self.assertEqual(gpio.read_text(), "0")
+        self.assertIn(b"runtime device detected", good.stdout)
+        self.assertIn(b"host-started", good.stdout)
+        # Simulate the added hub enumerating after power-on, not immediately.
+        (device / "idProduct").unlink()
+        process = subprocess.Popen([BASH, "-c", command], env=env,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        import time
+        time.sleep(0.2)
+        (device / "idProduct").write_text("614e\n")
+        output, errors = process.communicate(timeout=5)
+        self.assertEqual(process.returncode, 0, errors)
+        self.assertIn(b"host-started", output)
+        # A device that never enumerates must return failure, not launch host.
+        (device / "idProduct").unlink()
+        gate.write_text('#!/bin/sh\nsleep() { return 0; }\n. "$K2_TEST_HOOK"\nstart\n', newline="\n")
+        missing = subprocess.run([BASH, "-c", command], env=env, capture_output=True, timeout=5)
+        self.assertNotEqual(missing.returncode, 0)
+        self.assertIn(b"Klipper start blocked", missing.stderr)
+        self.assertNotIn(b"host-started", missing.stdout)
+
+    @unittest.skipUnless(Path(BASH).exists(), "bash required")
+    def test_shell_refresh_energizes_existing_power_mode_before_restart(self):
+        repo = self.base / "repo"
+        directory = repo / "installer/extras/nozzle-usb-cartographer"
+        directory.mkdir(parents=True)
+        script = directory / "install.sh"
+        script.write_text((HERE / "install.sh").read_text(), newline="\n")
+        helpers = repo / "scripts"
+        helpers.mkdir()
+        (helpers / "stock_nozzle_camera.sh").write_text(
+            'stock_nozzle_camera_is_jimmyv() { return 0; }\n'
+            'stock_nozzle_camera_require_idle() { return 0; }\n'
+            'stock_nozzle_camera_present() { return 1; }\n', newline="\n")
+        events = self.base / "events"
+        (helpers / "klippy_code_restart.sh").write_text(
+            'printf "restart\\n" >> "$K2_TEST_EVENTS"\n', newline="\n")
+        python = self.base / "python.sh"
+        python.write_text('#!/bin/sh\nprintf "configure:%s\\n" "$2" >> "$K2_TEST_EVENTS"\n', newline="\n")
+        hook = self.system / "etc/init.d/k2-nozzle-usb"
+        hook.write_text('#!/bin/sh\nprintf "power:%s\\n" "$1" >> "$K2_TEST_EVENTS"\n', newline="\n")
+        (self.custom / "k2_nozzle_camera_guard.cfg").write_text("# usb_power_hold: 1\n", newline="\n")
+        subprocess.run([BASH, "-c", 'chmod +x "$1" "$2"', "test", python.as_posix(), hook.as_posix()], check=True)
+        env = dict(os.environ, K2_PYTHON=python.as_posix(), K2_SYSTEM_ROOT=self.system.as_posix(),
+                   PRINTER_CFG_DIR=self.config.as_posix(), K2_TEST_EVENTS=events.as_posix())
+        result = subprocess.run([BASH, script.as_posix(), "--refresh"], env=env, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(events.read_text().splitlines(), ["configure:refresh", "power:start", "restart"])
+
+    @unittest.skipUnless(Path(BASH).exists(), "bash required")
+    def test_completed_v1_still_offers_boot_fix_and_old_hook_is_not_current(self):
+        self.apply("power")
+        root = HERE.parents[2]
+        state = self.base / "state"
+        state.mkdir()
+        (state / "initialized").touch()
+        (state / "completed-migrations").write_text("nozzle-usb-cartographer-protection-v1\n")
+        env = dict(os.environ, PRINTER_CFG_DIR=self.config.as_posix(),
+                   KLIPPER_DIR=self.klipper.as_posix(), K2_SYSTEM_ROOT=self.system.as_posix(),
+                   INSTALLER_DIR=root.as_posix(), MIGRATION_STATE_DIR=state.as_posix())
+        command = ('. "$INSTALLER_DIR/installer/detect/features.sh"; '
+                   '. "$INSTALLER_DIR/installer/migrations/catalog.sh"; '
+                   '. "$INSTALLER_DIR/installer/menus/update.sh"; migration_pending_components')
+        pending = subprocess.run([BASH, "-c", command], env=env, capture_output=True)
+        self.assertEqual(pending.returncode, 0, pending.stderr)
+        self.assertIn(b"nozzle-usb-cartographer", pending.stdout)
+        current = '. "$INSTALLER_DIR/installer/detect/features.sh"; is_nozzle_usb_cartographer'
+        self.assertEqual(subprocess.run([BASH, "-c", current], env=env).returncode, 0)
+        self.service.write_text(self.service_text, newline="\n")
+        self.assertEqual(subprocess.run([BASH, "-c", current], env=env).returncode, 1)
 
     @unittest.skipUnless(Path(BASH).exists(), "bash required")
     def test_power_off_is_mapped_to_power_on(self):

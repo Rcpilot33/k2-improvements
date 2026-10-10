@@ -166,5 +166,6 @@ fluidd-stale-update-cache-v2|fluidd|is_fluidd|Clear the previous Fluidd reposito
 chamber-fan-output-resync-v1|macros|is_macros|Resynchronize the chamber thermostat output after releasing Creality's direct case-fan request
 nozzle-camera-jimmyv-removal-v1|nozzle-camera-mount-compatibility|is_nozzle_camera_mount_compatible|Remove the managed stock nozzle-camera stream from JimmyV mounts without switching off shared USB power
 nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer|is_nozzle_usb_cartographer|Refresh opted-in nozzle-camera AI and USB power protection without changing the selected wiring mode
+nozzle-usb-cartographer-boot-dependencies-v2|nozzle-usb-cartographer|is_nozzle_usb_cartographer|Order nozzle USB power after factory GPIO initialization and block Klipper startup until Cartographer USB is detected
 EOF
 }

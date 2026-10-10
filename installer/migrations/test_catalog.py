@@ -74,6 +74,16 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_nozzle_usb_boot_fix_is_offered_after_v1_and_only_once(self):
+        update_id = "nozzle-usb-cartographer-boot-dependencies-v2"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        self.assertIn("nozzle-usb-cartographer-protection-v1", catalog_ids)
+        self.assertEqual(recommended({"nozzle-usb-cartographer"}, catalog_ids - {update_id}),
+                         {"nozzle-usb-cartographer"})
+        self.assertEqual(recommended({"nozzle-usb-cartographer"}, catalog_ids), set())
+        self.assertEqual(recommended(set(), catalog_ids - {update_id}), set())
+
     def test_final_z_mode_updates_are_offered_once(self):
         update_ids = {
             "cartographer-final-z-mode-macros-v1": "macros",

@@ -20,14 +20,20 @@ saved preference protection does not intercept every proprietary camera API.
 
 USB protection retains the original `nozzle_cam_power.sh` beside it as
 `.k2-factory` and replaces it with a wrapper that maps both on/off requests to
-power-on. An OpenWrt startup hook at priority 53 enables power after factory
-board initialization (20) and before Klipper (55). No `rc.local` replacement,
+power-on. The startup hook explicitly depends on `board_init`, and a narrow
+managed edit adds that hook to Klipper's existing boot dependencies. Numeric
+priorities alone are not sufficient: Tina runs boot scripts in parallel.
+Klipper also calls the hook before starting its host and refuses to launch
+unless the rail reads on and the Cartographer runtime USB device is detected.
+USB enumeration is checked for at most nine seconds at startup, not by a
+background worker. No `rc.local` replacement,
 polling daemon, USB reset, or unrelated power-rail change is installed.
 Whole USB-host shutdown/reset remains a hardware shutdown operation; do not
 restart `board_init` or run `usb_host_5v.sh disable` while Klipper is connected.
 
 Refreshes preserve the chosen wiring mode. Removal restores the factory power
-script, removes the managed hook/module/config, and restores only the original
+script, removes the managed Klipper dependency/preflight and hook/module/config,
+and restores only the original
 camera flags that are still disabled; it never actively turns the rail off.
 Rewire Cartographer to another powered USB port or remove it before restoring
 factory camera power management. Switching mounts alone does not remove this
@@ -38,6 +44,10 @@ and power-script shape, retains config/preference recovery backups, and uses
 the protected Klippy-code restart. No SSH login, password, or remote service
 is part of installation. Firmware upgrades may replace the factory wrapper;
 reinstall and verify after an upgrade, before homing or printing.
+
+The v2 boot-dependency migration repairs earlier opted-in installations even
+when `nozzle-usb-cartographer-protection-v1` is already recorded as completed.
+Refresh also turns the rail on and checks USB before the protected restart.
 
 Printer validation still required: cold boot without manual `on`, Cartographer
 enumeration/connection before homing, factory `off` request with no USB

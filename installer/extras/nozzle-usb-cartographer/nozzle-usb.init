@@ -2,10 +2,39 @@
 # k2-improvements: Cartographer nozzle USB startup
 START=53
 STOP=10
+DEPEND=board_init
 
 start() {
-    # board_init (20) has exported the GPIO; Klipper starts at 55.
-    /usr/bin/nozzle_cam_power.sh on
+    # Tina starts scripts in parallel: DEPEND, not START alone, orders GPIO init.
+    local power_script="${K2_NOZZLE_POWER_SCRIPT:-/usr/bin/nozzle_cam_power.sh}"
+    local gpio_value="${K2_NOZZLE_GPIO_VALUE:-/sys/class/gpio/gpio162/value}"
+    local usb_root="${K2_NOZZLE_USB_DEVICES:-/sys/bus/usb/devices}"
+    local attempt vendor product
+    "$power_script" on || {
+        echo 'E: cannot power the Cartographer nozzle USB connector' >&2
+        return 1
+    }
+    [ "$(cat "$gpio_value" 2>/dev/null)" = 0 ] || {
+        echo 'E: Cartographer nozzle USB power is not on' >&2
+        return 1
+    }
+    # Bounded startup check only; no persistent polling process. Klipper also
+    # calls this check before launching its host, including service restarts.
+    attempt=0
+    while [ "$attempt" -lt 10 ]; do
+        for vendor in "$usb_root"/*/idVendor; do
+            [ -f "$vendor" ] || continue
+            product="${vendor%/idVendor}/idProduct"
+            if [ "$(cat "$vendor")" = 1d50 ] && [ "$(cat "$product" 2>/dev/null)" = 614e ]; then
+                echo 'I: Cartographer nozzle USB rail on and runtime device detected'
+                return 0
+            fi
+        done
+        attempt=$((attempt + 1))
+        [ "$attempt" -ge 10 ] || sleep 1
+    done
+    echo 'E: Cartographer runtime USB device missing; Klipper start blocked' >&2
+    return 1
 }
 
 stop() {

@@ -42,8 +42,10 @@ if [ "$MODE" != remove ] && stock_nozzle_camera_present; then
     sh "$REPO_ROOT/installer/extras/nozzle-camera/uninstall.sh" --no-restart
 fi
 "${K2_PYTHON:-python3}" "$SCRIPT_DIR/configure.py" "$MODE"
-if [ "$MODE" = power ]; then
-    "${K2_SYSTEM_ROOT:-}/usr/bin/nozzle_cam_power.sh" on
+if [ "$MODE" != remove ] && grep -q '^# usb_power_hold: 1$' \
+    "${PRINTER_CFG_DIR:-/mnt/UDISK/printer_data/config}/custom/k2_nozzle_camera_guard.cfg"; then
+    # Refreshing the failed v1 boot hook must also restore power before restart.
+    "${K2_SYSTEM_ROOT:-}/etc/init.d/k2-nozzle-usb" start
 fi
 echo 'I: nozzle-camera protection configured; enclosure-camera AI settings preserved'
 echo 'I: USB power was not switched off; use manual flow and pressure-advance calibration'

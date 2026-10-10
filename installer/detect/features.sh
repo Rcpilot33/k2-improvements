@@ -21,7 +21,10 @@ is_nozzle_usb_cartographer() {
     if grep -q '^# usb_power_hold: 1$' "$custom/k2_nozzle_camera_guard.cfg"; then
         grep -q 'k2-improvements: Cartographer nozzle USB power guard' \
             "${K2_SYSTEM_ROOT:-}/usr/bin/nozzle_cam_power.sh" 2>/dev/null &&
-        [ -e "${K2_SYSTEM_ROOT:-}/etc/rc.d/S53k2-nozzle-usb" ]
+        [ -e "${K2_SYSTEM_ROOT:-}/etc/rc.d/S53k2-nozzle-usb" ] &&
+        grep -q '^DEPEND=board_init$' "${K2_SYSTEM_ROOT:-}/etc/init.d/k2-nozzle-usb" &&
+        grep -q '^DEPEND=.*[,=]k2-nozzle-usb\([,]\|$\)' "${K2_SYSTEM_ROOT:-}/etc/init.d/klipper" &&
+        grep -q '^    /etc/init.d/k2-nozzle-usb start || return 1$' "${K2_SYSTEM_ROOT:-}/etc/init.d/klipper"
     fi
 }
 

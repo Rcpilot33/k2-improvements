@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import sys
+import tempfile
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
@@ -18,6 +19,66 @@ from k2_nozzle_camera_guard import CAMERA_FLAGS, disable_camera_preferences
 MARKER = "# k2-improvements: nozzle-camera replacement"
 POWER_MARKER = "# k2-improvements: Cartographer nozzle USB power guard"
 INIT_MARKER = "# k2-improvements: Cartographer nozzle USB startup"
+DEPEND_BEGIN = "# BEGIN k2-improvements nozzle USB boot dependency"
+DEPEND_END = "# END k2-improvements nozzle USB boot dependency"
+PREFLIGHT = ("    # BEGIN k2-improvements nozzle USB preflight\n"
+             "    /etc/init.d/k2-nozzle-usb start || return 1\n"
+             "    # END k2-improvements nozzle USB preflight\n")
+
+
+def klipper_boot_plan(path, enable):
+    """Plan a narrow, reversible factory service edit; preserve other changes."""
+    if path.is_symlink():
+        raise ValueError("Unfamiliar linked Klipper service; inspect before changing")
+    text = path.read_text()
+    if DEPEND_BEGIN in text or DEPEND_END in text:
+        pattern = (re.escape(DEPEND_BEGIN) + r"\n# original dependencies: ([A-Za-z0-9_,.-]+)\n"
+                   r"(DEPEND=[A-Za-z0-9_,.-]+)\n" + re.escape(DEPEND_END) + r"\n")
+        blocks = list(re.finditer(pattern, text))
+        if len(blocks) != 1:
+            raise ValueError("Modified nozzle USB dependency block; inspect before changing")
+        block = blocks[0]
+        if block.group(2) != "DEPEND=" + block.group(1) + ",k2-nozzle-usb":
+            raise ValueError("Modified nozzle USB dependencies; refusing to discard changes")
+        text = text[:block.start()] + "DEPEND=" + block.group(1) + "\n" + text[block.end():]
+    if "# BEGIN k2-improvements nozzle USB preflight" in text or "# END k2-improvements nozzle USB preflight" in text:
+        if text.count(PREFLIGHT) != 1:
+            raise ValueError("Modified nozzle USB preflight; inspect before changing")
+        text = text.replace(PREFLIGHT, "", 1)
+    if not enable:
+        return text
+    dependencies = list(re.finditer(r"^DEPEND=([A-Za-z0-9_,.-]+)$", text, re.MULTILINE))
+    starts = list(re.finditer(r"^start_service\(\)[ \t]*\n?[ \t]*\{\n", text, re.MULTILINE))
+    if len(dependencies) != 1 or len(starts) != 1:
+        raise ValueError("Unsupported Klipper service layout; boot ordering cannot be secured")
+    original = dependencies[0].group(0)
+    if "k2-nozzle-usb" in dependencies[0].group(1).split(","):
+        raise ValueError("Unmanaged nozzle USB dependency; inspect before changing")
+    # Avoid a second literal DEPEND assignment in a comment: vendor boot
+    # dispatchers can parse script metadata without evaluating the shell.
+    block = (DEPEND_BEGIN + "\n# original dependencies: " + dependencies[0].group(1) +
+             "\n" + original + ",k2-nozzle-usb\n" + DEPEND_END + "\n")
+    text = text[:dependencies[0].start()] + block + text[dependencies[0].end() + 1:]
+    return re.sub(r"(^start_service\(\)[ \t]*\n?[ \t]*\{\n)",
+                  lambda match: match.group(1) + PREFLIGHT, text, count=1, flags=re.MULTILINE)
+
+
+def write_boot_plan(path, planned):
+    if path.read_text() != planned:
+        dest = Path(str(path) + ".before-nozzle-usb-boot")
+        if not dest.exists():
+            shutil.copy2(path, dest)
+        descriptor, temporary = tempfile.mkstemp(prefix=".k2-nozzle-boot-", dir=str(path.parent))
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as target:
+                target.write(planned)
+                target.flush()
+                os.fsync(target.fileno())
+            os.chmod(temporary, path.stat().st_mode & 0o777)
+            os.replace(temporary, path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
 
 
 def managed(path, marker):
@@ -40,6 +101,7 @@ def configure(config, klipper, system, preferences, mode):
     init = system / "etc/init.d/k2-nozzle-usb"
     boot = system / "etc/rc.d/S53k2-nozzle-usb"
     main = custom / "main.cfg"
+    klipper_service = system / "etc/init.d/klipper"
     if guard.exists() and not managed(guard, MARKER):
         raise ValueError("Unfamiliar guard config; refusing to overwrite")
     if module.exists() or module.is_symlink():
@@ -56,6 +118,7 @@ def configure(config, klipper, system, preferences, mode):
     if mode == "remove":
         if factory.exists() and not protected:
             raise ValueError("Factory power script changed; refusing automatic restoration")
+        boot_plan = klipper_boot_plan(klipper_service, False)
         if saved.exists():
             data = json.loads(preferences.read_text())
             values = json.loads(saved.read_text())
@@ -67,6 +130,7 @@ def configure(config, klipper, system, preferences, mode):
             backup(preferences)
             preferences.write_text(json.dumps(data, indent=2) + "\n")
             saved.unlink()
+        write_boot_plan(klipper_service, boot_plan)
         if protected:
             shutil.copy2(factory, power)
             factory.unlink()
@@ -110,6 +174,7 @@ def configure(config, klipper, system, preferences, mode):
             priorities.append(int(match.group(1)))
         if not priorities[0] < 53 < priorities[1]:
             raise ValueError("Unsupported startup order: need board_init < 53 < Klipper")
+    boot_plan = klipper_boot_plan(klipper_service, mode == "power")
     # All validation above is read-only. Retain recovery data before edits.
     backup(main)
     backup(preferences)
@@ -145,6 +210,7 @@ def configure(config, klipper, system, preferences, mode):
         for target in (boot, init):
             if target.exists() or target.is_symlink():
                 target.unlink()
+    write_boot_plan(klipper_service, boot_plan)
     # Do not execute power commands here. The shell workflow does that only on
     # explicit enable, never during removal or disabling of the power option.
 
