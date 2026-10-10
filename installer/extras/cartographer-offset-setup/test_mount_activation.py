@@ -49,6 +49,10 @@ class MountActivationTests(unittest.TestCase):
         self.original = "[bed_mesh]\nprobe_count: 15, 15\n[extruder]\npressure_advance: 0.05\n"
         self.overrides.write_text(self.original)
         self.restart_log = self.base / "restart.log"
+        self.klipper = self.base / "klipper"
+        guard = self.klipper / "klippy/extras/k2_cartographer_scan_guard.py"
+        guard.parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / "features/cartographer/k2_cartographer_scan_guard.py", guard)
         self.query_log = self.base / "query.log"
         self.curl = self.base / "fake-curl"
         self.curl.write_text(
@@ -64,6 +68,7 @@ class MountActivationTests(unittest.TestCase):
             K2_CURL=self.curl.as_posix(), K2_DEFER_FIRMWARE_RESTART="0",
             TEST_RESTART_LOG=self.restart_log.as_posix(),
             TEST_QUERY_LOG=self.query_log.as_posix(),
+            KLIPPER_DIR=self.klipper.as_posix(),
             TEST_ACTIVITY_JSON='{"result":{"status":{"print_stats":{"state":"' + state + '"}}}}',
         )
         env.update(extra_env)
@@ -86,6 +91,71 @@ class MountActivationTests(unittest.TestCase):
             self.assertIn(setting, saved)
         self.assertEqual((self.custom / "cartographer.cfg").read_text(), self.baseline)
         self.assertEqual(len(list(self.custom.glob("overrides.cfg.before-cartographer-offset-*"))), 1)
+
+    def test_front_travel_is_opt_in_for_each_jimmyv_mount(self):
+        for choice, offset, mesh_y, profile in (
+                ('2', 36, 30, 'jimmyv_legacy'),
+                ('3', 12, 6, 'jimmyv_final_12'),
+                ('4', 17, 11, 'jimmyv_final_17')):
+            with self.subTest(choice=choice):
+                result = self.run_picker(choice + '\ny\n')
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                saved = self.overrides.read_text()
+                self.assertIn(f'mount_profile: {profile}', saved)
+                self.assertIn('mesh_front_travel: 6', saved)
+                self.assertIn(f'mesh_min: 5, {mesh_y}', saved)
+                self.assertIn(f'y_offset: {offset}', saved)
+                self.assertIn('position_endstop: -6.2', saved)
+                self.assertIn('probe_count: 15, 15', saved)
+                self.assertEqual((self.custom / 'cartographer.cfg').read_text(), self.baseline)
+
+    def test_disabled_default_does_not_write_runtime_opt_in(self):
+        result = self.run_picker()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn('mesh_front_travel:', self.overrides.read_text())
+        self.assertIn('mesh_min: 5, 12', self.overrides.read_text())
+
+    def test_disable_or_switch_to_jamin_removes_opt_in(self):
+        for choice in ('3\nn\n', '1\n'):
+            with self.subTest(choice=choice):
+                self.assertEqual(self.run_picker('3\ny\n').returncode, 0)
+                result = self.run_picker(choice)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                saved = self.overrides.read_text()
+                self.assertNotIn('mesh_front_travel:', saved)
+                self.assertNotIn('mount_profile:', saved)
+                self.assertIn('pressure_advance: 0.05', saved)
+
+    def test_enabled_reapply_is_a_noop_and_recognizes_mount(self):
+        self.assertEqual(self.run_picker('3\ny\n').returncode, 0)
+        self.restart_log.unlink()
+        result = self.run_picker()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('Current profile: JimmyV final back-mount without 3DO camera', result.stdout)
+        self.assertIn('already configured - no change', result.stdout)
+        self.assertFalse(self.restart_log.exists())
+
+    def test_custom_mount_removes_previous_jimmyv_opt_in(self):
+        self.assertEqual(self.run_picker('3\ny\n').returncode, 0)
+        result = self.run_picker('5\n0\n12\n5, 12\n345, 340\n2\n')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn('mesh_front_travel:', self.overrides.read_text())
+        self.assertNotIn('mount_profile:', self.overrides.read_text())
+        self.assertNotIn('Clearance confirmed;', result.stdout)
+
+    def test_missing_runtime_upgrade_or_insufficient_range_refuses_opt_in(self):
+        guard = self.klipper / 'klippy/extras/k2_cartographer_scan_guard.py'
+        guard.write_text('old guard\n')
+        result = self.run_picker('3\ny\n')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.overrides.read_text(), self.original)
+        self.assertFalse(self.restart_log.exists())
+        shutil.copyfile(ROOT / 'features/cartographer/k2_cartographer_scan_guard.py', guard)
+        (self.custom.parent / 'printer.cfg').write_text(
+            '[stepper_y]\nposition_endstop: -0.4\nposition_min: -0.4\n')
+        result = self.run_picker('3\ny\n')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.overrides.read_text(), self.original)
 
     def test_cancel_does_not_query_write_or_restart(self):
         result = self.run_picker("b\n")

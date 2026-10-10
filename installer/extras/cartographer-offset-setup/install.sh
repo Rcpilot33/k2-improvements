@@ -53,12 +53,14 @@ CARTO_MIN=$(cfg_value "$CARTO_CFG" stepper_y position_min)
 CURRENT_Y=$(cfg_value "$OVERRIDES_CFG" cartographer y_offset)
 CURRENT_MESH_MIN=$(cfg_value "$OVERRIDES_CFG" bed_mesh mesh_min)
 CURRENT_MESH_MAX=$(cfg_value "$OVERRIDES_CFG" bed_mesh mesh_max)
+CURRENT_FRONT_TRAVEL=$(cfg_value "$OVERRIDES_CFG" k2_cartographer_scan_guard mesh_front_travel)
+CURRENT_MOUNT=$(cfg_value "$OVERRIDES_CFG" k2_cartographer_scan_guard mount_profile)
 
-if [ "$CURRENT_Y" = "36" ] && [ "$CURRENT_MESH_MIN" = "5, 36" ] && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
+if [ "$CURRENT_Y" = "36" ] && { [ "$CURRENT_MESH_MIN" = "5, 36" ] || [ "$CURRENT_MESH_MIN" = "5, 30" ]; } && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
     CURRENT_PROFILE="JimmyV legacy back-mount"
-elif [ "$CURRENT_Y" = "12" ] && [ "$CURRENT_MESH_MIN" = "5, 12" ] && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
+elif [ "$CURRENT_Y" = "12" ] && { [ "$CURRENT_MESH_MIN" = "5, 12" ] || [ "$CURRENT_MESH_MIN" = "5, 6" ]; } && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
     CURRENT_PROFILE="JimmyV final back-mount without 3DO camera"
-elif [ "$CURRENT_Y" = "17" ] && [ "$CURRENT_MESH_MIN" = "5, 17" ] && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
+elif [ "$CURRENT_Y" = "17" ] && { [ "$CURRENT_MESH_MIN" = "5, 17" ] || [ "$CURRENT_MESH_MIN" = "5, 11" ]; } && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
     CURRENT_PROFILE="JimmyV final back-mount with 3DO camera"
 elif [ -z "$CURRENT_Y" ] && [ -z "$CURRENT_MESH_MIN" ] && [ -z "$CURRENT_MESH_MAX" ]; then
     CURRENT_PROFILE="Jamin/default (cartographer.cfg baseline)"
@@ -152,6 +154,41 @@ case "$choice" in
     *) echo "cancelled"; exit 0 ;;
 esac
 
+FRONT_TRAVEL=0
+case "$PROFILE" in
+    jimmyv_*)
+        FRONT_DEFAULT=n
+        if [ "$CURRENT_MOUNT" = "$PROFILE" ] && [ "$CURRENT_FRONT_TRAVEL" = 6 ]; then
+            FRONT_DEFAULT=y
+        fi
+        echo
+        echo 'Optional mesh-only front travel to nozzle Y=-6 mm (hardware testing required).'
+        echo 'Enable ONLY after removing Y-homing spacers and verifying the installed mount has clearance to Y=-6.'
+        echo 'Homing zero and normal jog/print limits are not changed by this option.'
+        printf 'Clearance confirmed; enable the 6 mm mesh extension? [y/n, default %s]: ' "$FRONT_DEFAULT"
+        IFS= read -r FRONT_ANSWER || FRONT_ANSWER=
+        case "${FRONT_ANSWER:-$FRONT_DEFAULT}" in
+            y|Y|yes|YES)
+                # Upgrade the runtime guard before writing config that uses it.
+                GUARD="${KLIPPER_DIR:-/usr/share/klipper}/klippy/extras/k2_cartographer_scan_guard.py"
+                grep -q 'FRONT_LIMIT = -6.0' "$GUARD" 2>/dev/null || {
+                    echo 'ERROR: apply the Cartographer mesh-front migration first; no settings changed' >&2
+                    exit 1
+                }
+                awk -v value="$STOCK_MIN" 'BEGIN {
+                    exit !(value ~ /^[-+]?[0-9]+([.][0-9]+)?$/ && value + 0 <= -6)
+                }' || {
+                    echo 'ERROR: stock Y travel does not permit -6 mm; no settings changed' >&2
+                    exit 1
+                }
+                FRONT_TRAVEL=6
+                ;;
+            n|N|no|NO) ;;
+            *) echo 'ERROR: answer y or n; no settings changed' >&2; exit 1 ;;
+        esac
+        ;;
+esac
+
 CUSTOM_X="${CUSTOM_X:-}"
 CUSTOM_Y="${CUSTOM_Y:-}"
 CUSTOM_MESH_MIN="${CUSTOM_MESH_MIN:-}"
@@ -161,7 +198,7 @@ CUSTOM_STEPPER="${CUSTOM_STEPPER:-baseline}"
 NEW_CFG="${OVERRIDES_CFG}.new"
 trap 'rm -f "$NEW_CFG"' EXIT HUP INT TERM
 
-awk -v profile="$PROFILE" -v stock_endstop="$STOCK_ENDSTOP" -v stock_min="$STOCK_MIN" \
+awk -v profile="$PROFILE" -v front_travel="$FRONT_TRAVEL" -v stock_endstop="$STOCK_ENDSTOP" -v stock_min="$STOCK_MIN" \
     -v custom_x="$CUSTOM_X" -v custom_y="$CUSTOM_Y" \
     -v custom_mesh_min="$CUSTOM_MESH_MIN" -v custom_mesh_max="$CUSTOM_MESH_MAX" \
     -v custom_stepper="$CUSTOM_STEPPER" '
@@ -172,22 +209,26 @@ function emit_values(section) {
         print "y_offset: 36"
     } else if (profile == "jimmyv_legacy" && section == "[bed_mesh]") {
         print "# cartographer-offset-setup: JimmyV legacy mount"
-        print "mesh_min: 5, 36"
+        print "mesh_min: 5, " 36 - front_travel
         print "mesh_max: 345, 340"
     } else if (profile == "jimmyv_final_12" && section == "[cartographer]") {
         print "# cartographer-offset-setup: JimmyV final mount without 3DO camera"
         print "y_offset: 12"
     } else if (profile == "jimmyv_final_12" && section == "[bed_mesh]") {
         print "# cartographer-offset-setup: JimmyV final mount without 3DO camera"
-        print "mesh_min: 5, 12"
+        print "mesh_min: 5, " 12 - front_travel
         print "mesh_max: 345, 340"
     } else if (profile == "jimmyv_final_17" && section == "[cartographer]") {
         print "# cartographer-offset-setup: JimmyV final mount with 3DO camera"
         print "y_offset: 17"
     } else if (profile == "jimmyv_final_17" && section == "[bed_mesh]") {
         print "# cartographer-offset-setup: JimmyV final mount with 3DO camera"
-        print "mesh_min: 5, 17"
+        print "mesh_min: 5, " 17 - front_travel
         print "mesh_max: 345, 340"
+    } else if (profile ~ /^jimmyv_/ && front_travel > 0 && section == "[k2_cartographer_scan_guard]") {
+        print "# cartographer-offset-setup: mesh-only front travel"
+        print "mount_profile: " profile
+        print "mesh_front_travel: " front_travel
     } else if ((profile == "jimmyv_legacy" || profile == "jimmyv_final_12" || profile == "jimmyv_final_17") && section == "[stepper_y]") {
         print "# cartographer-offset-setup: restore stock printer.cfg values"
         print "position_endstop: " stock_endstop
@@ -210,6 +251,7 @@ function is_managed_key(section, line) {
     if (section == "[cartographer]" && line ~ /^[ \t]*[xy]_offset[ \t]*:/) return 1
     if (section == "[bed_mesh]" && line ~ /^[ \t]*mesh_(min|max)[ \t]*:/) return 1
     if (section == "[stepper_y]" && line ~ /^[ \t]*position_(endstop|min)[ \t]*:/) return 1
+    if (section == "[k2_cartographer_scan_guard]" && line ~ /^[ \t]*(mount_profile|mesh_front_travel)[ \t]*:/) return 1
     return 0
 }
 /^\[/ {
@@ -234,6 +276,11 @@ END {
             print "[bed_mesh]"
             emit_values("[bed_mesh]")
         }
+        if (profile ~ /^jimmyv_/ && front_travel > 0 && !("[k2_cartographer_scan_guard]" in seen)) {
+            print ""
+            print "[k2_cartographer_scan_guard]"
+            emit_values("[k2_cartographer_scan_guard]")
+        }
         if (!("[stepper_y]" in seen) && (profile == "jimmyv_legacy" || profile == "jimmyv_final_12" || profile == "jimmyv_final_17" || custom_stepper == "stock")) {
             print ""
             print "[stepper_y]"
@@ -256,7 +303,7 @@ if [ "$PROFILE" = "jamin" ] || { [ "$PROFILE" = "custom" ] && [ "$CUSTOM_STEPPER
     }
     /^\[/ {
         flush_section()
-        drop_if_empty = ($0 == "[cartographer]" || $0 == "[stepper_y]")
+        drop_if_empty = ($0 == "[cartographer]" || $0 == "[stepper_y]" || $0 == "[k2_cartographer_scan_guard]")
         buffered = $0 ORS
         next
     }

@@ -4,6 +4,7 @@
 
 migration_catalog() {
     cat <<'EOF'
+cartographer-jimmyv-mesh-front-travel-v1|cartographer|is_cartographer|Install a mesh-scoped Y=-6 guard; enable only through JimmyV mount setup after confirming spacer removal and physical clearance
 start-print-managed-backups-v1|cartographer-plate-workflow|is_carto_plate_workflow|Stop retaining redundant backups of installer-managed START_PRINT wrappers
 material-z-managed-backups-v1|material-z-offsets|is_material_z_offsets|Stop retaining redundant backups of installer-managed START_PRINT files
 save-config-cxsave-retention-v1|save-config-restart|is_save_config_restart|Clear completed automatic saves, skip unchanged writes, and retain only five printer config backups

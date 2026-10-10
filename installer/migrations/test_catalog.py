@@ -74,6 +74,14 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_jimmyv_mesh_front_guard_is_offered_once_to_cartographer_only(self):
+        update_id = "cartographer-jimmyv-mesh-front-travel-v1"
+        catalog_ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, catalog_ids)
+        self.assertEqual(recommended({"cartographer"}, catalog_ids - {update_id}),
+                         {"cartographer"})
+        self.assertEqual(recommended({"cartographer"}, catalog_ids), set())
+        self.assertEqual(recommended({"macros"}, catalog_ids - {update_id}), set())
     def test_nozzle_usb_boot_fix_is_offered_after_v1_and_only_once(self):
         update_id = "nozzle-usb-cartographer-boot-dependencies-v2"
         catalog_ids = {entry[0] for entry in entries()}

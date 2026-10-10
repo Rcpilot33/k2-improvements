@@ -97,6 +97,39 @@ the same key is not already present in `overrides.cfg`.
 
 ## Preservation and safety
 
+### Optional mesh-only front travel (hardware validation pending)
+
+Each JimmyV preset now offers a separate clearance confirmation. It defaults
+to **off**. Enable it only after removing the Y-homing spacers and verifying
+that the installed toolhead/mount has physical clearance to nozzle **Y=-6 mm**.
+Apply the Cartographer `cartographer-jimmyv-mesh-front-travel-v1` migration
+before enabling it on an existing installation.
+
+With confirmation, the picker writes the exact JimmyV profile and
+`mesh_front_travel: 6` to `[k2_cartographer_scan_guard]` in `overrides.cfg`.
+The mesh minimum becomes `5, 30` for legacy, `5, 6` for final/no-3DO, or
+`5, 11` for final/3DO. The preset mesh maximum stays `345, 340`; speed, grid,
+and unrelated user settings are preserved. Reapplying the same enabled preset keeps the confirmation;
+answer **n** to disable it and restore that preset's original mesh minimum.
+Jamin and Custom do not offer the extension and remove any prior opt-in.
+
+The guard temporarily permits nozzle Y down to -6 only inside the actual
+Cartographer **scan** mesh handler. This covers manual `BED_MESH_CALIBRATE`,
+adaptive start-print scans, and scans created by `MESH_IF_NEEDED`. It uses
+Creality's runtime setter for both Python and native motion boundaries; the
+scan-path planner sees the same floor, preventing rounded turns below -6.
+It does not change homing coordinates, Y=0, permanent jog/print limits, X,
+rear Y, or Z limits. Non-scan methods do not receive extended travel.
+
+Successful scans return to at least the ordinary front boundary before
+restoring the captured limits. Errors/cancellation/disconnection restore the
+limits without attempting recovery motion or marking disabled motors homed.
+No general-purpose boundary-unlock command is provided. Runtime status
+`k2_cartographer_scan_guard` publishes `mesh_front_active` and actual `y_limits`
+for validation. If an aborted scan leaves the head at negative Y, do not
+restart printing blindly; inspect the failure and return safely inside the
+ordinary boundary after resolving it.
+
 - Existing unrelated settings, including `[bed_mesh] probe_count`, are kept.
 - The picker can be rerun at any time to switch profiles.
 - Reapplying the active profile is a no-op unless a JimmyV profile still has
