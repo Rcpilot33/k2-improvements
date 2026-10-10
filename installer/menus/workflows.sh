@@ -59,9 +59,10 @@ show_return_to_stock_planned() {
 menu_cartographer_tools() {
     while :; do
         clear
-        local chw cfw usb offset normal_flash_state dfu_flash_state
-        chw="$(detect_carto_hw)"
-        cfw="$(detect_carto_fw)"
+        local chw cfw usb offset normal_flash_state dfu_flash_state carto_version
+        carto_version="$(_detect_carto_version_string || true)"
+        chw="$(detect_carto_hw "$carto_version")"
+        cfw="$(detect_carto_fw "$carto_version")"
         usb="$(detect_carto_usb_state)"
         offset="$(detect_carto_offset_label)"
 

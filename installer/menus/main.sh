@@ -70,15 +70,23 @@ detect_remote_commit_state() {
 }
 
 main_menu() {
-    local remote_commit_state checked_revision
+    local remote_commit_state checked_revision carto_version refresh_probe
     remote_commit_state=not_checked
     checked_revision=
+    carto_version=
+    refresh_probe=yes
     while :; do
         clear
         local fw chw cfw setup branch commit pending_updates update_state
         fw="$(detect_printer_fw)"
-        chw="$(detect_carto_hw)"
-        cfw="$(detect_carto_fw)"
+        if [ "$refresh_probe" = yes ]; then
+            carto_version=
+            if is_cartographer; then
+                carto_version="$(_detect_carto_version_string || true)"
+            fi
+        fi
+        chw="$(detect_carto_hw "$carto_version")"
+        cfw="$(detect_carto_fw "$carto_version")"
         setup="$(detect_install_profile)"
         branch="$(detect_installer_branch)"
         commit="$(detect_installer_commit)"
@@ -126,6 +134,7 @@ main_menu() {
         ui_menu_item 7 'Check for installer updates'
         printf '\n  0. Exit\n\nSelect [0-7]: '
         read_prompt c
+        refresh_probe=yes
         case "$c" in
             1) show_status ;;
             2) menu_install_paths ;;
@@ -137,6 +146,9 @@ main_menu() {
                 printf '\nChecking installer updates for %s (up to 5 seconds)...\n' "$branch"
                 remote_commit_state="$(detect_remote_commit_state)"
                 checked_revision="$branch:$commit"
+                # Checking GitHub does not change probe firmware. Reuse this
+                # panel's metadata instead of repeating an offline MCU query.
+                refresh_probe=no
                 ;;
             0|q|Q) exit 0 ;;
             *) ;;

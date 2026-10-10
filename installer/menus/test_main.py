@@ -14,16 +14,20 @@ BASH = shutil.which("bash") or "C:/Program Files/Git/bin/bash.exe"
 
 @unittest.skipUnless(Path(BASH).exists(), "bash required")
 class MainMenuTests(unittest.TestCase):
-    def run_menu(self, choices, results=("current",), pending=0, change=""):
+    def run_menu(self, choices, results=("current",), pending=0, change="", cartographer=False,
+                 version="CARTOGRAPHER v4 6.2.0"):
         with tempfile.TemporaryDirectory(prefix="k2-main-menu-") as directory:
             base = Path(directory)
             for name, contents in (("branch", "integration-testing\n"),
                                    ("commit", "abc1234\n"),
-                                   ("results", "\n".join(results) + "\n"), ("calls", "")):
+                                   ("results", "\n".join(results) + "\n"), ("calls", ""),
+                                   ("version", version),
+                                   ("version_calls", "")):
                 (base / name).write_text(contents, newline="\n")
             script = '''
 set -eu
 . "$COMMON_SCRIPT"
+. "$DETECT_SCRIPT"
 . "$MAIN_SCRIPT"
 clear() { :; }
 c_red() { printf '%s' "$1"; }
@@ -34,10 +38,12 @@ c_dim() { printf '%s' "$1"; }
 ui_rule() { :; }
 ui_menu_item() { printf 'MENU:%s:%s:%s\\n' "$1" "$2" "${3:-}"; }
 detect_printer_fw() { echo 1.1.7.0; }
-detect_carto_hw() { echo V4; }
-detect_carto_fw() { echo '6.2.0 (Full)'; }
+_detect_carto_version_string() {
+    echo lookup >> "$FIXTURES/version_calls"
+    cat "$FIXTURES/version"
+}
 detect_install_profile() { echo 'stock probe / no-Cartographer'; }
-is_cartographer() { return 1; }
+is_cartographer() { [ "$CARTOGRAPHER" = yes ]; }
 detect_installer_branch() { cat "$FIXTURES/branch"; }
 detect_installer_commit() { cat "$FIXTURES/commit"; }
 migration_pending_component_count() { echo "$PENDING"; }
@@ -49,7 +55,11 @@ detect_remote_commit_state() {
 }
 show_status() { :; }
 menu_install_paths() { echo another-branch > "$FIXTURES/branch"; }
-menu_cartographer_tools() { :; }
+menu_cartographer_tools() {
+    if [ "$CHANGE" = probe ]; then
+        echo 'CARTOGRAPHER v4 6.0.0 Lite' > "$FIXTURES/version"
+    fi
+}
 menu_extras() { :; }
 menu_maintenance() { :; }
 menu_update_installer() {
@@ -66,9 +76,12 @@ main_menu
                 timeout=10, env=dict(os.environ,
                     COMMON_SCRIPT=(ROOT / "installer/lib/common.sh").as_posix(),
                     MAIN_SCRIPT=(ROOT / "installer/menus/main.sh").as_posix(),
-                    FIXTURES=base.as_posix(), PENDING=str(pending), CHANGE=change),
+                    DETECT_SCRIPT=(ROOT / "installer/detect/cartographer.sh").as_posix(),
+                    FIXTURES=base.as_posix(), PENDING=str(pending), CHANGE=change,
+                    CARTOGRAPHER='yes' if cartographer else 'no'),
             )
             output = result.stdout.decode()
+            self.version_calls = (base / 'version_calls').read_text().splitlines()
             self.assertEqual(result.returncode, 0, result.stderr.decode())
             states = [line.split(":", 3)[3] for line in output.splitlines()
                       if line.startswith("MENU:6:")]
@@ -80,6 +93,22 @@ main_menu
         self.assertEqual(calls, [])
         self.assertIn("MENU:7:Check for installer updates:", output)
         self.assertIn("Select [0-7]:", output)
+        self.assertEqual(self.version_calls, [])
+
+    def test_probe_lookup_is_shared_and_not_repeated_by_option_seven(self):
+        for version, label in (("CARTOGRAPHER v4 6.2.0", "V4 / firmware 6.2.0 (Full)"),
+                               ("", "unknown / firmware unknown")):
+            with self.subTest(version=version):
+                _, _, output = self.run_menu("7\n7\n0\n", ('current', 'current'),
+                                             cartographer=True, version=version)
+                self.assertEqual(self.version_calls, ['lookup'])
+                self.assertEqual(output.count(label), 3)
+
+    def test_return_from_probe_tools_refreshes_metadata_after_flash(self):
+        _, _, output = self.run_menu("7\n3\n0\n", cartographer=True, change='probe')
+        self.assertEqual(self.version_calls, ['lookup', 'lookup'])
+        self.assertIn('V4 / firmware 6.2.0 (Full)', output)
+        self.assertIn('V4 / firmware 6.0.0 (Lite)', output)
 
     def test_manual_check_updates_option_six_without_hiding_pending_actions(self):
         for pending in (0, 2):

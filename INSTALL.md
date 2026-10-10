@@ -187,6 +187,13 @@ update status. Pending component actions remain visible alongside that result.
 A failed or timed-out check shows `CHECK FAILED`, not an up-to-date result.
 Changing the local branch or commit resets the check status to `NOT CHECKED`.
 
+Cartographer hardware and firmware labels share one read-only lookup per panel.
+When live MCU metadata is unavailable, only the last and first 256 KiB of
+`klippy.log` are searched; a large print log never triggers a full-file scan.
+If neither section contains a version, the labels show `unknown`. Item 7 reuses
+the current probe labels; returning from probe tools refreshes them. These
+display changes require no component migration or printer restart.
+
 States are displayed as words so they remain meaningful without terminal
 color:
 

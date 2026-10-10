@@ -3,10 +3,14 @@
 
 show_status() {
     clear
-    local fw chw cfw profile profile_display
+    local fw chw cfw profile profile_display carto_version
     fw="$(detect_printer_fw)"
-    chw="$(detect_carto_hw)"
-    cfw="$(detect_carto_fw)"
+    carto_version=
+    if is_cartographer; then
+        carto_version="$(_detect_carto_version_string || true)"
+    fi
+    chw="$(detect_carto_hw "$carto_version")"
+    cfw="$(detect_carto_fw "$carto_version")"
     profile="$(detect_install_profile)"
 
     case "$profile" in
