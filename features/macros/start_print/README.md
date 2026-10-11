@@ -17,6 +17,15 @@ the chamber target or performing the normal successful-wait bed restoration.
 Other macros retain their stock behavior. Older or unknown firmware versions
 do not load the helper.
 
+On no-Cartographer PR Touch printers, the helper also makes `MESH_IF_NEEDED`
+and `_CREATE_MESH` cancel-aware. Machine and mesh heat-soak dwells in those
+managed templates wait on the host with cancellation checks at most one second
+apart, instead of queueing a long MCU dwell that delays end-print cleanup.
+Cancel during their nested M191 wait skips the remaining soak, tilt, mesh, and
+print-start commands. Native probing/cleaning commands, offset cleanup, and
+Cartographer's existing execution path are unchanged. A move already executing
+may still finish before cancellation takes control.
+
 Replaces the stock start macro with a temperature-aware workflow that:
 
 - heats the bed and optionally soaks the complete machine after its requested
