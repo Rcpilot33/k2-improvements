@@ -69,6 +69,12 @@ It separates:
 - `native_fields`: a few scalar wrapper fields, if exposed by this firmware;
   `null` means unavailable, not zero.
 
+If the opt-in [native touchscreen compatibility](../prtouch-touchscreen/README.md)
+is installed, `probe_reported_offset` instead represents inverse live adjustment
+for the factory display/cleanup contract. Use `probe_calibrate_offset` and
+`pending_save_offset` for staged calibration; `probe_loaded_offset` and file
+entries still identify loaded/saved calibration. The tracer itself is unchanged.
+
 `config_set_before` records the requested `[prtouch_v3] z_offset` and Python
 caller stack. `config_set_after` shows resulting staged state. Commands such
 as homing, preparation, offset application, restore-state, config save, and
