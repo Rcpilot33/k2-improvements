@@ -1,8 +1,8 @@
 # Shared Fluidd settings controls
 
 This internal installer carries one verified Jacob Fluidd `v1.37.4` overlay for
-the core Bed Assist editor and the optional Global Carto Scan/Touch and Material
-Z-offset editors. Keeping all three dialogs in one archive prevents one feature
+the core Bed Assist editor and the optional Global Carto Scan/Touch, Global
+No-Carto, and Material Z-offset editors. Keeping all four dialogs in one archive prevents one feature
 from replacing another feature's UI.
 
 The normal Fluidd core installer and update source are unchanged. The overlay

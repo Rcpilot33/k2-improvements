@@ -174,7 +174,7 @@ has_settings_ui_overlay() {
     case "$version" in
         ''|*[!0-9]*) return 1 ;;
     esac
-    [ "$version" -ge 3 ]
+    [ "$version" -ge "${1:-3}" ]
 }
 is_global_touch_offsets() {
     local custom="$PRINTER_CFG_DIR/custom"
@@ -193,7 +193,8 @@ is_global_prtouch_offsets() {
     [ -e "$extras/k2_prtouch_touchscreen.py" ] &&
     grep -q '^\[include global_prtouch_offsets\.cfg\]$' "$custom/main.cfg" 2>/dev/null &&
     grep -q '^\[include prtouch_touchscreen\.cfg\]$' "$custom/main.cfg" 2>/dev/null &&
-    grep -q 'K2_PRTOUCH_GLOBAL_Z_APPLY' "$custom/start_print.cfg" 2>/dev/null
+    grep -q 'K2_PRTOUCH_GLOBAL_Z_APPLY' "$custom/start_print.cfg" 2>/dev/null &&
+    has_settings_ui_overlay 8
 }
 is_material_z_offsets() {
     local custom="$PRINTER_CFG_DIR/custom"

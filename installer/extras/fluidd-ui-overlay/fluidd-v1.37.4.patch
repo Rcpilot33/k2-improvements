@@ -1,71 +1,235 @@
 diff --git a/components.d.ts b/components.d.ts
-index 18415da..7a49e7c 100644
+index 18415da..885bd4e 100644
 --- a/components.d.ts
 +++ b/components.d.ts
-@@ -61,10 +61,13 @@ declare module 'vue' {
-     BedScrewsAdjustDialog: typeof import('./src/components/common/BedScrewsAdjustDialog.vue')['default']
-     CollapsableCard: typeof import('./src/components/common/CollapsableCard.vue')['default']
+@@ -63,2 +63,4 @@ declare module 'vue' {
      FlashMessage: typeof import('./src/components/common/FlashMessage.vue')['default']
++    GlobalPrTouchOffsetsDialog: typeof import('./src/components/common/GlobalPrTouchOffsetsDialog.vue')['default']
 +    GlobalTouchOffsetsDialog: typeof import('./src/components/common/GlobalTouchOffsetsDialog.vue')['default']
      KeyboardShortcutsDialog: typeof import('./src/components/common/KeyboardShortcutsDialog.vue')['default']
-     KlippyStatusCard: typeof import('./src/components/common/KlippyStatusCard.vue')['default']
+@@ -66,3 +68,5 @@ declare module 'vue' {
      Login: typeof import('./src/components/common/Login.vue')['default']
 +    M191SettingsDialog: typeof import('./src/components/common/M191SettingsDialog.vue')['default']
      ManualProbeDialog: typeof import('./src/components/common/ManualProbeDialog.vue')['default']
 +    MaterialZOffsetsDialog: typeof import('./src/components/common/MaterialZOffsetsDialog.vue')['default']
      PeripheralsDialog: typeof import('./src/components/common/PeripheralsDialog.vue')['default']
-     PromiseWrapper: typeof import('./src/components/common/PromiseWrapper.vue')['default']
-     RegisterServiceWorker: typeof import('./src/components/common/RegisterServiceWorker.vue')['default']
-@@ -82,6 +85,8 @@ declare module 'vue' {
-     VApp: typeof import('vuetify/lib')['VApp']
-     VAppBar: typeof import('vuetify/lib')['VAppBar']
+@@ -84,2 +88,4 @@ declare module 'vue' {
      VBadge: typeof import('vuetify/lib')['VBadge']
 +    VBreadcrumbs: typeof import('vuetify/lib')['VBreadcrumbs']
 +    VBreadcrumbsItem: typeof import('vuetify/lib')['VBreadcrumbsItem']
      VBtn: typeof import('vuetify/lib')['VBtn']
-     VBtnToggle: typeof import('vuetify/lib')['VBtnToggle']
-     VCard: typeof import('vuetify/lib')['VCard']
+diff --git a/package.json b/package.json
+index 96fae2a..fcc3cf7 100644
+--- a/package.json
++++ b/package.json
+@@ -2,3 +2,3 @@
+   "name": "fluidd",
+-  "version": "1.37.1",
++  "version": "1.37.4",
+   "private": true,
 diff --git a/public/k2-ui-overlay-support.txt b/public/k2-ui-overlay-support.txt
 new file mode 100644
-index 0000000..7f8f011
+index 0000000..45a4fb7
 --- /dev/null
 +++ b/public/k2-ui-overlay-support.txt
 @@ -0,0 +1 @@
-+7
++8
 diff --git a/src/App.vue b/src/App.vue
-index 2344eab..7a14b40 100644
+index 2344eab..6d65221 100644
 --- a/src/App.vue
 +++ b/src/App.vue
-@@ -68,6 +68,9 @@
-         <updating-dialog />
-         <spool-selection-dialog />
+@@ -70,2 +70,6 @@
          <action-command-prompt-dialog />
 +        <global-touch-offsets-dialog />
++        <global-pr-touch-offsets-dialog />
 +        <material-z-offsets-dialog />
 +        <m191-settings-dialog />
          <keyboard-shortcuts-dialog />
-         <manual-probe-dialog />
-         <bed-screws-adjust-dialog />
-@@ -100,6 +103,9 @@ import type { FlashMessage } from '@/types'
- import { getFilesFromDataTransfer, hasFilesInDataTransfer } from '@/util/file-system-entry'
- import type { ThemeConfig } from '@/store/config/types'
+@@ -102,2 +106,6 @@ import type { ThemeConfig } from '@/store/config/types'
  import ActionCommandPromptDialog from '@/components/common/ActionCommandPromptDialog.vue'
 +import GlobalTouchOffsetsDialog from '@/components/common/GlobalTouchOffsetsDialog.vue'
++import GlobalPrTouchOffsetsDialog from '@/components/common/GlobalPrTouchOffsetsDialog.vue'
 +import MaterialZOffsetsDialog from '@/components/common/MaterialZOffsetsDialog.vue'
 +import M191SettingsDialog from '@/components/common/M191SettingsDialog.vue'
  import KeyboardShortcutsDialog from '@/components/common/KeyboardShortcutsDialog.vue'
- import { eventTargetIsContentEditable, keyboardEventToKeyboardShortcut } from '@/util/event-helpers'
- import MmuEditTtgMapDialog from './components/widgets/mmu/MmuEditTtgMapDialog.vue'
-@@ -117,6 +123,9 @@ import MmuEditTtgMapDialog from './components/widgets/mmu/MmuEditTtgMapDialog.vu
-     FileSystemDownloadDialog,
-     FileSystemUploadDialog,
+@@ -119,2 +127,6 @@ import MmuEditTtgMapDialog from './components/widgets/mmu/MmuEditTtgMapDialog.vu
      ActionCommandPromptDialog,
 +    GlobalTouchOffsetsDialog,
++    GlobalPrTouchOffsetsDialog,
 +    MaterialZOffsetsDialog,
 +    M191SettingsDialog,
      KeyboardShortcutsDialog,
-     MmuEditTtgMapDialog
-   }
+diff --git a/src/components/common/GlobalPrTouchOffsetsDialog.vue b/src/components/common/GlobalPrTouchOffsetsDialog.vue
+new file mode 100644
+index 0000000..891eb09
+--- /dev/null
++++ b/src/components/common/GlobalPrTouchOffsetsDialog.vue
+@@ -0,0 +1,165 @@
++<template>
++  <app-dialog
++    v-model="open"
++    title="Global No-Carto Z Offsets"
++    cancel-button-text="Cancel"
++    save-button-text="Save"
++    max-width="450"
++    @cancel="cancel"
++    @save="save"
++  >
++    <v-card-text>
++      <div class="text-body-2 mb-3">
++        Select an offset and increment. Bed down makes the offset more negative.
++        These controls edit saved values, not live bed position.
++      </div>
++
++      <v-row
++        v-for="surface in dialog.surfaces"
++        :key="surface.index"
++        dense
++      >
++        <v-col>
++          <app-btn
++            :color="dialog.selectedIndex === surface.index ? 'primary' : undefined"
++            :outlined="dialog.selectedIndex !== surface.index"
++            block
++            class="surface-button"
++            @click="selectSurface(surface.index)"
++          >
++            <span class="surface-name">{{ surface.name }}{{ surface.inherited ? ' (default)' : '' }}</span>
++            <v-spacer />
++            <span class="offset-value">{{ surface.value.toFixed(3) }} mm</span>
++          </app-btn>
++        </v-col>
++      </v-row>
++
++      <v-row dense>
++        <v-col>
++          <app-btn-toggle
++            v-model="selectedIncrement"
++            mandatory
++            class="d-flex"
++          >
++            <app-btn
++              v-for="increment in increments"
++              :key="increment"
++              :value="increment"
++              class="flex-grow-1"
++              small
++            >
++              {{ increment.toFixed(3) }}
++            </app-btn>
++          </app-btn-toggle>
++        </v-col>
++      </v-row>
++
++      <v-row dense>
++        <v-col>
++          <app-btn
++            color="primary"
++            block
++            @click="adjust('up')"
++          >
++            Bed up / closer
++          </app-btn>
++        </v-col>
++        <v-col>
++          <app-btn
++            color="secondary"
++            block
++            @click="adjust('down')"
++          >
++            Bed down / farther
++          </app-btn>
++        </v-col>
++      </v-row>
++
++      <v-row
++        v-if="selectedSurface && selectedSurface.name !== 'DEFAULT'"
++        dense
++      >
++        <v-col>
++          <app-btn
++            block
++            outlined
++            @click="inherit"
++          >
++            Use DEFAULT
++          </app-btn>
++        </v-col>
++      </v-row>
++    </v-card-text>
++  </app-dialog>
++</template>
++
++<script lang="ts">
++import { Component, Mixins } from 'vue-property-decorator'
++import StateMixin from '@/mixins/state'
++
++@Component({})
++export default class GlobalPrTouchOffsetsDialog extends Mixins(StateMixin) {
++  readonly increments = [0.005, 0.010, 0.025, 0.050]
++
++  get dialog () {
++    return this.$typedState.console.globalPrTouchOffsetsDialog
++  }
++
++  get selectedSurface () {
++    return this.dialog.surfaces.find(surface => surface.index === this.dialog.selectedIndex)
++  }
++
++  get open (): boolean {
++    return this.dialog.open
++  }
++
++  set open (value: boolean) {
++    if (!value) this.cancel()
++  }
++
++  get selectedIncrement (): number {
++    return this.dialog.increment
++  }
++
++  set selectedIncrement (value: number) {
++    if (this.increments.includes(value) && value !== this.dialog.increment) {
++      this.sendGcode(`K2_PRTOUCH_GLOBAL_Z_STEP VALUE=${value.toFixed(3)}`)
++    }
++  }
++
++  selectSurface (index: number) {
++    this.sendGcode(`K2_PRTOUCH_GLOBAL_Z_SELECT INDEX=${index}`)
++  }
++
++  adjust (direction: 'up' | 'down') {
++    this.sendGcode(`K2_PRTOUCH_GLOBAL_Z_ADJUST DIRECTION=${direction}`)
++  }
++
++  inherit () {
++    this.sendGcode('K2_PRTOUCH_GLOBAL_Z_INHERIT')
++  }
++
++  cancel () {
++    this.sendGcode('K2_PRTOUCH_GLOBAL_Z_CANCEL')
++  }
++
++  save () {
++    this.sendGcode('K2_PRTOUCH_GLOBAL_Z_SAVE')
++  }
++}
++</script>
++
++<style lang="scss" scoped>
++.surface-button {
++  text-transform: none;
++}
++.surface-name {
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++.offset-value {
++  flex-shrink: 0;
++  margin-left: 8px;
++}
++</style>
 diff --git a/src/components/common/GlobalTouchOffsetsDialog.vue b/src/components/common/GlobalTouchOffsetsDialog.vue
 new file mode 100644
 index 0000000..f2d7eb5
@@ -753,31 +917,45 @@ index 0000000..b904777
 +}
 +</script>
 diff --git a/src/store/console/actions.ts b/src/store/console/actions.ts
-index 90385cb..e1d15c9 100644
+index 90385cb..eee584d 100644
 --- a/src/store/console/actions.ts
 +++ b/src/store/console/actions.ts
-@@ -1,6 +1,6 @@
- import type { ActionTree } from 'vuex'
+@@ -2,3 +2,3 @@ import type { ActionTree } from 'vuex'
  import { Globals } from '@/globals'
 -import type { ConsoleEntry, ConsoleFilter, ConsoleState, PromptDialogButton, PromptDialogItemButton, PromptDialogItemText } from './types'
 +import type { ConsoleEntry, ConsoleFilter, ConsoleState, GlobalTouchOffsetModel, M191Setting, MaterialZOffset, PromptDialogButton, PromptDialogItemButton, PromptDialogItemText } from './types'
  import type { RootState } from '../types'
- import { SocketActions } from '@/api/socketActions'
+@@ -6,2 +6,3 @@ import { SocketActions } from '@/api/socketActions'
  import DOMPurify from 'dompurify'
-@@ -57,6 +57,9 @@ export const actions = {
-     commit('setConsoleEntry', payload)
- 
++import { parsePrTouchGlobalAction } from '@/util/prtouch-global-offsets'
+ import { takeRightWhile } from 'lodash-es'
+@@ -59,2 +60,6 @@ export const actions = {
      dispatch('onUpdatePromptDialog', payload)
 +    dispatch('onUpdateGlobalTouchOffsetsDialog', payload)
++    dispatch('onUpdateGlobalPrTouchOffsetsDialog', payload)
 +    dispatch('onUpdateMaterialZOffsetsDialog', payload)
 +    dispatch('onUpdateM191SettingsDialog', payload)
    },
+@@ -162,2 +167,135 @@ export const actions = {
  
-   /**
-@@ -160,6 +163,121 @@ export const actions = {
-     }
-   },
- 
++  async onUpdateGlobalPrTouchOffsetsDialog ({ commit }, payload: ConsoleEntry) {
++    if (payload.type !== 'action') return
++    const action = parsePrTouchGlobalAction(payload.message)
++    if (!action) return
++    switch (action.type) {
++      case 'begin':
++        commit('setBeginGlobalPrTouchOffsetsDialog', action)
++        break
++      case 'surface':
++        commit('setGlobalPrTouchSurface', action.surface)
++        break
++      case 'show':
++      case 'end':
++        commit('setGlobalPrTouchOffsetsDialogOpen', action.type === 'show')
++        break
++    }
++  },
++
 +  async onUpdateGlobalTouchOffsetsDialog ({ commit }, payload: ConsoleEntry) {
 +    const parsedMessage = (
 +      payload.type === 'action' &&
@@ -894,25 +1072,36 @@ index 90385cb..e1d15c9 100644
 +  },
 +
    /**
-    * Klipper provides us with a list of available gcode commands
-    * based on the current configuration.
 diff --git a/src/store/console/mutations.ts b/src/store/console/mutations.ts
-index 400e40b..fe92e19 100644
+index 400e40b..057d188 100644
 --- a/src/store/console/mutations.ts
 +++ b/src/store/console/mutations.ts
-@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
- import type { MutationTree } from 'vuex'
- import { defaultState } from './state'
+@@ -5,4 +5,5 @@ import { defaultState } from './state'
  import { Globals } from '@/globals'
 -import type { ConsoleEntry, ConsoleFilter, ConsoleState, PromptDialogItemButton, PromptDialogItem } from './types'
 +import type { ConsoleEntry, ConsoleFilter, ConsoleState, GlobalTouchOffsetModel, M191Setting, MaterialZOffset, PromptDialogItemButton, PromptDialogItem } from './types'
  import { escapeRegExp } from 'lodash-es'
++import type { GlobalPrTouchSurface } from './types'
  
- const compileExpression = (filter: ConsoleFilter): RegExp => {
-@@ -71,6 +71,56 @@ export const mutations = {
-     state.promptDialog.open = payload
-   },
+@@ -73,2 +74,69 @@ export const mutations = {
  
++  setBeginGlobalPrTouchOffsetsDialog (state, payload: { selectedIndex: number; increment: number }) {
++    state.globalPrTouchOffsetsDialog = {
++      open: state.globalPrTouchOffsetsDialog.open,
++      selectedIndex: payload.selectedIndex,
++      increment: payload.increment,
++      surfaces: []
++    }
++  },
++
++  setGlobalPrTouchSurface (state, payload: GlobalPrTouchSurface) {
++    state.globalPrTouchOffsetsDialog.surfaces.push(payload)
++  },
++
++  setGlobalPrTouchOffsetsDialogOpen (state, payload: boolean) {
++    state.globalPrTouchOffsetsDialog.open = payload
++  },
++
 +  setResetGlobalTouchOffsetsDialog (state) {
 +    state.globalTouchOffsetsDialog = {
 +      open: false,
@@ -964,20 +1153,22 @@ index 400e40b..fe92e19 100644
 +  },
 +
    /**
-    * Defines the list of available commands
-    */
 diff --git a/src/store/console/state.ts b/src/store/console/state.ts
-index 417f8d8..2df40bb 100644
+index 417f8d8..bbd3545 100644
 --- a/src/store/console/state.ts
 +++ b/src/store/console/state.ts
-@@ -15,6 +15,19 @@ export const defaultState = (): ConsoleState => {
-       items: [],
-       footerButtons: []
+@@ -17,2 +17,21 @@ export const defaultState = (): ConsoleState => {
      },
 +    globalTouchOffsetsDialog: {
 +      open: false,
 +      mode: 'touch',
 +      models: []
++    },
++    globalPrTouchOffsetsDialog: {
++      open: false,
++      selectedIndex: 0,
++      increment: 0.010,
++      surfaces: []
 +    },
 +    materialZOffsetsDialog: {
 +      open: false,
@@ -988,30 +1179,35 @@ index 417f8d8..2df40bb 100644
 +      settings: []
 +    },
      consoleFilters: [],
-     consoleFiltersRegexp: []
-   }
 diff --git a/src/store/console/types.ts b/src/store/console/types.ts
-index 2eddc92..6ee3a9d 100644
+index 2eddc92..086fa75 100644
 --- a/src/store/console/types.ts
 +++ b/src/store/console/types.ts
-@@ -9,6 +9,9 @@ export interface ConsoleState {
-   autoScroll: boolean;
-   lastCleared: number;
+@@ -1 +1,4 @@
++import type { GlobalPrTouchSurface } from '@/util/prtouch-global-offsets'
++export type { GlobalPrTouchSurface } from '@/util/prtouch-global-offsets'
++
+ export interface ConsoleState {
+@@ -11,2 +14,6 @@ export interface ConsoleState {
    promptDialog: PromptDialog;
 +  globalTouchOffsetsDialog: GlobalTouchOffsetsDialog;
++  globalPrTouchOffsetsDialog: GlobalPrTouchOffsetsDialog;
 +  materialZOffsetsDialog: MaterialZOffsetsDialog;
 +  m191SettingsDialog: M191SettingsDialog;
    consoleFilters: ConsoleFilter[];
-   consoleFiltersRegexp: RegExp[];
- }
-@@ -48,6 +51,46 @@ export interface PromptDialogItemButton extends PromptDialogButton {
-   type: 'button';
- }
+@@ -50,2 +57,49 @@ export interface PromptDialogItemButton extends PromptDialogButton {
  
 +export interface GlobalTouchOffsetModel {
 +  index: number;
 +  name: string;
 +  value: number;
++}
++
++export interface GlobalPrTouchOffsetsDialog {
++  open: boolean;
++  selectedIndex: number;
++  increment: number;
++  surfaces: GlobalPrTouchSurface[];
 +}
 +
 +export interface GlobalTouchOffsetsDialog {
@@ -1049,8 +1245,6 @@ index 2eddc92..6ee3a9d 100644
 +}
 +
  export interface PromptDialogButton {
-   text: string;
-   command?: string;
 diff --git a/src/util/__tests__/global-touch-offsets.spec.ts b/src/util/__tests__/global-touch-offsets.spec.ts
 new file mode 100644
 index 0000000..d03ad0d
@@ -1158,6 +1352,51 @@ index 0000000..8d1dc9a
 +    ])
 +  })
 +})
+diff --git a/src/util/__tests__/prtouch-global-offsets.spec.ts b/src/util/__tests__/prtouch-global-offsets.spec.ts
+new file mode 100644
+index 0000000..be255ea
+--- /dev/null
++++ b/src/util/__tests__/prtouch-global-offsets.spec.ts
+@@ -0,0 +1,39 @@
++import { describe, expect, it } from 'vitest'
++import { parsePrTouchGlobalAction } from '../prtouch-global-offsets'
++
++describe('separate no-Carto global offset action protocol', () => {
++  it('parses selected surface and step', () => {
++    expect(parsePrTouchGlobalAction('// action:prtouch_global_offsets_begin 2|0.005'))
++      .toEqual({ type: 'begin', selectedIndex: 2, increment: 0.005 })
++  })
++
++  it('retains inheritance and all three decimal places', () => {
++    expect(parsePrTouchGlobalAction('// action:prtouch_global_offsets_surface EPOXY|-0.025|1|1'))
++      .toEqual({ type: 'surface', surface: { name: 'EPOXY', value: -0.025, index: 1, inherited: true } })
++    expect(parsePrTouchGlobalAction('// action:prtouch_global_offsets_surface DEFAULT|-0.020|0|0'))
++      .toEqual({ type: 'surface', surface: { name: 'DEFAULT', value: -0.020, index: 0, inherited: false } })
++  })
++
++  it('parses show and end', () => {
++    expect(parsePrTouchGlobalAction('// action:prtouch_global_offsets_show')).toEqual({ type: 'show' })
++    expect(parsePrTouchGlobalAction('// action:prtouch_global_offsets_end')).toEqual({ type: 'end' })
++  })
++
++  it('never consumes Cartographer, material, or generic prompt actions', () => {
++    for (const message of ['// action:global_carto_offsets_begin touch', '// action:material_z_offsets_show', '// action:prompt_show']) {
++      expect(parsePrTouchGlobalAction(message)).toBeUndefined()
++    }
++  })
++
++  it('refuses invalid numeric data, command text, and incomplete messages', () => {
++    for (const message of [
++      'begin -1|0.010', 'begin 0|0.100', 'begin |0.010',
++      'surface DEFAULT|NaN|0|0', 'surface DEFAULT|Infinity|0|0',
++      'surface DEFAULT|5.001|0|0', 'surface DEFAULT|-0.020|0.1|0',
++      'surface DEFAULT;-G28|-0.020|0|0', 'surface DEFAULT|-0.020|0|2',
++      'surface DEFAULT||0|0', 'surface DEFAULT|-0.020|0', 'surface', 'show junk'
++    ]) {
++      expect(parsePrTouchGlobalAction(`// action:prtouch_global_offsets_${message}`)).toBeUndefined()
++    }
++  })
++})
 diff --git a/src/util/global-touch-offsets.ts b/src/util/global-touch-offsets.ts
 new file mode 100644
 index 0000000..7876b4a
@@ -1255,3 +1494,55 @@ index 0000000..78054ba
 +  commands.push('K2_MATERIAL_Z_SAVE')
 +  return commands
 +}
+diff --git a/src/util/prtouch-global-offsets.ts b/src/util/prtouch-global-offsets.ts
+new file mode 100644
+index 0000000..dd3f08d
+--- /dev/null
++++ b/src/util/prtouch-global-offsets.ts
+@@ -0,0 +1,37 @@
++export interface GlobalPrTouchSurface {
++  index: number;
++  name: string;
++  value: number;
++  inherited: boolean;
++}
++
++export type PrTouchGlobalAction =
++  | { type: 'begin'; selectedIndex: number; increment: number }
++  | { type: 'surface'; surface: GlobalPrTouchSurface }
++  | { type: 'show' | 'end' }
++
++export const parsePrTouchGlobalAction = (message: string): PrTouchGlobalAction | undefined => {
++  const parsed = /^\/\/ action:prtouch_global_offsets_([^ ]+)(?: (.+))?$/.exec(message)
++  if (!parsed) return
++  const [, type, param] = parsed
++  if (type === 'show' || type === 'end') {
++    if (param === undefined) return { type }
++    return
++  }
++  const parts = param?.split('|') ?? []
++  if (type === 'begin' && parts.length === 2 && parts.every(part => part.trim())) {
++    const [selectedIndex, increment] = parts.map(Number)
++    if (Number.isSafeInteger(selectedIndex) && selectedIndex >= 0 && [0.005, 0.010, 0.025, 0.050].includes(increment)) {
++      return { type, selectedIndex, increment }
++    }
++  }
++  if (type === 'surface' && parts.length === 4 && parts.every(part => part.trim())) {
++    const [name, valueText, indexText, inheritedText] = parts
++    const value = Number(valueText)
++    const index = Number(indexText)
++    if (/^[A-Z0-9_]{1,64}$/.test(name) && Number.isFinite(value) && Math.abs(value) <= 5 &&
++        Number.isSafeInteger(index) && index >= 0 && ['0', '1'].includes(inheritedText)) {
++      return { type, surface: { name, value, index, inherited: inheritedText === '1' } }
++    }
++  }
++}
+diff --git a/vite.config.inject-version.ts b/vite.config.inject-version.ts
+index d1321fc..424e3b6 100644
+--- a/vite.config.inject-version.ts
++++ b/vite.config.inject-version.ts
+@@ -20,3 +20,3 @@ const writeReleaseInfoFile = async () => {
+     project_name: 'fluidd',
+-    project_owner: 'fluidd-core',
++    project_owner: 'Jacob10383',
+     version: `v${version}`

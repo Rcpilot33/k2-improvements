@@ -21,7 +21,7 @@ class FluiddBundleTests(unittest.TestCase):
             info = json.loads(archive.read("release_info.json"))
             self.assertEqual(info["project_owner"], "Jacob10383")
             self.assertEqual(info["version"], "v1.37.4")
-            self.assertEqual(archive.read("k2-ui-overlay-support.txt").decode().strip(), "7")
+            self.assertEqual(archive.read("k2-ui-overlay-support.txt").decode().strip(), "8")
             self.assertNotIn("global-touch-offsets-support.txt", archive.namelist())
 
     def test_entry_points_reference_files_in_the_archive(self):
@@ -48,6 +48,10 @@ class FluiddBundleTests(unittest.TestCase):
             b"global_carto_offsets_",
             b"Global Carto Scan Z Offsets",
             b"Global Carto Touch Z Offsets",
+            b"prtouch_global_offsets_",
+            b"Global No-Carto Z Offsets",
+            b"K2_PRTOUCH_GLOBAL_Z_ADJUST",
+            b"K2_PRTOUCH_GLOBAL_Z_INHERIT",
             b"material_z_offsets_",
             b"K2_CARTOGRAPHER_GLOBAL_Z_STAGE",
             b"K2_MATERIAL_Z_STAGE",
@@ -58,7 +62,7 @@ class FluiddBundleTests(unittest.TestCase):
         ):
             self.assertIn(value, scripts)
 
-        self.assertEqual(scripts.count(b'"save-button-text":`Save`'), 2)
+        self.assertEqual(scripts.count(b'"save-button-text":`Save`'), 3)
         self.assertNotIn(b'"save-button-text":`Save & Restart`', scripts)
         self.assertNotIn(b' Save & Restart ', scripts)
         self.assertIn(b' Save ', scripts)
@@ -95,6 +99,7 @@ class FluiddBundleTests(unittest.TestCase):
         patch = PATCH.read_text(encoding="utf-8")
         installer = INSTALLER.read_text(encoding="utf-8")
         self.assertIn("GlobalTouchOffsetsDialog.vue", patch)
+        self.assertIn("GlobalPrTouchOffsetsDialog.vue", patch)
         self.assertIn("Global Carto Scan Z Offsets", patch)
         self.assertIn("MaterialZOffsetsDialog.vue", patch)
         self.assertIn("M191SettingsDialog.vue", patch)
@@ -104,6 +109,19 @@ class FluiddBundleTests(unittest.TestCase):
         self.assertIn('chmod -R a+rX "$fluidd_target"', installer)
         self.assertIn("set_release_source.py", installer)
         self.assertIn("Rcpilot33 fluidd", installer)
+
+    def test_no_carto_layout_is_compact_and_commands_remain_separate(self):
+        patch = PATCH.read_text(encoding="utf-8")
+        section = patch.split('+++ b/src/components/common/GlobalPrTouchOffsetsDialog.vue', 1)[1].split('diff --git', 1)[0]
+        self.assertIn('max-width="450"', section)
+        self.assertIn('<v-spacer />', section)
+        self.assertIn('class="flex-grow-1"', section)
+        self.assertIn('value.toFixed(3)', section)
+        self.assertIn('K2_PRTOUCH_GLOBAL_Z_SAVE', section)
+        self.assertIn('K2_PRTOUCH_GLOBAL_Z_CANCEL', section)
+        self.assertNotIn('K2_CARTOGRAPHER_', section)
+        self.assertNotIn('K2_MATERIAL_', section)
+        self.assertNotIn('SAVE_CONFIG', section)
 
 
 if __name__ == "__main__":

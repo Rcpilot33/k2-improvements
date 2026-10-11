@@ -70,6 +70,24 @@ class Tests(unittest.TestCase):
         self.assertIn("[include prtouch_touchscreen.cfg]", self.main.read_text())
         self.assertEqual(before, (self.native.read_bytes(), self.table.read_bytes()))
 
+    def test_preflight_checks_before_overlay_without_creating_links_or_includes(self):
+        before = self.main.read_bytes(), self.native.read_bytes(), self.table.read_bytes()
+        c.configure(self.cfg, self.klipper, self.status, check_only=True)
+        self.assertEqual(before, (self.main.read_bytes(), self.native.read_bytes(), self.table.read_bytes()))
+        self.assertFalse((self.custom / c.CONFIG).is_symlink())
+        self.assertFalse((self.extras / "k2_prtouch_global_z.py").is_symlink())
+        self.status["print_stats"]["state"] = "printing"
+        with self.assertRaises(ValueError):
+            c.configure(self.cfg, self.klipper, self.status, check_only=True)
+
+    def test_installer_preflights_before_installing_shared_compact_ui(self):
+        script = (HERE / "install.sh").read_text()
+        self.assertLess(script.index('configure_feature --check-only'), script.index('../fluidd-ui-overlay/install.sh'))
+        self.assertLess(script.index('../fluidd-ui-overlay/install.sh'), script.index('configure_feature "$@"'))
+        detector = (c.ROOT / "installer/detect/features.sh").read_text()
+        body = detector.split('is_global_prtouch_offsets() {', 1)[1].split('\n}', 1)[0]
+        self.assertIn('has_settings_ui_overlay 8', body)
+
     def test_printing_paused_unknown_cartographer_or_missing_native_refused(self):
         for state in ("printing", "paused", "unknown", None):
             self.status["print_stats"]["state"] = state

@@ -233,30 +233,11 @@ class K2PRTouchGlobalZ:
             raise gcmd.error("Plate workflow changed; cancel and reopen the editor")
 
     def _show(self):
-        self._action("prompt_end")
-        self._action("prompt_begin Global No-Carto Z Offsets")
-        self._action("prompt_text Saved global values only; these buttons do not move the bed.")
-        self._action("prompt_text Selected: %s = %.3f mm; step %.3f mm" %
-                     (self.names[self.index].upper(), self._value(self.names[self.index]), self.increment))
+        self._action("prtouch_global_offsets_begin %d|%.3f" % (self.index, self.increment))
         for index, name in enumerate(self.names):
-            inherited = name not in self.session
-            self._action("prompt_button %s %.3f%s|K2_PRTOUCH_GLOBAL_Z_SELECT INDEX=%d|%s" %
-                         (name.upper(), self._value(name), " (default)" if inherited else "",
-                          index, "primary" if index == self.index else "secondary"))
-        self._action("prompt_button_group_start")
-        for step in (.005, .010, .025, .050):
-            self._action("prompt_button %.3f|K2_PRTOUCH_GLOBAL_Z_STEP VALUE=%.3f|%s" %
-                         (step, step, "primary" if step == self.increment else "secondary"))
-        self._action("prompt_button_group_end")
-        self._action("prompt_button_group_start")
-        self._action("prompt_button Bed up / closer|K2_PRTOUCH_GLOBAL_Z_ADJUST DIRECTION=up|primary")
-        self._action("prompt_button Bed down / farther|K2_PRTOUCH_GLOBAL_Z_ADJUST DIRECTION=down|secondary")
-        self._action("prompt_button_group_end")
-        if self.names[self.index] != "default":
-            self._action("prompt_button Use DEFAULT|K2_PRTOUCH_GLOBAL_Z_INHERIT|secondary")
-        self._action("prompt_footer_button Cancel|K2_PRTOUCH_GLOBAL_Z_CANCEL|secondary")
-        self._action("prompt_footer_button Save|K2_PRTOUCH_GLOBAL_Z_SAVE|primary")
-        self._action("prompt_show")
+            self._action("prtouch_global_offsets_surface %s|%.3f|%d|%d" %
+                         (name.upper(), self._value(name), index, name not in self.session))
+        self._action("prtouch_global_offsets_show")
 
     def _value(self, name):
         return self.session.get(name, self.session["default"])
@@ -283,6 +264,7 @@ class K2PRTouchGlobalZ:
                     names.add(match[1])
         self.names = [name for name in SURFACES if name in names] + sorted(names - set(SURFACES))
         self.index, self.increment = 0, .010
+        self._action("prompt_end")  # dismiss a legacy stacked prompt after upgrading
         self._show()
 
     def cmd_select(self, gcmd):
@@ -329,7 +311,7 @@ class K2PRTouchGlobalZ:
 
     def cmd_cancel(self, gcmd):
         self.session = None
-        self._action("prompt_end")
+        self._action("prtouch_global_offsets_end")
         gcmd.respond_info("Global No-Carto Z Offset changes cancelled")
 
     def cmd_save(self, gcmd):
@@ -346,7 +328,7 @@ class K2PRTouchGlobalZ:
         self.values = dict(self.session)
         self._activate(self.active_surface, self.values.get(self.active_surface, self.values["default"]))
         self.session = None
-        self._action("prompt_end")
+        self._action("prtouch_global_offsets_end")
         gcmd.respond_info("Global No-Carto Z offsets %s; no motion, staging, or restart" %
                           ("saved and active" if changed else "unchanged"))
 

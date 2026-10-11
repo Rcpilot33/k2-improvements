@@ -76,6 +76,16 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_installed_native_global_v1_receives_compact_ui_update(self):
+        update_id = "global-prtouch-offsets-compact-ui-v2"
+        ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, ids)
+        completed = ids - {update_id}
+        self.assertIn("global-prtouch-offsets-editor-v1", completed)
+        self.assertEqual(recommended({"global-prtouch-offsets"}, completed), {"global-prtouch-offsets"})
+        self.assertEqual(recommended({"global-prtouch-offsets"}, ids), set())
+        self.assertEqual(recommended({"macros", "cartographer", "plate-aware-mesh"}, completed), set())
+
     def test_native_global_editor_is_opt_in_and_tracked_once(self):
         update_id = "global-prtouch-offsets-editor-v1"
         ids = {entry[0] for entry in entries()}

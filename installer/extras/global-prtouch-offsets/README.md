@@ -8,12 +8,19 @@ the printer, changes its calibration, or sends a restart. Not installed by
 default. Cartographer is excluded at installation and runtime.
 
 The `Global_Z_Offsets_No_Carto` button appears in Fluidd's Z Offsets category.
-It uses Fluidd's standard prompt dialog, not a replacement web build. Select
-DEFAULT or a plate, then an increment: 0.005, 0.010, 0.025, or 0.050 mm.
+It uses a compact dialog matching the Cartographer editor: names on the left,
+values on the right, increments in one row, and closer/farther side by side.
+Its commands, draft session, and storage remain separate from Cartographer.
+Select DEFAULT or a plate, then an increment: 0.005, 0.010, 0.025, or 0.050 mm.
 **Bed up / closer** increases the value; **Bed down / farther** decreases it.
 These are editing buttons, not live bed-movement commands. **Save** makes the
 values persistent and active without restart; **Cancel** discards the edits.
 Opening, editing, and saving are refused during printing/paused/unknown states.
+The installer upgrades the shared Fluidd UI to overlay 8 while retaining the
+Cartographer, Material, Bed Assist, and Creality-camera controls. Existing
+installations receive migration `global-prtouch-offsets-compact-ui-v2` through
+Update installer / apply updates. Refresh Fluidd after installation; complete
+the protected Klippy code reload before opening the updated editor.
 
 ## Selection and storage
 

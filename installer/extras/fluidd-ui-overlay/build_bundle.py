@@ -12,8 +12,8 @@ def build(dist: Path, output: Path) -> None:
     version = (dist / ".version").read_text(encoding="utf-8").strip()
     overlay = (dist / "k2-ui-overlay-support.txt").read_text(encoding="utf-8").strip()
     release = json.loads((dist / "release_info.json").read_text(encoding="utf-8"))
-    if version != "v1.37.4" or overlay != "7":
-        raise ValueError("Expected Jacob Fluidd v1.37.4 with UI overlay 7")
+    if version != "v1.37.4" or overlay != "8":
+        raise ValueError("Expected Jacob Fluidd v1.37.4 with UI overlay 8")
     if release.get("project_owner") != "Jacob10383" or release.get("version") != version:
         raise ValueError("Fluidd release metadata does not identify Jacob v1.37.4")
     if not (dist / "index.html").is_file() or not (dist / "sw.js").is_file():

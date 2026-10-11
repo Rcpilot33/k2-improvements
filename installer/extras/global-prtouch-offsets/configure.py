@@ -20,7 +20,7 @@ def query(url):
         return json.load(response)["result"]["status"]
 
 
-def configure(config_dir, klipper_dir, status, remove=False):
+def configure(config_dir, klipper_dir, status, remove=False, check_only=False):
     custom, extras = Path(config_dir) / "custom", Path(klipper_dir) / "klippy/extras"
     main = custom / "main.cfg"
     if not main.is_file() or not extras.is_dir():
@@ -47,6 +47,8 @@ def configure(config_dir, klipper_dir, status, remove=False):
                 raise ValueError("refusing unfamiliar link: %s; update managed macros first" % target)
         elif target.exists():
             raise ValueError("refusing existing file: %s; update managed macros first" % target)
+    if check_only:
+        return
     if remove:
         add_include(str(main), CONFIG, commented=True)
         for source, target in links:
@@ -70,15 +72,19 @@ def configure(config_dir, klipper_dir, status, remove=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--remove", action="store_true")
+    parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--config-dir", required=True)
     parser.add_argument("--klipper-dir", required=True)
     parser.add_argument("--moonraker-url", required=True)
     args = parser.parse_args()
     try:
-        configure(args.config_dir, args.klipper_dir, query(args.moonraker_url), args.remove)
+        configure(args.config_dir, args.klipper_dir, query(args.moonraker_url), args.remove, args.check_only)
     except Exception as exc:
         print("ERROR: Global PR Touch installation was not completed: %s" % exc, file=sys.stderr)
         return 1
+    if args.check_only:
+        print("Global No-Carto Z Offsets preflight passed. No files changed.")
+        return 0
     print("Global No-Carto Z Offsets %s. Existing calibration and offset data preserved." %
           ("removed" if args.remove else "installed"))
     print("Power-cycle while idle; wait for full startup. No restart or motion was sent.")

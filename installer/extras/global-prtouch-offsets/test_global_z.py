@@ -190,8 +190,10 @@ class Tests(unittest.TestCase):
         self.assertTrue(set(m.SURFACES) <= set(self.helper.names))
         self.assertIn("custom_sheet", self.helper.names)
         self.assertIn("unsaved_sheet", self.helper.names)
-        self.assertTrue(any("TEXTURED_PEI -0.020 (default)" in action for action in self.actions))
-        self.assertIn("// action:prompt_show", self.actions)
+        self.assertTrue(any("prtouch_global_offsets_surface TEXTURED_PEI|-0.020|3|1" in action for action in self.actions))
+        self.assertIn("// action:prtouch_global_offsets_show", self.actions)
+        self.assertIn("// action:prtouch_global_offsets_begin 0|0.010", self.actions)
+        self.assertFalse(any("prompt_button" in action or "global_carto_offsets_" in action for action in self.actions))
         self.assertFalse(self.path.exists())
 
     def test_cancel_drops_working_changes_no_stage_write_or_motion(self):
@@ -383,6 +385,8 @@ class Tests(unittest.TestCase):
         self.cmd("step", VALUE=.005)
         self.cmd("adjust", DIRECTION="up")
         self.assertEqual(self.helper.session["default"], -.015)
+        self.assertIn("// action:prtouch_global_offsets_surface DEFAULT|-0.015|0|0", self.actions)
+        self.assertIn("// action:prtouch_global_offsets_begin 0|0.005", self.actions)
         self.cmd("adjust", DIRECTION="down")
         self.assertEqual(self.helper.session["default"], -.020)
         self.assertEqual(self.helper.active_value, -.020)
