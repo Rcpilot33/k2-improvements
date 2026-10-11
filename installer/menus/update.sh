@@ -22,6 +22,7 @@ migration_component_label() {
         axis_twist_compensation) echo 'Axis Twist Compensation' ;;
         cartographer-plate-workflow) echo 'Cartographer plate workflow' ;;
         global-touch-offsets) echo 'Global Carto Z Offsets' ;;
+        global-prtouch-offsets) echo 'Global No-Carto Z Offsets' ;;
         material-z-offsets) echo 'Material Z Offsets' ;;
         plate-aware-mesh) echo 'Plate-aware saved meshes' ;;
         nozzle-camera) echo 'Stock nozzle camera stream' ;;
@@ -48,6 +49,7 @@ migration_component_installed() {
         axis_twist_compensation) is_axis_twist ;;
         cartographer-plate-workflow) is_carto_plate_workflow ;;
         global-touch-offsets) is_global_touch_offsets ;;
+        global-prtouch-offsets) is_global_prtouch_offsets ;;
         material-z-offsets) is_material_z_offsets ;;
         plate-aware-mesh) is_plate_aware_mesh ;;
         nozzle-camera) is_nozzle_camera ;;
@@ -61,6 +63,9 @@ migration_component_installed() {
 }
 
 migration_component_applicable() {
+    if [ "$1" = global-prtouch-offsets ] && is_cartographer; then
+        return 1
+    fi
     if [ "$1" = nozzle-camera-mount-compatibility ]; then
         _load_stock_nozzle_camera_helpers &&
             stock_nozzle_camera_is_jimmyv && stock_nozzle_camera_present
@@ -124,6 +129,9 @@ migration_component_present() {
         global-touch-offsets)
             [ -e "$custom/global_touch_offsets.cfg" ]
             ;;
+        global-prtouch-offsets)
+            [ -e "$custom/global_prtouch_offsets.cfg" ]
+            ;;
         material-z-offsets)
             [ -e "$custom/material_z_offsets.cfg" ]
             ;;
@@ -155,7 +163,7 @@ migration_capture_installed_components() {
     : > "$temporary"
     for component in cartographer save-config-restart virtual-sdcard-guard abort_homing \
         screws_tilt_adjust macros r3men-bed kamp-adaptive-purge \
-        axis_twist_compensation cartographer-plate-workflow global-touch-offsets material-z-offsets plate-aware-mesh nozzle-camera nozzle-usb-cartographer fluidd better-init start-print-fast-stop; do
+        axis_twist_compensation cartographer-plate-workflow global-touch-offsets global-prtouch-offsets material-z-offsets plate-aware-mesh nozzle-camera nozzle-usb-cartographer fluidd better-init start-print-fast-stop; do
         if migration_component_installed "$component" 2>/dev/null ||
            migration_component_present "$component" 2>/dev/null; then
             printf '%s\n' "$component" >> "$temporary"
@@ -213,7 +221,7 @@ migration_pending_components() {
         END {
             count = split("cartographer save-config-restart virtual-sdcard-guard abort_homing " \
                 "screws_tilt_adjust macros r3men-bed kamp-adaptive-purge " \
-                "axis_twist_compensation cartographer-plate-workflow global-touch-offsets " \
+                "axis_twist_compensation cartographer-plate-workflow global-touch-offsets global-prtouch-offsets " \
                 "material-z-offsets plate-aware-mesh nozzle-camera nozzle-camera-mount-compatibility nozzle-usb-cartographer fluidd better-init " \
                 "start-print-fast-stop", components, " ")
             for (i = 1; i <= count; i++)
@@ -430,6 +438,10 @@ migration_repair_component() {
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/global-touch-offsets/install.sh"
             ;;
+        global-prtouch-offsets)
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
+                sh "$INSTALLER_DIR/installer/extras/global-prtouch-offsets/install.sh"
+            ;;
         material-z-offsets)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/material-z-offsets/install.sh"
@@ -478,7 +490,7 @@ migration_repair_component() {
 
 migration_component_restart_kind() {
     case "$1" in
-        cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|axis_twist_compensation|global-touch-offsets|material-z-offsets|start-print-fast-stop|nozzle-usb-cartographer)
+        cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|axis_twist_compensation|global-touch-offsets|global-prtouch-offsets|material-z-offsets|start-print-fast-stop|nozzle-usb-cartographer)
             echo code
             ;;
         fluidd)

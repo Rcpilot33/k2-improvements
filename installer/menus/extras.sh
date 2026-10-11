@@ -9,6 +9,7 @@ surface-selection-wrapper|is_surface_wrap|START_PRINT SURFACE= param loads match
 cartographer-offset-setup|is_carto_offset_set|Cartographer mount offset profiles/custom|installer/extras/cartographer-offset-setup/install.sh|is_cartographer
 cartographer-macros|is_carto_macros|CARTO_* Fluidd buttons (profiles/calibration/load)|installer/extras/cartographer-macros/install.sh|is_cartographer
 global-touch-offsets|is_global_touch_offsets|Interactive Cartographer global Scan/Touch offset editor|installer/extras/global-touch-offsets/install.sh|is_cartographer
+global-prtouch-offsets|is_global_prtouch_offsets|Default and plate-aware no-Carto global Z editor (hardware testing)|installer/extras/global-prtouch-offsets/install.sh|is_stock_probe
 material-z-offsets|is_material_z_offsets|Interactive material Z-offset editor|installer/extras/material-z-offsets/install.sh|is_macros
 axis_twist_compensation|is_axis_twist|Optional Z-drift compensation across X|features/axis_twist_compensation/install.sh|
 plate-aware-mesh|is_plate_aware_mesh|Saved meshes selected by build plate and temperature|installer/extras/plate-aware-mesh/install.sh|is_stock_probe
@@ -197,10 +198,11 @@ menu_extras() {
             printf '\n  0. Back\n\nSelect [0-9]: '
         else
             ui_menu_item 5 'Plate-aware saved meshes' "$(extra_state plate-aware-mesh)"
-            ui_menu_item 6 'Material Z Offsets' "$(extra_state material-z-offsets)"
+            ui_menu_item 6 'Global No-Carto Z Offsets' "$(extra_state global-prtouch-offsets)"
+            ui_menu_item 7 'Material Z Offsets' "$(extra_state material-z-offsets)"
             printf '\n Security\n'
-            ui_menu_item 7 'Secure Auth' "$(extra_state secure-auth)"
-            printf '\n  0. Back\n\nSelect [0-7]: '
+            ui_menu_item 8 'Secure Auth' "$(extra_state secure-auth)"
+            printf '\n  0. Back\n\nSelect [0-8]: '
         fi
         read_prompt c
         case "$c" in
@@ -219,18 +221,18 @@ menu_extras() {
                 if is_cartographer; then
                     run_extra_name global-touch-offsets
                 else
-                    run_extra_name material-z-offsets
+                    run_extra_name global-prtouch-offsets
                 fi
                 ;;
             7)
                 if is_cartographer; then
                     run_extra_name material-z-offsets
                 else
-                    run_extra_name secure-auth
+                    run_extra_name material-z-offsets
                 fi
                 ;;
             8)
-                if is_cartographer; then run_extra_name secure-auth; fi
+                run_extra_name secure-auth
                 ;;
             9)
                 if is_cartographer; then

@@ -23,6 +23,7 @@ KNOWN_COMPONENTS = {
     "axis_twist_compensation",
     "cartographer-plate-workflow",
     "global-touch-offsets",
+    "global-prtouch-offsets",
     "material-z-offsets",
     "plate-aware-mesh",
     "memory-diagnostics",
@@ -45,6 +46,7 @@ EXPECTED_DETECTORS = {
     "axis_twist_compensation": "is_axis_twist",
     "cartographer-plate-workflow": "is_carto_plate_workflow",
     "global-touch-offsets": "is_global_touch_offsets",
+    "global-prtouch-offsets": "is_global_prtouch_offsets",
     "material-z-offsets": "is_material_z_offsets",
     "plate-aware-mesh": "is_plate_aware_mesh",
     "memory-diagnostics": "is_memory_diagnostics",
@@ -74,6 +76,14 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_native_global_editor_is_opt_in_and_tracked_once(self):
+        update_id = "global-prtouch-offsets-editor-v1"
+        ids = {entry[0] for entry in entries()}
+        self.assertIn(update_id, ids)
+        completed = ids - {update_id}
+        self.assertEqual(recommended({"global-prtouch-offsets"}, completed), {"global-prtouch-offsets"})
+        self.assertEqual(recommended({"global-prtouch-offsets"}, ids), set())
+        self.assertEqual(recommended({"macros", "cartographer", "plate-aware-mesh"}, completed), set())
     def test_jimmyv_mesh_front_guard_is_offered_once_to_cartographer_only(self):
         update_id = "cartographer-jimmyv-mesh-front-travel-v1"
         catalog_ids = {entry[0] for entry in entries()}

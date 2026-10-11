@@ -61,6 +61,7 @@ show_status() {
     status_line 'Material Z Offsets' is_material_z_offsets
     if ! is_cartographer; then
         status_line 'Plate-aware saved meshes' is_plate_aware_mesh
+        status_line 'Global No-Carto Z Offsets' is_global_prtouch_offsets
     fi
     if is_cartographer; then
         if is_carto_plate_workflow; then

@@ -184,6 +184,17 @@ is_global_touch_offsets() {
     [ -e "$editor" ] &&
     has_settings_ui_overlay
 }
+is_global_prtouch_offsets() {
+    local custom="$PRINTER_CFG_DIR/custom"
+    local extras="${KLIPPER_DIR:-${HOME:-/mnt/UDISK/root}/klipper}/klippy/extras"
+    is_stock_probe &&
+    [ -e "$custom/global_prtouch_offsets.cfg" ] &&
+    [ -e "$extras/k2_prtouch_global_z.py" ] &&
+    [ -e "$extras/k2_prtouch_touchscreen.py" ] &&
+    grep -q '^\[include global_prtouch_offsets\.cfg\]$' "$custom/main.cfg" 2>/dev/null &&
+    grep -q '^\[include prtouch_touchscreen\.cfg\]$' "$custom/main.cfg" 2>/dev/null &&
+    grep -q 'K2_PRTOUCH_GLOBAL_Z_APPLY' "$custom/start_print.cfg" 2>/dev/null
+}
 is_material_z_offsets() {
     local custom="$PRINTER_CFG_DIR/custom"
     local editor="${KLIPPER_DIR:-${HOME:-/mnt/UDISK/root}/klipper}/klippy/extras/k2_material_z_offset_editor.py"
