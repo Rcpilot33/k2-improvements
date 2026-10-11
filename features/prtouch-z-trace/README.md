@@ -71,9 +71,11 @@ It separates:
 
 If the opt-in [native touchscreen compatibility](../prtouch-touchscreen/README.md)
 is installed, `probe_reported_offset` instead represents inverse live adjustment
-for the factory display/cleanup contract. Use `probe_calibrate_offset` and
-`pending_save_offset` for staged calibration; `probe_loaded_offset` and file
-entries still identify loaded/saved calibration. The tracer itself is unchanged.
+for the factory display/cleanup contract. The transient-only version updates
+`probe_calibrate_offset` for print-recovery bookkeeping without staging it;
+use `pending_save_offset` to identify an actual pending calibration save.
+`probe_loaded_offset` and file entries still identify loaded/saved calibration.
+The tracer itself is unchanged.
 
 `config_set_before` records the requested `[prtouch_v3] z_offset` and Python
 caller stack. `config_set_after` shows resulting staged state. Commands such

@@ -1,7 +1,7 @@
 # Native PR Touch touchscreen Z-offset compatibility
 
-Opt-in **no-Cartographer** compatibility for the first hardware test on the
-1.1.5.5 native `[prtouch_v3]` setup. This is not the global-offset editor and
+Opt-in **no-Cartographer** compatibility for the 1.1.5.5 native `[prtouch_v3]`
+setup. This is not the global-offset editor and
 is not automatically installed by setup, the menu, or update migrations.
 Cartographer's existing compatibility module and installers are unchanged.
 
@@ -25,13 +25,27 @@ pair; the meaning of the reported status field differs.
 This module instead reports **inverse live G-code Z offset** in that one
 status field, following the existing Cartographer compatibility contract.
 The same example then reports -0.105 to the client; cleanup returns live Z to
-zero and the unmodified native handler stages the original -0.020 calibration.
-The temporary combined calibration can still be staged during live adjustment.
-Staging is not an on-disk save; do not save a temporary combined value mid-print.
+zero. This display/cleanup behavior passed adjusted, unadjusted, and cancelled
+hardware prints on the no-Carto 1.1.5.5 test printer.
+
+The new **transient-only** version also replaces the registered no-Carto
+`Z_OFFSET_APPLY_PROBE` handler. It performs the same in-memory bookkeeping and
+calls the native print-recovery recorder, but never calls `configfile.set()`
+or prints a SAVE_CONFIG prompt. Thus neither a live adjustment nor cleanup
+stages any native calibration, even when cleanup restores the original number.
+This applies to all calls of that command while this feature is active;
+there is no staging parameter or legacy alias. The dedicated global-offset
+editor is the next feature and will own the deliberate save path.
+
+Existing pending values are not cleared or overwritten, and other intentional
+calibration/configuration saves still work. Do not mistake an old pending value
+from an earlier print for a new write by this version. A fresh idle power-cycle
+without saving clears old pending state before the test.
 
 The module does not change `probe.z_offset`, `get_offsets()`, the native driver,
-homing/motion/offset command handlers, material macros, or stored calibration.
-It sends no G-code. It stays inactive whenever `cartographer` is loaded, even
+homing/motion handlers, material macros, or stored calibration. It sends no
+G-code and does not patch `configfile.set()` or SAVE_CONFIG. It stays inactive
+whenever `cartographer` is loaded, even
 if a dummy `prtouch_v3` object exists, and requires a native probe named
 `prtouch_v3`. All other probe status fields are preserved.
 
@@ -59,7 +73,7 @@ states. It links its module/config and enables only its own include in existing
 `K2_PYTHON`, and `MOONRAKER_URL` can override the default paths/runtime/endpoint.
 No SSH credentials, keys, or printer IP are embedded in the feature.
 
-Power-cycle while idle **without saving the previous test's pending zero**,
+Power-cycle while idle **without saving an old test's pending calibration**,
 then wait for complete K2 startup. New Python code requires a fresh Klippy
 process. Run in Fluidd:
 
@@ -67,10 +81,12 @@ process. Run in Fluidd:
 K2_PRTOUCH_TOUCHSCREEN_STATUS
 ```
 
-Expect `installed=True`, `live_z_offset=0`, `probe_z_offset=0`, and your
+Expect `installed=True`, `transient_only=True`, `live_z_offset=0`,
+`probe_z_offset=0`, and your
 existing `loaded_z_offset` (currently -0.020 on the test printer).
-`native_reported_z_offset` shows the underlying loaded/staged calibration,
-separate from the inverse-live value sent to the factory client.
+`native_reported_z_offset` shows the underlying loaded/in-memory bookkeeping
+value, separate from the inverse-live value sent to the factory client. During
+live adjustment that bookkeeping value is not staged for saving.
 
 Remove while idle, then power-cycle to unload:
 
@@ -81,7 +97,7 @@ sh features/prtouch-touchscreen/install.sh --remove
 Only its include and owned symlinks are disabled/removed. This does not restore
 calibration or undo any SAVE_CONFIG performed by the user.
 
-## First hardware test
+## Transient-only hardware test
 
 Keep the existing PR Touch tracer installed. Do not change calibration or
 material offsets for this test, and do not SAVE_CONFIG during it.
@@ -93,16 +109,21 @@ material offsets for this test, and do not SAVE_CONFIG during it.
 3. Before/after one small normal touchscreen adjustment, capture snapshots
    labeled `compat_before_adjust` / `compat_after_adjust` and compatibility
    status. Note the display values. Do not send an extra console adjustment.
-4. After completion, capture compatibility status and a snapshot labeled
-   `compat_after_print`. Expected live offset: zero. Expected pending native
-   calibration: the original loaded value, not zero or a combined value.
+4. During live adjustment and after completion, verify **no** `[prtouch_v3]
+   `z_offset` is pending for SAVE_CONFIG and no SAVE_CONFIG prompt is emitted
+   by offset apply. Capture compatibility status and a snapshot labeled
+   `compat_after_print`. Expected live offset after completion: zero. Loaded
+   calibration stays unchanged; in-memory bookkeeping returns to that value.
 5. Collect `prtouch-z-trace.log`, `klippy.log`, and master-server logs before
    restarting. Then repeat an unadjusted print; test cancellation separately
    while watching the printer before promoting this to automatic installation.
 
 With this feature, the tracer's `probe_reported_offset` is the inverse-live
-display field, **not** staged calibration. Use `probe_loaded_offset`,
-`probe_calibrate_offset`, `pending_save_offset`, and file entries to distinguish
-loaded, staged, and saved values. The native compiled driver's physical use
+display field, **not** staged calibration. `probe_calibrate_offset` and
+`probe_change_flag` also change for native print-recovery bookkeeping, without
+staging a save. Use `pending_save_offset` to identify actual pending calibration,
+and `probe_loaded_offset` / file entries for loaded / saved values.
+There should be no `config_set_before/after` events for native z_offset from
+live adjustment or cleanup. The native compiled driver's physical use
 of calibration is not proven by status alone; local tests cover the Python
 status/cleanup contract, not hardware motion.

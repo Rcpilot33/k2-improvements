@@ -2,9 +2,13 @@
 
 import ast
 import importlib.util
+import json
+import logging
 from pathlib import Path
 from types import SimpleNamespace
+import tempfile
 import unittest
+from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -27,10 +31,11 @@ native_path = ROOT / "features/axis_twist_compensation/probe.py"
 native_tree = ast.parse(native_path.read_text())
 native_class = next(n for n in native_tree.body
                     if isinstance(n, ast.ClassDef) and n.name == "PrinterProbe")
-native_methods = {}
+native_methods = {"logging": logging}
 exec(compile(ast.Module(body=[n for n in native_class.body
      if isinstance(n, ast.FunctionDef) and n.name in
-     ("get_offsets", "get_status", "cmd_Z_OFFSET_APPLY_PROBE")], type_ignores=[]),
+     ("get_offsets", "get_status", "cmd_Z_OFFSET_APPLY_PROBE",
+      "record_gcode_offset_when_printing")], type_ignores=[]),
      str(native_path), "exec"), native_methods)
 
 
@@ -40,6 +45,8 @@ class GCode:
         self.messages = []
 
     def register_command(self, name, handler, desc=None):
+        if handler is None:
+            return self.commands.pop(name, None)
         self.commands[name] = handler
 
     def respond_info(self, message):
@@ -82,10 +89,12 @@ class NativeProbe:
         self.last_state = False
         self.last_z_result = 1.962
         self.record_calls = 0
+        self.recovery_offsets = []
         self.gcode.commands["Z_OFFSET_APPLY_PROBE"] = self.cmd_Z_OFFSET_APPLY_PROBE
 
     def record_gcode_offset_when_printing(self):
         self.record_calls += 1
+        self.recovery_offsets.append(self.z_offset_calibrate)
 
 
 class Printer:
@@ -100,8 +109,13 @@ class Printer:
     def register_event_handler(self, event, callback):
         self.handlers.setdefault(event, []).append(callback)
 
+    def load_object(self, config, name):
+        return self.lookup_object(name)
+
     def ready(self):
-        for callback in self.handlers["klippy:ready"]:
+        for callback in self.handlers.get("klippy:connect", []):
+            callback()
+        for callback in self.handlers.get("klippy:ready", []):
             callback()
 
 
@@ -119,7 +133,7 @@ class Tests(unittest.TestCase):
             self.printer.ready()
 
     def apply(self):
-        self.probe.gcode.commands["Z_OFFSET_APPLY_PROBE"](None)
+        self.probe.gcode.commands["Z_OFFSET_APPLY_PROBE"](self.probe.gcode)
 
     def cleanup(self):
         # Exact master-server pair captured on both printers. MOVE=0 changes
@@ -127,7 +141,7 @@ class Tests(unittest.TestCase):
         self.move.offset += self.probe.get_status(0)["z_offset"]
         self.apply()
 
-    def test_only_status_changes_on_install_and_query(self):
+    def test_install_and_query_do_not_change_offsets_or_stage_config(self):
         self.setup_probe()
         self.assertTrue(self.compat.installed)
         self.assertEqual(self.probe.get_status(2),
@@ -136,8 +150,8 @@ class Tests(unittest.TestCase):
         self.assertEqual(self.probe.z_offset_calibrate, 0)
         self.assertFalse(self.probe.z_offset_change_flag)
         self.assertEqual(self.cfg.pending, {})
-        self.assertIs(self.probe.gcode.commands["Z_OFFSET_APPLY_PROBE"],
-                      self.original_handler)
+        self.assertIs(self.probe.gcode.commands["Z_OFFSET_APPLY_PROBE"].__self__,
+                      self.compat)
         self.assertEqual(self.probe.record_calls, 0)
 
     def test_captured_no_carto_touchscreen_sequence_restores_baseline(self):
@@ -148,14 +162,18 @@ class Tests(unittest.TestCase):
         self.assertEqual(self.probe.get_status(0)["z_offset"], -.100)
         self.move.offset += .005  # normal touchscreen MOVE=1 adjustment
         self.apply()
-        self.assertEqual(self.cfg.pending[("prtouch_v3", "z_offset")], "-0.125")
+        self.assertEqual(self.cfg.pending, {})
         self.assertEqual(self.probe.get_status(0)["z_offset"], -.105)
         self.assertAlmostEqual(self.compat.get_status(0)["native_reported_z_offset"], -.125)
         self.cleanup()
         self.assertAlmostEqual(self.move.offset, 0)
-        self.assertEqual(self.cfg.pending[("prtouch_v3", "z_offset")], "-0.020")
+        self.assertEqual(self.cfg.pending, {})
         self.assertEqual(self.probe.get_offsets()[2], -.020)
         self.assertEqual(self.probe.record_calls, 2)
+        self.assertAlmostEqual(self.probe.recovery_offsets[0], -.125)
+        self.assertAlmostEqual(self.probe.recovery_offsets[1], -.020)
+        self.assertTrue(self.probe.z_offset_change_flag)
+        self.assertFalse(any("SAVE_CONFIG" in msg for msg in self.probe.gcode.messages))
 
     def test_unadjusted_repeated_prints_and_both_offset_signs(self):
         for global_offset in (-.020, 0.0, .035):
@@ -171,20 +189,98 @@ class Tests(unittest.TestCase):
                                 self.apply()
                             self.cleanup()
                             self.assertAlmostEqual(self.move.offset, 0, places=6)
-                            # Native formatting can preserve a negative zero
-                            # from harmless floating-point cleanup residue.
-                            self.assertAlmostEqual(
-                                float(self.cfg.pending[("prtouch_v3", "z_offset")]),
-                                global_offset, places=3)
+                            self.assertEqual(self.cfg.pending, {})
                             self.assertEqual(self.probe.get_offsets()[2], global_offset)
 
-    def test_direct_probe_apply_still_stages_the_native_calculation(self):
+    def test_direct_probe_apply_is_transient_too(self):
         self.setup_probe()
         self.move.offset = -.030
         self.apply()
-        self.assertEqual(self.cfg.pending[("prtouch_v3", "z_offset")], "0.010")
+        self.assertEqual(self.cfg.pending, {})
+        self.assertAlmostEqual(self.probe.z_offset_calibrate, .010)
         self.assertEqual(self.probe.get_status(0)["z_offset"], .030)
         self.assertEqual(self.probe.get_offsets()[2], -.020)
+
+    def test_deliberate_pending_values_and_other_config_saves_are_not_changed(self):
+        self.setup_probe()
+        self.cfg.set("prtouch_v3", "z_offset", "-0.040")
+        self.cfg.set("bed_mesh default", "points", "1,2")
+        before = dict(self.cfg.pending)
+        self.move.offset = .105
+        self.apply()
+        self.cleanup()
+        self.assertEqual(self.cfg.pending, before)
+        # The future editor can write a deliberate value through configfile.set;
+        # we do not patch that writer or SAVE_CONFIG globally.
+        self.cfg.set("prtouch_v3", "z_offset", "-0.050")
+        self.assertEqual(self.cfg.pending[("prtouch_v3", "z_offset")], "-0.050")
+
+    def test_native_and_transient_recovery_bookkeeping_match(self):
+        self.setup_probe()
+        self.move.offset = .105
+        self.original_handler(self.probe.gcode)
+        native_recovery = list(self.probe.recovery_offsets)
+        native_calibrate = self.probe.z_offset_calibrate
+        self.setup_probe()
+        self.move.offset = .105
+        self.apply()
+        self.assertEqual(self.probe.recovery_offsets, native_recovery)
+        self.assertEqual(self.probe.z_offset_calibrate, native_calibrate)
+        self.assertEqual(self.cfg.pending, {})
+
+    def test_real_native_recovery_file_writer_still_records_live_adjustment(self):
+        self.setup_probe()
+        with tempfile.TemporaryDirectory() as directory:
+            recovery = Path(directory) / "print-recovery.json"
+            recovery.write_text(json.dumps({"existing": "keep"}))
+            self.printer.objects["print_stats"] = SimpleNamespace(state="printing")
+            self.printer.objects["virtual_sdcard"] = SimpleNamespace(
+                print_file_name_path=str(recovery))
+            self.probe.record_gcode_offset_when_printing = (
+                native_methods["record_gcode_offset_when_printing"].__get__(self.probe))
+            self.move.offset = .105
+            self.apply()
+            result = json.loads(recovery.read_text())
+            self.assertAlmostEqual(result["SET_GCODE_OFFSET"], -.125)
+            self.assertEqual(result["existing"], "keep")
+            self.assertEqual(self.cfg.pending, {})
+            # Cleanup after completion must not overwrite print-recovery data.
+            self.printer.objects["print_stats"].state = "complete"
+            before = recovery.read_bytes()
+            self.cleanup()
+            self.assertEqual(recovery.read_bytes(), before)
+            self.assertEqual(self.cfg.pending, {})
+
+    def test_no_config_writer_call_even_when_staging_would_fail(self):
+        self.setup_probe()
+        with patch.object(self.cfg, "set", side_effect=AssertionError("must not stage")):
+            self.move.offset = .105
+            self.apply()
+            self.cleanup()
+        self.assertEqual(self.probe.record_calls, 2)
+        self.assertAlmostEqual(self.move.offset, 0)
+
+    def test_connect_installs_before_ready_time_trace_wrapper(self):
+        self.setup_probe(activate=False)
+        events = []
+
+        def trace_ready():
+            original = self.probe.gcode.register_command("Z_OFFSET_APPLY_PROBE", None)
+
+            def traced(gcmd):
+                events.append("before")
+                original(gcmd)
+                events.append("after")
+
+            self.probe.gcode.register_command("Z_OFFSET_APPLY_PROBE", traced)
+
+        # Match the actual include order: tracer's ready hook precedes ours.
+        self.printer.handlers["klippy:ready"].insert(0, trace_ready)
+        self.printer.ready()
+        self.move.offset = .105
+        self.apply()
+        self.assertEqual(events, ["before", "after"])
+        self.assertEqual(self.cfg.pending, {})
 
     def test_rounding_does_not_expose_float_residue(self):
         self.setup_probe()
@@ -228,6 +324,8 @@ class Tests(unittest.TestCase):
             self.printer.ready()
             self.assertFalse(self.compat.installed)
             self.assertEqual(self.probe.get_status, original)
+            self.assertIs(self.probe.gcode.commands["Z_OFFSET_APPLY_PROBE"],
+                          self.original_handler)
         self.setup_probe(activate=False)
         self.probe.name = "probe"
         self.printer.ready()
@@ -247,6 +345,8 @@ class Tests(unittest.TestCase):
                 self.printer.ready()
                 self.assertFalse(self.compat.installed)
                 self.assertTrue(carto.installed)
+                self.assertIs(self.probe.gcode.commands["Z_OFFSET_APPLY_PROBE"],
+                              self.original_handler)
                 self.move.offset = .035
                 self.assertEqual(self.probe.get_status(0)["z_offset"], -.035)
                 self.move.offset += .005
@@ -258,6 +358,7 @@ class Tests(unittest.TestCase):
         self.probe.gcode.commands["K2_PRTOUCH_TOUCHSCREEN_STATUS"](self.probe.gcode)
         message = self.probe.gcode.messages[-1]
         self.assertIn("installed=True", message)
+        self.assertIn("transient_only=True", message)
         self.assertIn("loaded_z_offset=-0.02", message)
         self.assertIn("native_reported_z_offset=-0.02", message)
         self.assertEqual(self.cfg.pending, {})
