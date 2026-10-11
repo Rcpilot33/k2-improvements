@@ -76,6 +76,17 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_stock_plate_picker_and_native_editor_slicer_updates_are_tracked_separately(self):
+        updates = {"plate-aware-mesh-slicer-choice-v1": "plate-aware-mesh",
+                   "global-prtouch-offsets-slicer-choice-v4": "global-prtouch-offsets"}
+        ids = {entry[0] for entry in entries()}
+        self.assertTrue(set(updates) <= ids)
+        completed = ids - set(updates)
+        for component in updates.values():
+            self.assertEqual(recommended({component}, completed), {component})
+            self.assertEqual(recommended({component}, ids), set())
+        self.assertEqual(recommended({"cartographer", "cartographer-plate-workflow"}, completed), set())
+
     def test_installed_native_global_v2_receives_initial_default_update(self):
         update_id = "global-prtouch-offsets-initial-default-v3"
         ids = {entry[0] for entry in entries()}

@@ -4,6 +4,8 @@
 
 migration_catalog() {
     cat <<'EOF'
+plate-aware-mesh-slicer-choice-v1|plate-aware-mesh|is_plate_aware_mesh|Add the Cartographer-style Creality Print, Orca, or Both picker and retain the saved preference during updates; existing stock setups without a choice keep Both
+global-prtouch-offsets-slicer-choice-v4|global-prtouch-offsets|is_global_prtouch_offsets|Show the selected slicer's standard plates in the no-Carto global editor while preserving all saved offsets and custom plate names
 global-prtouch-offsets-initial-default-v3|global-prtouch-offsets|is_global_prtouch_offsets|Initialize new no-Carto offset tables at -0.080 mm while preserving existing saved global values and the native PR Touch baseline
 global-prtouch-offsets-compact-ui-v2|global-prtouch-offsets|is_global_prtouch_offsets|Replace the stacked no-Carto prompt with a compact Cartographer-style dialog while preserving every saved offset and existing editor
 global-prtouch-offsets-editor-v1|global-prtouch-offsets|is_global_prtouch_offsets|Refresh the opted-in no-Carto global Z editor and its baseline-relative plate-selection handoff

@@ -27,6 +27,11 @@ the protected Klippy code reload before opening the updated editor.
 - Without plate-aware saved meshes installed, only DEFAULT is used/shown.
 - With that workflow installed, `START_PRINT SURFACE=<name>` uses its global
   offset; omitted/empty `SURFACE` or `SURFACE=default` uses DEFAULT.
+- The plate-aware workflow's Creality Print / Orca / Both choice selects the
+  standard plate rows in this dialog. Custom names remain visible; offsets for
+  hidden standard plates are kept and still work when passed in SURFACE.
+  Without a saved choice, the old stock behavior (Both) is retained. Changing
+  the preference during editing requires canceling and reopening the dialog.
 - A plate without an explicit value inherits DEFAULT, not zero. **Use DEFAULT**
   removes an explicit override. A changed DEFAULT updates inherited plates.
 - Each new print resets the previous plate selection before preparation and

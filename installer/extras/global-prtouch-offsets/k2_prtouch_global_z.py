@@ -10,6 +10,9 @@ import tempfile
 
 SURFACES = ("default", "epoxy", "high_temp", "textured_pei", "custom",
             "orca_cool_plate", "orca_engineering", "orca_textured_cool", "orca_supertack")
+CREALITY_SURFACES = frozenset(("default", "epoxy", "high_temp", "textured_pei", "custom"))
+ORCA_SURFACES = frozenset(("default", "high_temp", "textured_pei", "orca_cool_plate",
+                           "orca_engineering", "orca_textured_cool", "orca_supertack"))
 NAME = re.compile(r"^[a-z0-9_]{1,64}$")
 MESH_NAME = re.compile(r"^(.+)_-?\d+(?:\.\d+)?c_-?\d+(?:\.\d+)?c$")
 RECOVERY_KEY = "K2_PRTOUCH_GLOBAL_Z"
@@ -80,6 +83,7 @@ class K2PRTouchGlobalZ:
         self.active_value = None
         self.delta = 0.0
         self.session = None
+        self.session_slicers = None
         self.names = []
         self.index = 0
         self.increment = .010
@@ -128,6 +132,16 @@ class K2PRTouchGlobalZ:
 
     def _plate_aware(self):
         return self.printer.lookup_object("gcode_macro _PLATE_AWARE_MESH", None) is not None
+
+    def _plate_slicers(self):
+        path = os.path.join(os.path.dirname(self.path), "plate-workflow-slicers.json")
+        if not os.path.exists(path):
+            return "both"  # Preserve the old stock editor's complete plate list.
+        with open(path) as source:
+            saved = json.load(source)
+        if not isinstance(saved, dict) or saved.get("slicers") not in ("creality", "orca", "both"):
+            raise ValueError("Invalid saved plate-workflow slicer selection")
+        return saved["slicers"]
 
     def _activate(self, name, value):
         self.active_surface, self.active_value = name, value
@@ -232,6 +246,12 @@ class K2PRTouchGlobalZ:
             raise gcmd.error("Open Global_Z_Offsets_No_Carto first")
         if self.session_plate_aware != self._plate_aware():
             raise gcmd.error("Plate workflow changed; cancel and reopen the editor")
+        if self.session_plate_aware:
+            try:
+                if self.session_slicers != self._plate_slicers():
+                    raise ValueError("Plate slicer choice changed; cancel and reopen the editor")
+            except (OSError, ValueError, TypeError) as exc:
+                raise gcmd.error(str(exc))
 
     def _show(self):
         self._action("prtouch_global_offsets_begin %d|%.3f" % (self.index, self.increment))
@@ -247,13 +267,17 @@ class K2PRTouchGlobalZ:
         self._idle(gcmd)
         try:
             saved, self.digest = read_table(self.path, self.baseline)
+            slicers = self._plate_slicers() if self._plate_aware() else None
         except (OSError, ValueError, TypeError) as exc:
             raise gcmd.error("Could not read global Z table: %s" % exc)
         if saved != self.values:
             raise gcmd.error("Global Z file changed outside this editor; restart before editing")
         self.session, self.original = dict(saved), dict(saved)
         self.session_plate_aware = self._plate_aware()
-        names = set(SURFACES) | set(saved) if self.session_plate_aware else {"default"}
+        self.session_slicers = slicers
+        selected = (CREALITY_SURFACES if slicers == "creality" else
+                    ORCA_SURFACES if slicers == "orca" else set(SURFACES))
+        names = set(selected) | (set(saved) - set(SURFACES)) if self.session_plate_aware else {"default"}
         if self.session_plate_aware:
             raw = self.printer.lookup_object("configfile").get_status(0).get("config", {})
             mesh = self.printer.lookup_object("bed_mesh", None)
@@ -261,7 +285,7 @@ class K2PRTouchGlobalZ:
             mesh_names += [section[len("bed_mesh "):] for section in raw if section.startswith("bed_mesh ")]
             for mesh_name in mesh_names:
                 match = MESH_NAME.fullmatch(mesh_name)
-                if match and NAME.fullmatch(match[1]):
+                if match and NAME.fullmatch(match[1]) and (match[1] not in SURFACES or match[1] in selected):
                     names.add(match[1])
         self.names = [name for name in SURFACES if name in names] + sorted(names - set(SURFACES))
         self.index, self.increment = 0, .010

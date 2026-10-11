@@ -114,7 +114,9 @@ printf 'unreachable\\n'
         source = (
             ROOT / "installer/extras/plate-aware-mesh/install.sh"
         ).read_text(encoding="utf-8")
-        self.assertIn('python3 "$SCRIPT_DIR/../../../scripts/ensure_included.py"', source)
+        self.assertIn('PYTHON="${K2_PYTHON:-python3}"', source)
+        self.assertIn('"$PYTHON" "$SCRIPT_DIR/../../../scripts/ensure_included.py"', source)
+        self.assertIn('"$PYTHON" "$SCRIPT_DIR/configure_slicers.py" "$@" --check-only', source)
 
     def test_memory_diagnostics_migration_has_repair_and_code_restart(self):
         source = (ROOT / "installer/menus/update.sh").read_text(encoding="utf-8")

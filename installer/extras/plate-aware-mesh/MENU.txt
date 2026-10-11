@@ -1,5 +1,10 @@
-Uses the selected Creality Print build-plate type as part of the saved bed
+Uses the selected Creality Print or Orca build-plate type as part of the saved bed
 mesh name on stock PR Touch installations.
+
+Choose Creality Print, OrcaSlicer, or Both using the same picker as Cartographer.
+Enter keeps the saved choice; legacy stock setups with no choice keep Both.
+The choice also selects the standard plate rows in Global No-Carto Z Offsets.
+Saved meshes, global offsets, and custom plate names are preserved.
 
 Examples:
   SURFACE=textured_pei -> textured_pei_70.0c_0.0c

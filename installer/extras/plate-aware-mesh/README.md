@@ -5,8 +5,20 @@ plates on a K2 Plus using the stock PR Touch probe.
 
 ## Naming
 
-Creality Print and OrcaSlicer use the same optional extra; no slicer-specific
-printer installation is needed. Use a surface-profile variant from the
+Creality Print and OrcaSlicer use the same optional extra. During installation,
+the same picker as the Cartographer workflow offers **Creality Print**,
+**OrcaSlicer**, or **Both**. The choice is saved in
+`custom/plate-workflow-slicers.json` and retained during updates. Enter keeps the
+saved choice; older stock setups without a choice retain Both.
+
+When Global No-Carto Z Offsets is installed, its dialog shows the selected
+slicer's standard plates plus custom plate names. Shared `high_temp` and
+`textured_pei` names appear once. Switching slicers does not delete any saved
+offset or mesh, and does not reject a SURFACE passed by the other slicer.
+Re-run this optional extra to change the choice. No Cartographer macros or
+calibration models are installed on the stock probe path.
+
+Use a surface-profile variant from the
 [slicer templates](../kamp-adaptive-purge/slicer-templates/README.md).
 The [plate mapping](../cartographer-macros/README.md#slicer-choice-and-orca-mapping)
 also applies to stock PR Touch mesh names, without any Cartographer calibration
@@ -30,9 +42,9 @@ be converted one at a time.
 
 ## Slicer setup
 
-Use one of the complete Creality Print plate-selection templates in
-[`slicer-templates`](../kamp-adaptive-purge/slicer-templates/README.md). They
-map Creality Print's four build-plate choices to these stable names:
+Use one of the complete Creality Print or Orca plate-selection templates in
+[`slicer-templates`](../kamp-adaptive-purge/slicer-templates/README.md).
+Creality Print's four build-plate choices map to these stable names:
 
 | Creality Print bed type | `SURFACE` |
 |---|---|
@@ -84,7 +96,23 @@ per-plate reuse.
 ## Installation and verification
 
 From the main installer, select **Optional extras -> Plate-aware saved
-meshes**. The installer adds one marker config and performs a firmware restart.
+meshes**, confirm, and choose the slicer(s). The installer adds one marker
+config, saves the preference, and performs a firmware restart. Update repairs
+retain the saved choice without prompting. Migration
+`plate-aware-mesh-slicer-choice-v1` tracks the installer change; the separate
+`global-prtouch-offsets-slicer-choice-v4` refreshes an already installed
+no-Carto global editor. Neither feature is automatically installed just by
+updating the repository.
+
+For manual installation, use the same choice tokens as Cartographer:
+
+```sh
+K2_PLATE_SLICERS=creality sh installer/extras/plate-aware-mesh/install.sh
+K2_PLATE_SLICERS=orca sh installer/extras/plate-aware-mesh/install.sh
+K2_PLATE_SLICERS=both sh installer/extras/plate-aware-mesh/install.sh
+```
+
+Without `K2_PLATE_SLICERS`, the installer retains the saved preference.
 
 This feature completed K2 Plus `1.1.5.5` hardware validation on the stock PR
 Touch path. Testing covered legacy naming with no `SURFACE`, creation and reuse

@@ -109,6 +109,20 @@ carto_plate_workflow_state() {
     fi
 }
 
+choose_plate_workflow_slicers() {
+    local plate_choice
+    printf '\nPlate selectors: 1. Creality Print  2. OrcaSlicer  3. Both\n'
+    printf 'Select [1-3], or Enter to keep the saved choice: '
+    read_prompt plate_choice
+    case "$plate_choice" in
+        1) plate_slicers=creality ;;
+        2) plate_slicers=orca ;;
+        3) plate_slicers=both ;;
+        '') plate_slicers='' ;;
+        *) warn 'Invalid plate selector choice'; press_enter; return 1 ;;
+    esac
+}
+
 run_carto_plate_workflow() {
     clear
     ui_heading 'CARTOGRAPHER PLATE PROFILES / AUTO-SELECTION'
@@ -131,17 +145,8 @@ run_carto_plate_workflow() {
         return 0
     fi
 
-    local pwd_home failed plate_choice plate_slicers
-    printf '\nPlate selectors: 1. Creality Print  2. OrcaSlicer  3. Both\n'
-    printf 'Select [1-3], or Enter to keep the saved choice: '
-    read_prompt plate_choice
-    case "$plate_choice" in
-        1) plate_slicers=creality ;;
-        2) plate_slicers=orca ;;
-        3) plate_slicers=both ;;
-        '') plate_slicers='' ;;
-        *) warn 'Invalid plate selector choice'; press_enter; return 1 ;;
-    esac
+    local pwd_home failed plate_slicers
+    choose_plate_workflow_slicers || return 1
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
     [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
     [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
@@ -260,6 +265,7 @@ install_extra() {
     local script="$INSTALLER_DIR/$script_rel"
     local readme="$(dirname "$script")/README.md"
     local script_arg=''
+    local plate_slicers="${K2_PLATE_SLICERS:-}"
 
     clear
     ui_heading "$name"
@@ -312,6 +318,13 @@ install_extra() {
             local label=$(detect_carto_offset_label)
             printf '  Currently configured: %s\n\n' "$(c_green "$label")"
             if ! confirm "Open the offset picker?"; then return 0; fi
+            ;;
+        plate-aware-mesh)
+            if "$det" 2>/dev/null; then
+                printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"
+            fi
+            if ! confirm 'Install or update plate-aware meshes and choose its slicers?'; then return 0; fi
+            choose_plate_workflow_slicers || return 1
             ;;
         secure-auth)
             if "$det" 2>/dev/null; then
@@ -369,7 +382,7 @@ install_extra() {
     [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
     [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
     info "running $script (HOME=$pwd_home)"
-    if HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script" $script_arg; then
+    if K2_PLATE_SLICERS="$plate_slicers" HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH" sh "$script" $script_arg; then
         info "$name install completed"
         if command -v migration_mark_component_current >/dev/null 2>&1; then
             if ! migration_mark_component_current "$name"; then

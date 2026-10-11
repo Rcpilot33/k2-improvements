@@ -102,6 +102,9 @@ class Tests(unittest.TestCase):
     def plate_aware(self):
         self.objects["gcode_macro _PLATE_AWARE_MESH"] = object()
 
+    def slicers(self, value):
+        m.write_json(str(self.path.parent / "plate-workflow-slicers.json"), {"slicers": value})
+
     def values(self, **values):
         self.helper.values.update(values)
 
@@ -244,6 +247,57 @@ class Tests(unittest.TestCase):
         self.assertIn("// action:prtouch_global_offsets_begin 0|0.010", self.actions)
         self.assertFalse(any("prompt_button" in action or "global_carto_offsets_" in action for action in self.actions))
         self.assertFalse(self.path.exists())
+
+    def test_slicer_choice_filters_only_standard_ui_rows_not_stored_values_or_routing(self):
+        self.plate_aware()
+        self.values(epoxy=-.045, orca_cool_plate=-.065, my_sheet=-.095)
+        m.write_json(str(self.path), {"version": 1, "offsets": self.helper.values})
+        before = self.path.read_bytes()
+        for choice, standard in (("creality", m.CREALITY_SURFACES),
+                                 ("orca", m.ORCA_SURFACES), ("both", set(m.SURFACES))):
+            self.slicers(choice)
+            self.cmd("open")
+            self.assertEqual(set(self.helper.names), set(standard) | {"my_sheet", "custom_sheet"})
+            self.cmd("save")
+            self.assertEqual(self.path.read_bytes(), before)
+            for surface, value in (("epoxy", -.045), ("orca_cool_plate", -.065)):
+                self.cmd("apply", SURFACE=surface)
+                self.assertEqual(self.helper.active_value, value)
+            self.cmd("apply")
+            self.assertEqual(self.helper.active_value, -.080)
+
+    def test_shared_plates_appear_once_and_hidden_standard_mesh_names_stay_hidden(self):
+        self.plate_aware()
+        self.raw.update({"bed_mesh epoxy_70.0c_0.0c": {},
+                         "bed_mesh orca_cool_plate_70.0c_0.0c": {}})
+        for choice in ("creality", "orca", "both"):
+            self.slicers(choice)
+            self.cmd("open")
+            for name in ("default", "high_temp", "textured_pei"):
+                self.assertEqual(self.helper.names.count(name), 1)
+            self.assertEqual("epoxy" in self.helper.names, choice != "orca")
+            self.assertEqual("orca_cool_plate" in self.helper.names, choice != "creality")
+            self.cmd("cancel")
+
+    def test_slicer_change_or_invalid_preference_blocks_editor_not_print_routing(self):
+        self.plate_aware()
+        self.slicers("creality")
+        self.cmd("open")
+        self.slicers("orca")
+        with self.assertRaisesRegex(RuntimeError, "slicer choice changed"):
+            self.cmd("save")
+        self.cmd("cancel")
+        self.cmd("open")
+        self.assertNotIn("epoxy", self.helper.names)
+        self.cmd("cancel")
+        self.slicers("unknown")
+        with self.assertRaisesRegex(RuntimeError, "Invalid saved"):
+            self.cmd("open")
+        self.cmd("apply", SURFACE="textured_pei")
+        self.assertEqual(self.helper.active_value, -.080)
+        self.objects.pop("gcode_macro _PLATE_AWARE_MESH")
+        self.cmd("open")
+        self.assertEqual(self.helper.names, ["default"])
 
     def test_cancel_drops_working_changes_no_stage_write_or_motion(self):
         self.cmd("open")
