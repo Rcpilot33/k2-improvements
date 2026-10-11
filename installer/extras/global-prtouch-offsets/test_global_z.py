@@ -105,12 +105,61 @@ class Tests(unittest.TestCase):
     def values(self, **values):
         self.helper.values.update(values)
 
-    def test_initial_default_is_native_baseline_no_write_or_motion(self):
-        self.assertEqual(self.helper.values, {"default": -.02})
-        self.assertEqual(self.helper.delta, 0)
+    def test_initial_default_is_minus_080_no_baseline_write_or_motion(self):
+        self.assertEqual(self.helper.values, {"default": -.080})
+        self.assertAlmostEqual(self.helper.delta, -.060)
         self.assertFalse(self.path.exists())
         self.assertEqual(self.motion.moves, [])
         self.assertEqual(self.probe.z_offset, -.02)
+
+    def test_fresh_zero_baseline_uses_initial_default_without_double_counting(self):
+        self.helper.installed = False
+        self.move.transform = self.motion
+        self.probe.z_offset = 0.
+        self.ready()
+        self.assertEqual(self.helper.baseline, 0.)
+        self.assertEqual(self.helper.active_value, -.080)
+        self.assertAlmostEqual(self.helper.delta, -.080)
+        self.assertEqual(self.motion.moves, [])
+        self.assertFalse(self.path.exists())
+        self.helper.move([100., 100., .200, 0.], 25)
+        self.assertAlmostEqual(self.motion.pos[2], .280)
+        self.assertEqual(self.move.homing_origin_z, .100)
+        self.assertEqual(self.probe.z_offset, 0.)
+
+    def test_existing_saved_offsets_survive_initial_default_change_and_baseline_reset(self):
+        saved = {"default": -.025, "epoxy": -.045, "textured_pei": 0.}
+        m.write_json(str(self.path), {"version": 1, "offsets": saved})
+        before = self.path.read_bytes()
+        self.helper.installed = False
+        self.move.transform = self.motion
+        self.probe.z_offset = 0.
+        self.ready()
+        self.assertEqual(self.helper.values, saved)
+        self.assertAlmostEqual(self.helper.delta, -.025)
+        self.assertEqual(self.path.read_bytes(), before)
+        self.assertEqual(self.motion.moves, [])
+
+    def test_saved_zero_default_is_not_replaced_by_initial_default(self):
+        m.write_json(str(self.path), {"version": 1, "offsets": {"default": 0.}})
+        before = self.path.read_bytes()
+        self.helper.installed = False
+        self.move.transform = self.motion
+        self.probe.z_offset = 0.
+        self.ready()
+        self.assertEqual(self.helper.values, {"default": 0.})
+        self.assertEqual(self.helper.delta, 0.)
+        self.assertEqual(self.path.read_bytes(), before)
+
+    def test_initial_default_is_inherited_by_new_plates_and_missing_surface(self):
+        self.plate_aware()
+        for params in ({"SURFACE": "textured_pei"}, {"SURFACE": "epoxy"},
+                       {"SURFACE": "new_sheet"}, {}):
+            self.cmd("apply", **params)
+            self.assertEqual(self.helper.active_value, -.080)
+            self.assertAlmostEqual(self.helper.delta, -.060)
+        self.assertEqual(self.helper.values, {"default": -.080})
+        self.assertFalse(self.path.exists())
 
     def test_default_only_without_plate_extra_ignores_surface(self):
         self.values(default=-.030, textured_pei=-.010)
@@ -179,7 +228,7 @@ class Tests(unittest.TestCase):
         self.cmd("apply", SURFACE="epoxy")
         self.cmd("reset")
         self.assertEqual(self.helper.active_surface, "default")
-        self.assertEqual(self.helper.delta, 0)
+        self.assertAlmostEqual(self.helper.delta, -.060)
         self.assertEqual(self.motion.moves, [])
 
     def test_prompt_lists_both_slicers_custom_profiles_and_inherited_values(self):
@@ -190,7 +239,7 @@ class Tests(unittest.TestCase):
         self.assertTrue(set(m.SURFACES) <= set(self.helper.names))
         self.assertIn("custom_sheet", self.helper.names)
         self.assertIn("unsaved_sheet", self.helper.names)
-        self.assertTrue(any("prtouch_global_offsets_surface TEXTURED_PEI|-0.020|3|1" in action for action in self.actions))
+        self.assertTrue(any("prtouch_global_offsets_surface TEXTURED_PEI|-0.080|3|1" in action for action in self.actions))
         self.assertIn("// action:prtouch_global_offsets_show", self.actions)
         self.assertIn("// action:prtouch_global_offsets_begin 0|0.010", self.actions)
         self.assertFalse(any("prompt_button" in action or "global_carto_offsets_" in action for action in self.actions))
@@ -201,8 +250,8 @@ class Tests(unittest.TestCase):
         self.cmd("stage", INDEX=0, VALUE=-.030)
         self.cmd("cancel")
         self.assertIsNone(self.helper.session)
-        self.assertEqual(self.helper.values["default"], -.020)
-        self.assertEqual(self.helper.delta, 0)
+        self.assertEqual(self.helper.values["default"], -.080)
+        self.assertAlmostEqual(self.helper.delta, -.060)
         self.assertFalse(self.path.exists())
         self.assertEqual(self.motion.moves, [])
 
@@ -228,7 +277,7 @@ class Tests(unittest.TestCase):
         self.cmd("open")
         self.cmd("save")
         self.assertFalse(self.path.exists())
-        self.assertEqual(self.helper.values, {"default": -.020})
+        self.assertEqual(self.helper.values, {"default": -.080})
 
     def test_edit_default_updates_inheriting_plate_and_preserves_override(self):
         self.plate_aware()
@@ -253,7 +302,7 @@ class Tests(unittest.TestCase):
         self.cmd("apply", SURFACE="epoxy")
         self.assertEqual(self.helper.active_value, -.045)
         self.cmd("apply")
-        self.assertEqual(self.helper.active_value, -.020)
+        self.assertEqual(self.helper.active_value, -.080)
 
     def test_idle_editor_refuses_printing_paused_unknown_and_missing_stats(self):
         for state in ("printing", "paused", None, "unknown"):
@@ -270,7 +319,7 @@ class Tests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.cmd("save")
         self.assertFalse(self.path.exists())
-        self.assertEqual(self.helper.values["default"], -.020)
+        self.assertEqual(self.helper.values["default"], -.080)
 
     def test_external_file_change_is_not_overwritten(self):
         self.cmd("open")
@@ -280,7 +329,7 @@ class Tests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.cmd("save")
         self.assertEqual(self.path.read_bytes(), before)
-        self.assertEqual(self.helper.active_value, -.020)
+        self.assertEqual(self.helper.active_value, -.080)
 
     def test_atomic_save_failure_keeps_old_file_and_active_value(self):
         m.write_json(str(self.path), {"version": 1, "offsets": self.helper.values})
@@ -291,7 +340,7 @@ class Tests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 self.cmd("save")
         self.assertEqual(self.path.read_bytes(), before)
-        self.assertEqual(self.helper.active_value, -.020)
+        self.assertEqual(self.helper.active_value, -.080)
         self.assertEqual(list(self.path.parent.glob(".prtouch-global-z-*")), [])
 
     def test_invalid_offsets_surface_and_table_are_refused(self):
@@ -364,7 +413,7 @@ class Tests(unittest.TestCase):
         self.stats.state = "printing"
         with self.assertRaisesRegex(RuntimeError, "synchronize"):
             self.helper.move([100, 100, .200, 0], 25)
-        self.assertEqual(self.helper.delta, 0)
+        self.assertAlmostEqual(self.helper.delta, -.060)
         self.assertEqual(self.motion.moves, [])
         self.move.reset_last_position()
         self.helper.move([100, 100, .200, 0], 25)
@@ -384,12 +433,12 @@ class Tests(unittest.TestCase):
         self.cmd("open")
         self.cmd("step", VALUE=.005)
         self.cmd("adjust", DIRECTION="up")
-        self.assertEqual(self.helper.session["default"], -.015)
-        self.assertIn("// action:prtouch_global_offsets_surface DEFAULT|-0.015|0|0", self.actions)
+        self.assertEqual(self.helper.session["default"], -.075)
+        self.assertIn("// action:prtouch_global_offsets_surface DEFAULT|-0.075|0|0", self.actions)
         self.assertIn("// action:prtouch_global_offsets_begin 0|0.005", self.actions)
         self.cmd("adjust", DIRECTION="down")
-        self.assertEqual(self.helper.session["default"], -.020)
-        self.assertEqual(self.helper.active_value, -.020)
+        self.assertEqual(self.helper.session["default"], -.080)
+        self.assertEqual(self.helper.active_value, -.080)
         self.assertEqual(self.motion.moves, [])
         with self.assertRaises(RuntimeError):
             self.cmd("step", VALUE=.1)
@@ -403,7 +452,7 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Plate workflow changed"):
             self.cmd("save")
         self.assertFalse(self.path.exists())
-        self.assertEqual(self.helper.active_value, -.020)
+        self.assertEqual(self.helper.active_value, -.080)
 
     def test_recovery_changed_baseline_or_missing_plate_workflow_blocks_motion(self):
         recovery = self.path.parent / "recovery.json"

@@ -4,6 +4,7 @@
 
 migration_catalog() {
     cat <<'EOF'
+global-prtouch-offsets-initial-default-v3|global-prtouch-offsets|is_global_prtouch_offsets|Initialize new no-Carto offset tables at -0.080 mm while preserving existing saved global values and the native PR Touch baseline
 global-prtouch-offsets-compact-ui-v2|global-prtouch-offsets|is_global_prtouch_offsets|Replace the stacked no-Carto prompt with a compact Cartographer-style dialog while preserving every saved offset and existing editor
 global-prtouch-offsets-editor-v1|global-prtouch-offsets|is_global_prtouch_offsets|Refresh the opted-in no-Carto global Z editor and its baseline-relative plate-selection handoff
 cartographer-jimmyv-mesh-front-travel-v1|cartographer|is_cartographer|Install a mesh-scoped Y=-6 guard; enable only through JimmyV mount setup after confirming spacer removal and physical clearance

@@ -13,6 +13,7 @@ SURFACES = ("default", "epoxy", "high_temp", "textured_pei", "custom",
 NAME = re.compile(r"^[a-z0-9_]{1,64}$")
 MESH_NAME = re.compile(r"^(.+)_-?\d+(?:\.\d+)?c_-?\d+(?:\.\d+)?c$")
 RECOVERY_KEY = "K2_PRTOUCH_GLOBAL_Z"
+INITIAL_DEFAULT_Z_OFFSET = -.080
 
 
 def offset(value):
@@ -34,7 +35,7 @@ def surface(value):
 def read_table(path, baseline):
     if not os.path.exists(path):
         offset(baseline)  # validate, but do not round/change a native baseline
-        return {"default": float(baseline)}, None
+        return {"default": INITIAL_DEFAULT_Z_OFFSET}, None
     with open(path, "rb") as source:
         data = source.read()
     table = json.loads(data)

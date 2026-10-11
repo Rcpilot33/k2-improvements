@@ -38,13 +38,22 @@ the protected Klippy code reload before opening the updated editor.
   bed/chamber temperature. A slicer plate type is not a unique physical sheet;
   use unique SURFACE names for separate sheets of the same type.
 
-Before the first explicit save, DEFAULT equals the existing native
-`probe.z_offset` exactly (e.g. -0.020); installation does not migrate, clear,
-or rewrite it. Deliberate edits are stored atomically in
+For a new offset table, DEFAULT starts at **-0.080 mm**, independently of the
+native `probe.z_offset` (normally zero on a fresh stock setup). Installation
+does not clear or rewrite the native calibration. An existing JSON table is
+always preserved, including deliberately saved zero values and plate offsets;
+updating does not reset its DEFAULT to -0.080. Deliberate edits are stored atomically in
 `custom/prtouch_global_z.json`, not `printer.cfg`. That file contains a versioned
 table of absolute global values. Back it up with the printer configuration.
 The editor detects outside file changes and refuses to overwrite them.
 Only the Save button writes this table; live taps and cleanup never do.
+
+Migration `global-prtouch-offsets-initial-default-v3` updates this initialization
+policy for installations that opted into the feature. It never edits existing
+JSON values or the native calibration. For example, resetting a test native
+baseline from -0.020 to zero leaves a saved global -0.025 intact; its applied
+difference then becomes -0.025. Set a different saved global through the editor,
+not by deleting the table or changing the native baseline.
 
 Creality's native saved `[prtouch_v3] z_offset` remains the baseline. A chained
 G-code move transform applies only `selected_global - native_baseline`, leaving
@@ -67,16 +76,19 @@ additional power-loss path has unit tests but still needs physical validation.
 
 ## Initial hardware test
 
-Keep the PR Touch tracer enabled. First use the inherited DEFAULT unchanged:
-the baseline-relative delta must be zero and the existing adjusted completion /
-cancellation behavior must stay unchanged. Check:
+Keep the PR Touch tracer enabled. Before printing, check the selected global
+value and native baseline. With a fresh zero native baseline and the initial
+DEFAULT of -0.080, the baseline-relative delta must be -0.080, not zero.
+Existing saved tables retain their own DEFAULT. Check:
 
 ```gcode
 K2_PRTOUCH_GLOBAL_Z_STATUS
 K2_PRTOUCH_TOUCHSCREEN_STATUS
 ```
 
-Then, while idle, open the editor and change DEFAULT by just 0.005 mm. Save,
+If testing a zero-delta control first, use the editor while idle to save DEFAULT
+equal to the native baseline. Do not change the native calibration merely to
+edit a global offset. Then change DEFAULT by just 0.005 mm. Save,
 run the same small print, and compare its first layer while ready to cancel.
 Verify the console reports the expected global/baseline/delta and neither
 display adds global to the material value. Live-adjust and finish/cancel;
