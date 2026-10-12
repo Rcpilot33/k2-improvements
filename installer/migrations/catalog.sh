@@ -4,6 +4,7 @@
 
 migration_catalog() {
     cat <<'EOF'
+start-print-fast-stop-stock-mesh-v1|start-print-fast-stop|is_start_print_fast_stop|Stop native PR Touch mesh calibration at a completed sample boundary and restore probe state and temporary motion limits without saving a partial mesh
 start-print-fast-stop-stock-soaks-v1|start-print-fast-stop|is_start_print_fast_stop|Stop no-Carto machine and mesh heat soaks promptly and unwind nested mesh macros after canceled M191 waits
 plate-aware-mesh-slicer-choice-v1|plate-aware-mesh|is_plate_aware_mesh|Add the Cartographer-style Creality Print, Orca, or Both picker and retain the saved preference during updates; existing stock setups without a choice keep Both
 global-prtouch-offsets-slicer-choice-v4|global-prtouch-offsets|is_global_prtouch_offsets|Show the selected slicer's standard plates in the no-Carto global editor while preserving all saved offsets and custom plate names

@@ -168,6 +168,7 @@ class MigrationCatalogTests(unittest.TestCase):
             "start-print-fast-stop-m191-handoff-v1",
             "start-print-fast-stop-waits-v1",
             "start-print-fast-stop-stock-soaks-v1",
+            "start-print-fast-stop-stock-mesh-v1",
         }
         catalog_ids = {entry[0] for entry in entries()}
         self.assertTrue(update_ids <= catalog_ids)
