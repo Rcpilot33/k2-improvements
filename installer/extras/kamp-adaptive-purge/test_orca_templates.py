@@ -4,6 +4,7 @@ These are not a substitute for slicing or physical printer validation.
 """
 from pathlib import Path
 import re
+import shlex
 import unittest
 
 
@@ -32,7 +33,7 @@ class OrcaTemplateTests(unittest.TestCase):
                 self.assertEqual(len(starts), 7 if surface else 1)
                 for line in starts:
                     self.assertIn("CHAMBER_TEMP=[overall_chamber_temperature]", line)
-                    self.assertIn("MATERIAL={filament_type[initial_tool]}", line)
+                    self.assertIn('MATERIAL="{filament_type[initial_tool]}"', line)
                     self.assertEqual("SURFACE=" in line, surface)
                 self.assertNotIn("multicolor_method", code)
                 self.assertEqual(code.count("T[initial_no_support_extruder]"), 1)
@@ -41,6 +42,26 @@ class OrcaTemplateTests(unittest.TestCase):
                 purge = "LINE_PURGE" if kamp else "G1 X0 Y0 E15 F6000"
                 self.assertLess(code.index("M109 S[nozzle_temperature_initial_layer]"), code.index(purge))
                 self.assertLess(code.index("M83"), code.index(purge))
+
+    def test_all_orca_and_creality_start_branches_quote_material_values(self):
+        files = sorted(TEMPLATES.glob("*-start-material-*.gcode"))
+        self.assertEqual(len(files), 8)
+        for path in files:
+            starts = [line for line in path.read_text().splitlines() if line.startswith("START_PRINT ")]
+            self.assertTrue(starts, path.name)
+            for line in starts:
+                for material in ("PLA", "PETG", "PLA+ 2.0", "PETG-CF", "Support for PLA"):
+                    with self.subTest(template=path.name, start=line, material=material):
+                        self.assertIn('MATERIAL="{filament_type[initial_tool]}"', line)
+                        rendered = line.replace("{filament_type[initial_tool]}", material)
+                        rendered = rendered.replace("[nozzle_temperature_initial_layer]", "220")
+                        rendered = rendered.replace("[bed_temperature_initial_layer_single]", "55")
+                        rendered = rendered.replace("[overall_chamber_temperature]", "35")
+                        args = dict(token.split("=", 1) for token in shlex.split(rendered)[1:])
+                        self.assertEqual(args["MATERIAL"], material)
+                        self.assertEqual(args["EXTRUDER_TEMP"], "220")
+                        self.assertEqual(args["BED_TEMP"], "55")
+                        self.assertEqual(args["CHAMBER_TEMP"], "35")
 
     def test_both_surface_variants_use_exact_captured_names_and_default(self):
         for path in TEMPLATES.glob("orca-start-material-surface-profiles*.gcode"):

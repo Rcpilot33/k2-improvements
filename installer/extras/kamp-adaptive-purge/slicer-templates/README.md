@@ -24,6 +24,10 @@ KAMP-only variants intentionally omit `SURFACE=`; Cartographer then loads its
 `default` models, while the stock-probe path retains its original
 temperature-only mesh name. All eight variants pass `MATERIAL=` so
 `START_PRINT` can apply the matching offset from `_START_PRINT_VARS`.
+All branches quote the material value as `MATERIAL="{filament_type[initial_tool]}"`.
+Keep these quotes: a custom type such as `PLA+ 2.0` otherwise becomes two command
+arguments and fails before `START_PRINT` can run. Quoting also works for
+single-word types such as `PLA` and `PETG` in both slicers.
 
 The four Creality Print variants were validated on printer firmware `1.1.5.5`.
 See the repository [validation report](../../../../VALIDATION.md).
@@ -37,7 +41,8 @@ See the repository [validation report](../../../../VALIDATION.md).
 3. Replace the complete block with the desired template.
 4. Save the profile and slice a test object.
 5. Confirm the generated `START_PRINT` line contains the expected
-   `MATERIAL=` value.
+   quoted `MATERIAL=` value (for example, `MATERIAL="PLA+ 2.0"`). Re-slice after
+   updating an existing preset; previously exported G-code is not changed.
 6. For a KAMP variant, confirm the output contains `EXCLUDE_OBJECT_DEFINE`,
    `M109`, and `LINE_PURGE` before printing.
 7. For a plate-selection variant, confirm the output contains the expected

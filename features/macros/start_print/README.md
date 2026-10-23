@@ -150,7 +150,7 @@ python3 -m unittest discover -s features/macros/start_print -p 'test*.py'
 Pass nozzle, bed, chamber, and material values from the slicer:
 
 ```gcode
-START_PRINT EXTRUDER_TEMP=[nozzle_temperature_initial_layer] BED_TEMP=[bed_temperature_initial_layer_single] CHAMBER_TEMP=[overall_chamber_temperature] MATERIAL={filament_type[initial_tool]}
+START_PRINT EXTRUDER_TEMP=[nozzle_temperature_initial_layer] BED_TEMP=[bed_temperature_initial_layer_single] CHAMBER_TEMP=[overall_chamber_temperature] MATERIAL="{filament_type[initial_tool]}"
 ```
 
 Optional extensions such as KAMP, Cartographer plate selection, or stock-probe
