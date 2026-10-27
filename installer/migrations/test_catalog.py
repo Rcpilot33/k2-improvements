@@ -393,6 +393,7 @@ class MigrationCatalogTests(unittest.TestCase):
             "global-touch-offsets-live-save-v5": "global-touch-offsets",
             "global-carto-scan-offsets-v1": "global-touch-offsets",
             "material-z-offsets-live-save-v4": "material-z-offsets",
+            "material-z-offsets-pending-global-discard-v5": "material-z-offsets",
         }
         for update_id, component in cases.items():
             with self.subTest(update_id=update_id):

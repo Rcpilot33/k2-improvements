@@ -1,6 +1,7 @@
 """Live Fluidd editor and START_PRINT helper for material Z offsets."""
 
 import hashlib
+import copy
 import logging
 import os
 import re
@@ -340,7 +341,59 @@ class K2MaterialZOffsetEditor:
         self.materials = None
         self.session_digest = None
         self._close_prompt()
+        try:
+            self._discard_pending_global_z()
+        except Exception as exc:
+            raise gcmd.error(
+                "Material Z offsets were saved and are active, but pending "
+                "global Z offsets could not be discarded: %s" % exc
+            )
         gcmd.respond_info("Material Z offsets saved and active; no restart needed")
+
+    def _discard_pending_global_z(self):
+        """Restore only staged model Z offsets to disk values; never save config.
+
+        Other pending options (including fresh calibration coefficients) remain.
+        The live Cartographer model and current G-code offset are not changed.
+        """
+        configfile = self.printer.lookup_object("configfile", None)
+        if configfile is None:
+            return
+        pending = copy.deepcopy(configfile.status_save_pending)
+        targets = [section for section, options in pending.items()
+                   if isinstance(options, dict) and "z_offset" in options
+                   and section.startswith(("cartographer touch_model ", "cartographer scan_model "))]
+        if not targets:
+            return
+        filename = self.printer.get_start_args()["config_file"]
+        regular, autosaved = configfile._find_autosave_data(configfile._read_config_file(filename))
+        saved = configfile._build_config_wrapper(regular + "\n" + autosaved, filename).fileconfig
+        saved_autosave = configfile._build_config_wrapper(autosaved, filename).fileconfig
+        staged = copy.deepcopy(configfile.autosave.fileconfig)
+        discarded = []
+        for section in targets:
+            # A newly calibrated model with no saved offset must remain pending.
+            if not saved.has_option(section, "z_offset"):
+                continue
+            if saved_autosave.has_option(section, "z_offset"):
+                staged.set(section, "z_offset", saved_autosave.get(section, "z_offset"))
+            else:
+                staged.remove_option(section, "z_offset")
+            del pending[section]["z_offset"]
+            # Cartographer also stages unchanged model fields when applying Z.
+            # Already-persisted identical fields are not unsaved calibration.
+            for option, value in list(pending[section].items()):
+                if saved.has_option(section, option) and saved.get(section, option).strip() == str(value).strip():
+                    del pending[section][option]
+            if not pending[section]:
+                del pending[section]
+            discarded.append(section)
+        configfile.autosave.fileconfig = staged
+        configfile.status_save_pending = pending
+        configfile.save_config_pending = bool(pending)
+        if discarded:
+            logging.info("%s discarded pending global Z offsets for %s; saved config unchanged",
+                         LOG_PREFIX, ", ".join(discarded))
 
 
 def load_config(config):

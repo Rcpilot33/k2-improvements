@@ -4,6 +4,9 @@ import importlib.util
 import pathlib
 import tempfile
 import unittest
+import configparser
+from types import SimpleNamespace
+from unittest.mock import patch
 
 
 MODULE_PATH = pathlib.Path(__file__).with_name("k2_material_z_offset_editor.py")
@@ -171,6 +174,94 @@ class MaterialEditorTests(unittest.TestCase):
         self.assertEqual(printer.objects["gcode_macro _START_PRINT_VARS"].variables["offset_petg"], 0.1)
         editor.cmd_apply(FakeGCmd(MATERIAL="PETG"))
         self.assertEqual(printer.objects["gcode"].scripts, ["SET_GCODE_OFFSET Z=0.100"])
+
+    def test_save_discards_only_pending_global_z_and_restores_staged_disk_value(self):
+        editor, printer = self.make_editor()
+        section = 'cartographer touch_model default'
+        def parser(data):
+            p = configparser.RawConfigParser()
+            p.read_string(data)
+            return p
+        saved = '[%s]\nz_offset = -0.150\nsoftware_version = same\n' % section
+        primary = self.path.with_name('printer.cfg')
+        primary.write_text('SAVE_MARKER' + saved)
+        staged = parser(saved)
+        staged.set(section, 'z_offset', '-0.175')
+        staged.add_section('bed_mesh new')
+        staged.set('bed_mesh new', 'points', 'new calibration')
+        config = SimpleNamespace(autosave=SimpleNamespace(fileconfig=staged),
+            status_save_pending={section: {'z_offset': '-0.175', 'software_version': 'same'},
+                                 'bed_mesh new': {'points': 'new calibration'}},
+            save_config_pending=True,
+            _read_config_file=lambda filename: pathlib.Path(filename).read_text(),
+            _find_autosave_data=lambda raw: raw.split('SAVE_MARKER'),
+            _build_config_wrapper=lambda data, filename: SimpleNamespace(fileconfig=parser(data)))
+        printer.objects['configfile'] = config
+        printer.get_start_args = lambda: {'config_file': str(primary)}
+        editor.cmd_open(FakeGCmd())
+        editor.cmd_stage(FakeGCmd(INDEX=1, VALUE=0.1))
+        editor.cmd_save(FakeGCmd())
+        self.assertEqual(config.autosave.fileconfig.get(section, 'z_offset'), '-0.150')
+        self.assertEqual(config.status_save_pending, {'bed_mesh new': {'points': 'new calibration'}})
+        self.assertTrue(config.save_config_pending)
+        self.assertEqual(primary.read_text(), 'SAVE_MARKER' + saved)
+        self.assertEqual(printer.objects['gcode'].scripts, [])
+        # If only global Z remains, the prompt is cleared without touching disk.
+        config.status_save_pending = {section: {'z_offset': '-0.175'}}
+        config.autosave.fileconfig.set(section, 'z_offset', '-0.175')
+        editor._discard_pending_global_z()
+        self.assertFalse(config.save_config_pending)
+        self.assertEqual(config.status_save_pending, {})
+        self.assertEqual(config.autosave.fileconfig.get(section, 'z_offset'), '-0.150')
+
+        # New models with no saved baseline must never lose their calibration.
+        new_section = 'cartographer scan_model new'
+        config.autosave.fileconfig.add_section(new_section)
+        config.autosave.fileconfig.set(new_section, 'z_offset', '0')
+        config.status_save_pending = {new_section: {'z_offset': '0'}}
+        config.save_config_pending = True
+        editor._discard_pending_global_z()
+        self.assertEqual(config.status_save_pending, {new_section: {'z_offset': '0'}})
+        self.assertTrue(config.save_config_pending)
+
+        # Calibration changes in the same model are unrelated and stay pending.
+        config.status_save_pending = {section: {'z_offset': '-0.175', 'threshold': '2500'}}
+        config.autosave.fileconfig.set(section, 'threshold', '2500')
+        editor._discard_pending_global_z()
+        self.assertEqual(config.status_save_pending, {section: {'threshold': '2500'}})
+        self.assertTrue(config.save_config_pending)
+        self.assertEqual(config.autosave.fileconfig.get(section, 'threshold'), '2500')
+
+        # A saved regular/include option must not be reintroduced into autosave.
+        primary.write_text(saved + 'SAVE_MARKER')
+        config.status_save_pending = {section: {'z_offset': '-0.175'}}
+        editor._discard_pending_global_z()
+        self.assertFalse(config.autosave.fileconfig.has_option(section, 'z_offset'))
+        self.assertFalse(config.save_config_pending)
+        self.assertEqual(primary.read_text(), saved + 'SAVE_MARKER')
+
+    def test_pending_save_failure_reports_material_values_already_persisted(self):
+        editor, printer = self.make_editor()
+        editor.cmd_open(FakeGCmd())
+        editor.cmd_stage(FakeGCmd(INDEX=1, VALUE=0.1))
+        command = FakeGCmd()
+        with patch.object(editor, "_discard_pending_global_z", side_effect=RuntimeError("disk error")):
+            with self.assertRaisesRegex(RuntimeError, "were saved and are active.*disk error"):
+                editor.cmd_save(command)
+        self.assertIn("variable_offset_PETG: 0.100", self.path.read_text())
+        self.assertEqual(printer.objects["gcode_macro _START_PRINT_VARS"].variables["offset_petg"], 0.1)
+        self.assertIsNone(editor.materials)
+        self.assertEqual(command.info, [])
+
+    def test_cancel_and_unchanged_save_do_not_discard_pending_config(self):
+        editor, printer = self.make_editor()
+        editor.cmd_open(FakeGCmd())
+        editor.cmd_save(FakeGCmd())
+        editor.cmd_open(FakeGCmd())
+        editor.cmd_stage(FakeGCmd(INDEX=1, VALUE=0.1))
+        editor.cmd_cancel(FakeGCmd())
+        self.assertEqual(printer.objects["gcode"].scripts, [])
+        self.assertEqual(self.path.read_text(), BASE_CONFIG)
 
     def test_missing_live_macro_prevents_save(self):
         editor, printer = self.make_editor()

@@ -137,6 +137,7 @@ material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets
 material-z-offsets-fluidd-namespace-bootstrap-v1|material-z-offsets|is_material_z_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Material Z Offset layout setup
 material-z-offsets-fluidd-post-restart-layout-v2|material-z-offsets|is_material_z_offsets|Reapply and verify persistent Material Z Offset Fluidd grouping after the upgraded macros are active
 material-z-offsets-live-save-v4|material-z-offsets|is_material_z_offsets|Saving Material Z offsets now updates live START_PRINT variables without restarting
+material-z-offsets-pending-global-discard-v5|material-z-offsets|is_material_z_offsets|Discard staged global Z offset changes after saving Material Z offsets without saving unrelated pending configuration
 macros-preserve-carto-surface-wrapper-v1|macros|is_macros|Macro repairs now preserve an installed Cartographer surface-selection wrapper
 case-fan-runtime-state-v2|macros|is_macros|The guarded pre-print case-fan release now applies independently of firmware version
 case-fan-any-direct-request-v3|macros|is_macros|Pre-print now releases any nonzero direct case-fan request while preserving chamber cooling
