@@ -53,3 +53,12 @@ Printer validation still required: cold boot without manual `on`, Cartographer
 enumeration/connection before homing, factory `off` request with no USB
 disconnect, AI preference requests with `WASTE_SWITCH=1` still reporting zero,
 and enclosure-camera AI behavior. Run power-cycle tests only while idle.
+
+## Update status for earlier direct installations
+
+The updater verifies the installed module, preferences and (in USB-power mode)
+power wrapper, startup script, and Klipper dependency/preflight before hiding
+the two already-satisfied v1/v2 migration notices. This verification is read-only:
+it does not operate the USB rail, restart a service, or change completion records.
+Missing or mismatched files keep the repair recommendation visible. Future
+migrations are never suppressed by this check.

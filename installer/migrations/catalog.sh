@@ -4,6 +4,8 @@
 
 migration_catalog() {
     cat <<'EOF'
+virtual-sdcard-ignored-tool-position-v2|virtual-sdcard-guard|is_virtual_sdcard_guard|Count ignored tool-selection lines in the saved file offset so refill and pause resumes start at complete G-code lines
+resume-off-fan-defaults-v1|macros|is_macros|Restore zero-speed model and side fans without generating an empty M106 speed after refill or pause
 cartographer-stationary-probe-motion-wait-v1|cartographer|is_cartographer|Complete positioning before stationary Scan probe sampling so Z tilt and screws tilt can start from a lowered bed while retaining the sensor sample timeout; reload through the protected restart
 prtouch-final-z-after-tilt-v1|macros|is_macros|Re-home native PR Touch Z at 140 C after tilt and nozzle cleaning for both saved and new meshes; recheck plate Z offsets after updating
 start-print-fast-stop-stock-mesh-v1|start-print-fast-stop|is_start_print_fast_stop|Stop native PR Touch mesh calibration at a completed sample boundary and restore probe state and temporary motion limits without saving a partial mesh

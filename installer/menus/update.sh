@@ -180,7 +180,7 @@ migration_is_complete() {
 }
 
 migration_pending_entries() {
-    local id component detector reason applicable_components inapplicable_components
+    local id component detector reason applicable_components inapplicable_components usb_verified
     # Read completion state once and discard acknowledged entries before any
     # installation probes. Most menu redraws have no outstanding migrations.
     # A missing/unreadable completion file still means nothing is acknowledged.
@@ -194,8 +194,25 @@ migration_pending_entries() {
     ' | {
         applicable_components='|'
         inapplicable_components='|'
+        usb_verified=unknown
         while IFS='|' read -r id component detector reason; do
             [ -n "$id" ] || continue
+            # Older direct installs may have correct files but no updater receipt.
+            # Verify only these released migrations without touching printer state.
+            # Never auto-suppress future migrations or a partial installation.
+            case "$id" in
+                nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer-boot-dependencies-v2)
+                    if [ "$usb_verified" = unknown ]; then
+                        usb_verified=no
+                        if [ -n "${INSTALLER_DIR:-}" ] &&
+                           [ -f "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/verify_install.py" ] &&
+                           "${K2_PYTHON:-python3}" -B "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/verify_install.py" 2>/dev/null; then
+                            usb_verified=yes
+                        fi
+                    fi
+                    [ "$usb_verified" != yes ] || continue
+                    ;;
+            esac
             # Cache positive AND negative applicability only within this scan.
             # The next scan must see installs, repairs and firmware-gate changes.
             case "$applicable_components" in

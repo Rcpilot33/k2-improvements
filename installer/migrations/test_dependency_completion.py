@@ -12,6 +12,27 @@ BASH = shutil.which("bash") or "C:/Program Files/Git/bin/bash.exe"
 
 @unittest.skipUnless(Path(BASH).exists(), "bash required")
 class DependencyCompletionTests(unittest.TestCase):
+    def test_verified_legacy_usb_receipts_are_filtered_but_future_updates_remain(self):
+        for result in (0,1):
+            with self.subTest(result=result), tempfile.TemporaryDirectory() as directory:
+                script='''
+. "$UPDATE_SCRIPT"
+migration_catalog() {
+    printf '%s\\n' 'nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer|check|old' 'nozzle-usb-cartographer-boot-dependencies-v2|nozzle-usb-cartographer|check|old' 'future-usb|nozzle-usb-cartographer|check|new'
+}
+migration_component_applicable() { return 0; }
+python3() { return "$VERIFY_RESULT"; }
+migration_pending_entries
+'''
+                run=subprocess.run([BASH,'-c',script],capture_output=True,text=True,
+                    env=dict(os.environ,UPDATE_SCRIPT=(ROOT/'installer/menus/update.sh').as_posix(),INSTALLER_DIR=ROOT.as_posix(),
+                             MIGRATION_STATE_DIR=Path(directory).as_posix(),VERIFY_RESULT=str(result)))
+                self.assertEqual(run.returncode,0,run.stderr)
+                self.assertIn('future-usb|',run.stdout)
+                self.assertEqual('nozzle-usb-cartographer-protection-v1|' in run.stdout,result==1)
+                self.assertEqual('nozzle-usb-cartographer-boot-dependencies-v2|' in run.stdout,result==1)
+                self.assertFalse((Path(directory)/'completed-migrations').exists())
+
     def test_fresh_setup_completes_fluidd_cache_migration_before_marking(self):
         for failed_step in ("", "reset", "restart", "verify", "mark"):
             with self.subTest(failed_step=failed_step):
