@@ -11,6 +11,7 @@ UPDATE_MENU = HERE.parent / "menus" / "update.sh"
 MAIN_MENU = HERE.parent / "menus" / "main.sh"
 
 KNOWN_COMPONENTS = {
+    "moonraker-source",
     "fluidd",
     "cartographer",
     "macros",
@@ -34,6 +35,7 @@ KNOWN_COMPONENTS = {
 }
 
 EXPECTED_DETECTORS = {
+    "moonraker-source": "is_managed_moonraker",
     "fluidd": "is_fluidd",
     "cartographer": "is_cartographer",
     "macros": "is_macros",
@@ -77,6 +79,17 @@ def recommended(installed, completed=frozenset()):
 
 
 class MigrationCatalogTests(unittest.TestCase):
+    def test_moonraker_fork_migration_is_once_and_moonraker_restart_only(self):
+        migration = "moonraker-maintained-fork-v1"
+        ids = {entry[0] for entry in entries()}
+        self.assertIn(migration, ids)
+        self.assertEqual(recommended({"moonraker-source"}, ids - {migration}),
+                         {"moonraker-source"})
+        self.assertEqual(recommended({"moonraker-source"}, ids), set())
+        self.assertEqual(recommended({"macros"}, ids - {migration}), set())
+        text = UPDATE_MENU.read_text(encoding="utf-8")
+        self.assertIn('moonraker-source|fluidd)\n            echo moonraker', text)
+
     def test_stationary_scan_motion_wait_is_offered_once_to_cartographer_only(self):
         update_id = "cartographer-stationary-probe-motion-wait-v1"
         ids = {entry[0] for entry in entries()}

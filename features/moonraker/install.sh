@@ -48,15 +48,8 @@ remove_legacy_symlinks() {
 }
 
 fetch_moonraker() {
-    progress "Fetching mooonraker ..."
-    # clone my mooonraker fork
-    if [ -d moonraker/.git ]; then
-        git -C moonraker pull
-    else
-        git clone https://github.com/jacob10383/moonraker.git
-    fi
-    # ensure we are on the k2 branch
-    git -C moonraker checkout k2
+    progress "Fetching maintained K2 Moonraker fork ..."
+    python3 "$SCRIPT_DIR/source.py" "$HOME/moonraker"
 }
 
 create_moonraker_venv() {
