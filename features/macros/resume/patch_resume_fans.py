@@ -15,8 +15,15 @@ def patch_text(text):
     match=matches[0];section=match.group()
     if MARKER in section:
         return text,False
-    for token in ('M106 P2 S{s_value} F1','M106 P0 S{s_value_0} F1',
-                  "printer['gcode_macro PRINTER_PARAM'].fan2_speed > 0",
+    # Known factory variants restore fans with or without F1. Match active,
+    # complete command lines: a commented example is not a restore command.
+    # Keep the original commands/flags byte-for-byte; only add defaults.
+    for fan, variable in ((2, 's_value'), (0, 's_value_0')):
+        command = (r'^[ \t]*M106[ \t]+P' + str(fan) + r'[ \t]+S\{'
+                   + variable + r'\}(?:[ \t]+F1)?[ \t]*(?:;[^\r\n]*)?\r?$')
+        if len(re.findall(command, section, re.M)) != 1:
+            raise ValueError('unsupported factory fan restore macro; refusing to overwrite')
+    for token in ("printer['gcode_macro PRINTER_PARAM'].fan2_speed > 0",
                   "printer['gcode_macro PRINTER_PARAM'].fan0_speed > 0"):
         if token not in section:
             raise ValueError('unsupported factory fan restore macro; refusing to overwrite')

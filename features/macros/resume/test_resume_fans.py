@@ -40,6 +40,48 @@ class ResumeFansTests(unittest.TestCase):
             self.assertEqual(p.with_name(p.name+'.before-resume-fan-defaults').read_bytes(),original)
             self.assertIn('# 中文',p.read_bytes().decode('gbk'))
 
+    def test_rc1_restore_without_f1_preserves_entire_macro(self):
+        # RC1's factory macro uses SET_PIN inside the conditions and plain
+        # M106 restore commands afterward. Its commented M106 examples must
+        # not count as additional active restores.
+        original=STOCK.replace(' F1','').replace(
+            '    {% set s_value = 80 %}',
+            "    SET_PIN PIN=fan2 VALUE={(printer['gcode_macro PRINTER_PARAM'].fan2_speed * 255 + 0.5)|int}\n"
+            '    {% set s_value = 80 %}\n    # M106 P2 S{s_value}').replace(
+            '    {% set s_value_0 = 25 %}',
+            "    SET_PIN PIN=fan0 VALUE={(printer['gcode_macro PRINTER_PARAM'].fan0_speed * 255 + 0.5)|int}\n"
+            '    {% set s_value_0 = 25 %}\n    # M106 P2 S{s_value}')
+        patched,changed=patcher.patch_text(original)
+        added='  '+patcher.MARKER+'\n  {% set s_value = 0 %}\n  {% set s_value_0 = 0 %}\n'
+        self.assertTrue(changed)
+        self.assertEqual(patched.replace(added,'',1),original)
+        self.assertEqual(patcher.patch_text(patched),(patched,False))
+
+    def test_optional_f1_with_crlf_and_indentation(self):
+        original=STOCK.replace('M106 P2 S{s_value} F1','M106\tP2\tS{s_value} ; side fan').replace('\n','\r\n')
+        patched,changed=patcher.patch_text(original)
+        added='  '+patcher.MARKER+'\r\n  {% set s_value = 0 %}\r\n  {% set s_value_0 = 0 %}\r\n'
+        self.assertTrue(changed)
+        self.assertEqual(patched.replace(added,'',1),original)
+
+    def test_commented_duplicate_or_unrecognized_restores_are_refused(self):
+        command='M106 P2 S{s_value} F1'
+        for replacement in ('# '+command, '; '+command,
+                            command+' F2', command.replace('F1','F0'),
+                            'M106 P2 S{different}', command+'\n  '+command):
+            with self.subTest(replacement=replacement), self.assertRaises(ValueError):
+                patcher.patch_text(STOCK.replace(command,replacement))
+
+    def test_refused_macro_does_not_change_file_or_create_backup(self):
+        with tempfile.TemporaryDirectory() as folder:
+            p=Path(folder)/'gcode_macro.cfg'
+            original=STOCK.replace('M106 P2 S{s_value} F1','# M106 P2 S{s_value} F1').encode()
+            p.write_bytes(original)
+            with self.assertRaises(ValueError):
+                patcher.main(['patch',str(p)])
+            self.assertEqual(p.read_bytes(),original)
+            self.assertFalse(p.with_name(p.name+'.before-resume-fan-defaults').exists())
+
     def test_unknown_section_is_refused(self):
         for text in ('',STOCK.replace('M106 P2 S{s_value} F1','different command')):
             with self.assertRaises(ValueError): patcher.patch_text(text)
