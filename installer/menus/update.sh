@@ -10,6 +10,7 @@ REPOSITORY_RECOVERY_ROOT="${REPOSITORY_RECOVERY_ROOT:-/mnt/UDISK/root/.k2-improv
 
 migration_component_label() {
     case "$1" in
+        moonraker-source) echo 'Moonraker maintained K2 fork' ;;
         cartographer) echo 'Cartographer' ;;
         macros) echo 'Macros (START_PRINT / M191 / bed mesh)' ;;
         save-config-restart) echo 'SAVE_CONFIG restart protection' ;;
@@ -37,6 +38,10 @@ migration_component_label() {
 
 migration_component_installed() {
     case "$1" in
+        moonraker-source)
+            python3 "$INSTALLER_DIR/features/moonraker/source.py" \
+                "${HOME:-/mnt/UDISK/root}/moonraker" --check
+            ;;
         cartographer) is_cartographer ;;
         macros) is_macros ;;
         save-config-restart) is_save_config_restart ;;
@@ -93,6 +98,7 @@ migration_component_present() {
     local custom configfile
     custom="$PRINTER_CFG_DIR/custom"
     case "$1" in
+        moonraker-source) is_managed_moonraker ;;
         cartographer)
             [ -f "$custom/cartographer.cfg" ] ||
                 grep -q '^\[cartographer\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null
@@ -180,7 +186,7 @@ migration_is_complete() {
 }
 
 migration_pending_entries() {
-    local id component detector reason applicable_components inapplicable_components
+    local id component detector reason applicable_components inapplicable_components usb_verified
     # Read completion state once and discard acknowledged entries before any
     # installation probes. Most menu redraws have no outstanding migrations.
     # A missing/unreadable completion file still means nothing is acknowledged.
@@ -194,8 +200,25 @@ migration_pending_entries() {
     ' | {
         applicable_components='|'
         inapplicable_components='|'
+        usb_verified=unknown
         while IFS='|' read -r id component detector reason; do
             [ -n "$id" ] || continue
+            # Older direct installs may have correct files but no updater receipt.
+            # Verify only these released migrations without touching printer state.
+            # Never auto-suppress future migrations or a partial installation.
+            case "$id" in
+                nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer-boot-dependencies-v2)
+                    if [ "$usb_verified" = unknown ]; then
+                        usb_verified=no
+                        if [ -n "${INSTALLER_DIR:-}" ] &&
+                           [ -f "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/verify_install.py" ] &&
+                           "${K2_PYTHON:-python3}" -B "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/verify_install.py" 2>/dev/null; then
+                            usb_verified=yes
+                        fi
+                    fi
+                    [ "$usb_verified" != yes ] || continue
+                    ;;
+            esac
             # Cache positive AND negative applicability only within this scan.
             # The next scan must see installs, repairs and firmware-gate changes.
             case "$applicable_components" in
@@ -222,7 +245,7 @@ migration_pending_components() {
     migration_pending_entries | awk -F '|' '
         NF >= 2 { pending[$2] = 1 }
         END {
-            count = split("cartographer save-config-restart virtual-sdcard-guard abort_homing " \
+            count = split("moonraker-source cartographer save-config-restart virtual-sdcard-guard abort_homing " \
                 "screws_tilt_adjust macros r3men-bed kamp-adaptive-purge " \
                 "cartographer-plate-workflow global-touch-offsets global-prtouch-offsets " \
                 "material-z-offsets plate-aware-mesh nozzle-camera nozzle-camera-mount-compatibility nozzle-usb-cartographer fluidd better-init " \
@@ -386,6 +409,10 @@ migration_repair_component() {
     [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
 
     case "$component" in
+        moonraker-source)
+            HOME="$pwd_home" python3 "$INSTALLER_DIR/features/moonraker/source.py" \
+                "$pwd_home/moonraker" --migrate
+            ;;
         cartographer)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/features/cartographer/install.sh"
@@ -497,7 +524,7 @@ migration_component_restart_kind() {
         cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|global-touch-offsets|global-prtouch-offsets|material-z-offsets|start-print-fast-stop|nozzle-usb-cartographer)
             echo code
             ;;
-        fluidd)
+        moonraker-source|fluidd)
             echo moonraker
             ;;
         *)

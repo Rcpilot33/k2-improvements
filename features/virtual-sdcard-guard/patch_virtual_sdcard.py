@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add a narrow trailing multipart-boundary guard to virtual_sdcard.py."""
+"""Protect terminal upload boundaries and ignored-tool resume byte offsets."""
 
 from pathlib import Path
 import re
@@ -63,7 +63,7 @@ def is_terminal_multipart_boundary(line, next_position, file_size):
     )
 
 
-def patch_text(text):
+def patch_boundary_text(text):
     if MARKER in text:
         return text, False
     helper_matches = list(HELPER_PATTERN.finditer(text))
@@ -86,6 +86,28 @@ def patch_text(text):
         indented_guard = indented_guard.replace("\n", "\r\n")
     text = text[:match.end()] + indented_guard + text[match.end():]
     return text, True
+
+
+SKIP_MARKER = 'k2-improvements: count ignored tool commands before pause'
+
+
+def patch_text(text):
+    text, boundary_changed = patch_boundary_text(text)
+    if SKIP_MARKER in text or 'self.ignore_t_code(line)' not in text:
+        return text, boundary_changed
+    pattern = re.compile(r'^(?P<i>[ \t]*)if self\.ignore_t_code\(line\):[ \t]*continue[ \t]*\r?$', re.MULTILINE)
+    matches = list(pattern.finditer(text))
+    if len(matches) != 1:
+        raise ValueError('unsupported ignored-tool dispatch; refusing to patch')
+    match = matches[0]
+    indent = match.group('i')
+    newline = '\r\n' if '\r\n' in text else '\n'
+    block = newline.join([indent+'if self.ignore_t_code(line):',
+                          indent+'    # '+SKIP_MARKER,
+                          indent+'    self.cmd_from_sd = False',
+                          indent+'    self.file_position = self.next_file_position',
+                          indent+'    continue'])
+    return text[:match.start()]+block+text[match.end():], True
 
 
 def decode_source(raw):
@@ -119,14 +141,18 @@ def main(argv):
         original, encoding = decode_source(original_bytes)
         patched, changed = patch_text(original)
         if not changed:
-            print("I: virtual-SD upload-boundary guard already installed")
+            print("I: virtual-SD protections already installed")
             return 2
         patched = ensure_encoding_cookie(patched, encoding)
         backup = target.with_name(target.name + ".before-upload-boundary-guard")
         if not backup.exists():
             backup.write_bytes(original_bytes)
+        if SKIP_MARKER in patched and SKIP_MARKER not in original:
+            resume_backup = target.with_name(target.name + '.before-ignored-tool-position')
+            if not resume_backup.exists():
+                resume_backup.write_bytes(original_bytes)
         target.write_bytes(patched.encode(encoding))
-        print("I: installed terminal multipart upload-boundary guard")
+        print("I: installed virtual-SD upload and pause/refill position protection")
         return 0
     except Exception as exc:
         print("E: could not patch {}: {}".format(target, exc), file=sys.stderr)

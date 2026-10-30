@@ -4,6 +4,9 @@
 
 migration_catalog() {
     cat <<'EOF'
+moonraker-maintained-fork-v1|moonraker-source|is_managed_moonraker|Switch existing managed Moonraker to Rcpilot33/moonraker k2, preserving printer configuration and virtualenv; restart Moonraker only
+virtual-sdcard-ignored-tool-position-v2|virtual-sdcard-guard|is_virtual_sdcard_guard|Count ignored tool-selection lines in the saved file offset so refill and pause resumes start at complete G-code lines
+resume-off-fan-defaults-v1|macros|is_macros|Restore zero-speed model and side fans without generating an empty M106 speed after refill or pause
 cartographer-stationary-probe-motion-wait-v1|cartographer|is_cartographer|Complete positioning before stationary Scan probe sampling so Z tilt and screws tilt can start from a lowered bed while retaining the sensor sample timeout; reload through the protected restart
 prtouch-final-z-after-tilt-v1|macros|is_macros|Re-home native PR Touch Z at 140 C after tilt and nozzle cleaning for both saved and new meshes; recheck plate Z offsets after updating
 start-print-fast-stop-stock-mesh-v1|start-print-fast-stop|is_start_print_fast_stop|Stop native PR Touch mesh calibration at a completed sample boundary and restore probe state and temporary motion limits without saving a partial mesh
@@ -137,6 +140,7 @@ material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets
 material-z-offsets-fluidd-namespace-bootstrap-v1|material-z-offsets|is_material_z_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Material Z Offset layout setup
 material-z-offsets-fluidd-post-restart-layout-v2|material-z-offsets|is_material_z_offsets|Reapply and verify persistent Material Z Offset Fluidd grouping after the upgraded macros are active
 material-z-offsets-live-save-v4|material-z-offsets|is_material_z_offsets|Saving Material Z offsets now updates live START_PRINT variables without restarting
+material-z-offsets-pending-global-discard-v5|material-z-offsets|is_material_z_offsets|Discard staged global Z offset changes after saving Material Z offsets without saving unrelated pending configuration
 macros-preserve-carto-surface-wrapper-v1|macros|is_macros|Macro repairs now preserve an installed Cartographer surface-selection wrapper
 case-fan-runtime-state-v2|macros|is_macros|The guarded pre-print case-fan release now applies independently of firmware version
 case-fan-any-direct-request-v3|macros|is_macros|Pre-print now releases any nonzero direct case-fan request while preserving chamber cooling

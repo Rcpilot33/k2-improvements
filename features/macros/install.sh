@@ -18,7 +18,7 @@ if grep -q 'surface-selection wrapper' "$CUSTOM/start_print.cfg" 2>/dev/null; th
     HAD_SURFACE_WRAPPER=1
 fi
 
-for sub in start_print m191 bed_mesh overrides; do
+for sub in resume start_print m191 bed_mesh overrides; do
     if [ -f "$SCRIPT_DIR/$sub/install.sh" ]; then
         echo "--- macros/$sub ---"
         sh "$SCRIPT_DIR/$sub/install.sh" --no-restart

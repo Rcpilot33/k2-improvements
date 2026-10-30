@@ -57,6 +57,39 @@ class BoundaryPredicateTests(unittest.TestCase):
 
 
 class PatcherTests(unittest.TestCase):
+    def test_ignored_tool_updates_position_before_continue(self):
+        source=STOCK_SNIPPET.replace('        self.gcode.run_script(line)',
+            '        if self.ignore_t_code(line): continue\n        self.gcode.run_script(line)')
+        for source in (source,source.replace('\n','\r\n')):
+            patched,changed=PATCHER.patch_text(source)
+            self.assertTrue(changed)
+            self.assertIn(PATCHER.SKIP_MARKER,patched)
+            self.assertIn('self.file_position = self.next_file_position',patched.split(PATCHER.SKIP_MARKER)[1])
+            self.assertEqual(PATCHER.patch_text(patched),(patched,False))
+
+    def test_upgrade_existing_guard_and_execute_pause_bookkeeping(self):
+        source=STOCK_SNIPPET.replace('        self.gcode.run_script(line)',
+            '        if self.ignore_t_code(line): continue\n        self.gcode.run_script(line)')
+        old,_=PATCHER.patch_boundary_text(source)
+        fixed,_=PATCHER.patch_text(old)
+        import io
+        # Execute the actual installed skip branch over a T0 + extrusion stream.
+        block=fixed[fixed.index('        if self.ignore_t_code(line):'):fixed.index('        self.gcode.run_script(line)')]
+        block='\n'.join(line[8:] for line in block.splitlines())
+        program='for line in lines:\n    self.next_file_position = self.file_position + len(line.encode("utf-8")) + 1\n'+''.join('    '+line+'\n' for line in block.splitlines())+'    self.file_position = self.next_file_position\n'
+        from types import SimpleNamespace
+        lines=['T0','G1 X1 E.07616']
+        state=SimpleNamespace(file_position=0,next_file_position=0,cmd_from_sd=True,ignore_t_code=lambda line:line=='T0')
+        exec(program,dict(self=state,lines=lines))
+        data=('\n'.join(lines)+'\nG1 X2\n').encode()
+        stream=io.BytesIO(data);stream.seek(state.file_position)
+        self.assertEqual(stream.readline(),b'G1 X2\n')
+        self.assertFalse(state.cmd_from_sd)
+
+    def test_unsupported_skip_layout_refuses_entire_patch(self):
+        with self.assertRaises(ValueError):
+            PATCHER.patch_text(STOCK_SNIPPET+'\nif self.ignore_t_code(line):\n    other_operation()\n')
+
     def test_patch_adds_guard_before_dispatch(self):
         patched, changed = PATCHER.patch_text(STOCK_SNIPPET)
         self.assertTrue(changed)

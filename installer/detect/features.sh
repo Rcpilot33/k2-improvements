@@ -44,6 +44,7 @@ is_cartographer() {
     grep -q '^class TriggerDispatch' "$klipper_dir/klippy/mcu.py" 2>/dev/null
 }
 is_moonraker()     { [ -d /mnt/UDISK/printer_data/moonraker ] || [ -f /mnt/UDISK/printer_data/config/moonraker.conf ]; }
+is_managed_moonraker() { [ -d "${HOME:-/mnt/UDISK/root}/moonraker/.git" ]; }
 is_fluidd()        { grep -ilq 'crealityk2' /usr/share/fluidd/assets/*.js 2>/dev/null; }
 is_macros() {
     local custom="$PRINTER_CFG_DIR/custom"
