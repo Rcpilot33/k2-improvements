@@ -207,6 +207,14 @@ migration_pending_entries() {
             # Verify only these released migrations without touching printer state.
             # Never auto-suppress future migrations or a partial installation.
             case "$id" in
+                moonraker-maintained-fork-v1)
+                    # Fresh installs already select the maintained fork. Verify
+                    # the checkout before offering this source-only migration;
+                    # keep future Moonraker migrations independent of this one.
+                    if migration_component_installed moonraker-source 2>/dev/null; then
+                        continue
+                    fi
+                    ;;
                 nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer-boot-dependencies-v2)
                     if [ "$usb_verified" = unknown ]; then
                         usb_verified=no

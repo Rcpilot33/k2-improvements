@@ -12,6 +12,34 @@ BASH = shutil.which("bash") or "C:/Program Files/Git/bin/bash.exe"
 
 @unittest.skipUnless(Path(BASH).exists(), "bash required")
 class DependencyCompletionTests(unittest.TestCase):
+    def test_verified_moonraker_fork_needs_no_receipt_but_future_updates_remain(self):
+        for verified in (0, 1):
+            with self.subTest(verified=verified), tempfile.TemporaryDirectory() as directory:
+                script = '''
+. "$UPDATE_SCRIPT"
+migration_catalog() {
+    printf '%s\\n' 'moonraker-maintained-fork-v1|moonraker-source|check|fork' 'future-moonraker|moonraker-source|check|future'
+}
+migration_component_applicable() { return 0; }
+migration_component_installed() {
+    [ "$1" = moonraker-source ] && return "$VERIFY_RESULT"
+    return 1
+}
+migration_pending_entries
+'''
+                result = subprocess.run(
+                    [BASH, '-c', script], capture_output=True, text=True,
+                    env=dict(os.environ,
+                             UPDATE_SCRIPT=(ROOT / 'installer/menus/update.sh').as_posix(),
+                             MIGRATION_STATE_DIR=Path(directory).as_posix(),
+                             VERIFY_RESULT=str(verified)),
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('future-moonraker|', result.stdout)
+                self.assertEqual('moonraker-maintained-fork-v1|' in result.stdout,
+                                 verified == 1)
+                self.assertFalse((Path(directory) / 'completed-migrations').exists())
+
     def test_verified_legacy_usb_receipts_are_filtered_but_future_updates_remain(self):
         for result in (0,1):
             with self.subTest(result=result), tempfile.TemporaryDirectory() as directory:
