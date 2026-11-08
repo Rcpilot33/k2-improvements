@@ -16,11 +16,10 @@ Select DEFAULT or a plate, then an increment: 0.005, 0.010, 0.025, or 0.050 mm.
 These are editing buttons, not live bed-movement commands. **Save** makes the
 values persistent and active without restart; **Cancel** discards the edits.
 Opening, editing, and saving are refused during printing/paused/unknown states.
-The installer upgrades the shared Fluidd UI to overlay 8 while retaining the
-Cartographer, Material, Bed Assist, and Creality-camera controls. Existing
-installations receive migration `global-prtouch-offsets-compact-ui-v2` through
-Update installer / apply updates. Refresh Fluidd after installation; complete
-the protected Klippy code reload before opening the updated editor.
+The installer requires the settings dialogs included in the Rcpilot33 Fluidd
+build. It checks capabilities without replacing the UI. Install the combined
+Fluidd build first, then refresh Fluidd after installation; complete the
+protected Klippy code reload before opening the updated editor.
 
 ## Selection and storage
 

@@ -83,7 +83,8 @@ def download_file(url: str, filename: str, token: Optional[str] = None) -> None:
         sys.exit(1)
 
 
-def download_latest_release(repo: str, token: Optional[str] = None, pattern: Optional[str] = None) -> None:
+def download_latest_release(repo: str, token: Optional[str] = None, pattern: Optional[str] = None,
+                            asset_name: Optional[str] = None) -> None:
     """Download the latest release assets from a GitHub repository."""
     release_data = fetch_latest_release(repo, token)
 
@@ -93,6 +94,10 @@ def download_latest_release(repo: str, token: Optional[str] = None, pattern: Opt
 
     # Filter assets if pattern is provided
     assets = release_data['assets']
+    if asset_name:
+        assets = [asset for asset in assets if asset['name'] == asset_name]
+        if len(assets) != 1:
+            raise SystemExit(f"Expected exactly one release asset named {asset_name}")
     if pattern:
         assets = [asset for asset in assets if pattern.lower() in asset['name'].lower()]
         if not assets:
@@ -134,6 +139,7 @@ def main():
     parser.add_argument('repository', help='GitHub repository (format: owner/repo)')
     parser.add_argument('-t', '--token', help='GitHub personal access token', default=None)
     parser.add_argument('-p', '--pattern', help='Filter assets by name pattern', default=None)
+    parser.add_argument('--asset-name', help='Download one exact asset name without prompting', default=None)
 
     args = parser.parse_args()
 
@@ -141,7 +147,7 @@ def main():
         print("Error: Repository must be in format 'owner/repo'")
         sys.exit(1)
 
-    download_latest_release(args.repository, args.token, args.pattern)
+    download_latest_release(args.repository, args.token, args.pattern, args.asset_name)
 
 
 if __name__ == '__main__':

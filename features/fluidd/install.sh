@@ -5,10 +5,19 @@ SCRIPT_DIR=$(readlink -f $(dirname ${0}))
 
 # Parse arguments
 SKIP_CAM=0
-for arg in "$@"; do
-    case "$arg" in
+ARCHIVE=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
         --nocam) SKIP_CAM=1 ;;
+        --archive)
+            [ "$#" -ge 2 ] || { echo 'E: --archive requires a local fluidd.zip path'; exit 1; }
+            ARCHIVE=$(readlink -f "$2")
+            [ -f "$ARCHIVE" ] || { echo 'E: test archive does not exist'; exit 1; }
+            shift
+            ;;
+        *) echo "E: unknown Fluidd option: $1"; exit 1 ;;
     esac
+    shift
 done
 
 # DEPENDS: moonraker
@@ -34,19 +43,45 @@ if ! command -v unzip > /dev/null; then
     opkg install unzip
 fi
 
-rm -fr fluidd
+if [ -e /usr/share/fluidd ] && [ ! -L /usr/share/fluidd ] &&
+   [ -e /usr/share/fluidd.before-k2-cards ]; then
+    echo 'E: existing /usr/share/fluidd backup requires review'
+    exit 1
+fi
 
-mkdir -p fluidd
-cd fluidd
-python3 ${SCRIPT_DIR}/get_latest_release.py Rcpilot33/fluidd
-unzip fluidd.zip
-rm -f fluidd.zip
-python3 ${SCRIPT_DIR}/set_release_source.py release_info.json Rcpilot33 fluidd
-cd ..
+STAGING=$(mktemp -d "$HOME/fluidd-stage.XXXXXX")
+DOWNLOAD=$(mktemp -d "$HOME/fluidd-download.XXXXXX")
+trap 'rm -rf "$STAGING" "$DOWNLOAD"' EXIT
+if [ -z "$ARCHIVE" ]; then
+    cd "$DOWNLOAD"
+    python3 "$SCRIPT_DIR/get_latest_release.py" Rcpilot33/fluidd --asset-name fluidd.zip
+    ARCHIVE="$DOWNLOAD/fluidd.zip"
+fi
+python3 "$SCRIPT_DIR/prepare_bundle.py" "$ARCHIVE" "$STAGING"
+python3 "$SCRIPT_DIR/configure_device.py"
+cd "$HOME"
+# Keep the first known UI for rollback; activate only a fully validated build.
+if [ -e "$HOME/fluidd" ]; then
+    if [ ! -e "$HOME/fluidd.before-k2-cards" ]; then
+        cp -a "$HOME/fluidd" "$HOME/fluidd.before-k2-cards"
+    fi
+    mv "$HOME/fluidd" "$DOWNLOAD/previous"
+fi
+if ! mv "$STAGING" "$HOME/fluidd"; then
+    [ ! -e "$DOWNLOAD/previous" ] || mv "$DOWNLOAD/previous" "$HOME/fluidd"
+    exit 1
+fi
 
 # replace the existing Fluidd
-rm -fr /usr/share/fluidd
-ln -sf ~/fluidd /usr/share/fluidd
+if [ -L /usr/share/fluidd ]; then
+    rm -f /usr/share/fluidd
+elif [ -e /usr/share/fluidd ]; then
+    [ ! -e /usr/share/fluidd.before-k2-cards ] || {
+        echo 'E: existing /usr/share/fluidd backup requires review'; exit 1;
+    }
+    mv /usr/share/fluidd /usr/share/fluidd.before-k2-cards
+fi
+ln -s "$HOME/fluidd" /usr/share/fluidd
 
 # restart nginx
 /etc/init.d/nginx restart
@@ -79,3 +114,4 @@ while ! nc -z 127.0.0.1 7125; do
     sleep 1
 done
 echo "I: Moonraker is accepting connections"
+python3 "$SCRIPT_DIR/configure_device.py" --check --live

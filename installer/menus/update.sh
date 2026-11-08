@@ -29,7 +29,7 @@ migration_component_label() {
         nozzle-camera) echo 'Stock nozzle camera stream' ;;
         nozzle-usb-cartographer) echo 'Nozzle-camera AI / USB protection' ;;
         nozzle-camera-mount-compatibility) echo 'Remove stock camera from JimmyV mount' ;;
-        fluidd) echo 'Fluidd update source metadata' ;;
+        fluidd) echo 'Fluidd settings dialogs and K2 device cards' ;;
         better-init) echo 'Improved Init service management' ;;
         start-print-fast-stop) echo 'START_PRINT Fast Stop (firmware 1.1.5.5+)' ;;
         *) echo "$1" ;;
@@ -498,6 +498,13 @@ migration_repair_component() {
                 sh "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/install.sh" --refresh
             ;;
         fluidd)
+            # Existing complete builds only need the printer-side bridge
+            # refreshed. Older UIs must first obtain the combined release.
+            if [ "$(cat /usr/share/fluidd/k2-device-cards-api.txt 2>/dev/null)" != 1 ]; then
+                HOME="$pwd_home" sh "$INSTALLER_DIR/features/fluidd/install.sh" --nocam || return 1
+            else
+                HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_device.py" || return 1
+            fi
             python3 "$INSTALLER_DIR/features/fluidd/set_release_source.py" \
                 /usr/share/fluidd/release_info.json Rcpilot33 fluidd &&
             mkdir -p "$pwd_home/printer_data/config/updates" &&
@@ -632,6 +639,8 @@ migration_reconcile_fluidd_layout() {
             HOME="$pwd_home" python3 "$layout" || return 1
             ;;
         fluidd)
+            HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_device.py" --check --live || return 1
+            [ "$(cat /usr/share/fluidd/k2-device-cards-api.txt 2>/dev/null)" = 1 ] || return 1
             python3 - /usr/share/fluidd/release_info.json <<'PY'
 import json
 import sys
