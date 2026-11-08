@@ -69,6 +69,13 @@ class ProtocolTests(unittest.TestCase):
         for value in (None, [], {'materialBoxs': 'bad'}, {'materialBoxs': [None, {}]}):
             self.assertEqual(bridge.slots_from_info(value), [])
 
+    def test_rc1_native_seven_digit_colors(self):
+        for reported, expected in [('#0000000', '#000000'), ('#000ff7f', '#00ff7f'),
+                                   ('#0ff0000', '#ff0000')]:
+            info = slot_info()
+            info['materialBoxs'][1]['materials'][0]['color'] = reported
+            self.assertEqual(bridge.slots_from_info(info)[1]['color'], expected)
+
 
 class CommandTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -87,6 +94,20 @@ class CommandTests(unittest.IsolatedAsyncioTestCase):
         self.device.raw = dict(state=0, feedState=0, boxsInfo=slot_info(),
                                modelFanPct=0, caseFanPct=50, auxiliaryFanPct=100)
         self.device.seen = {key: time.monotonic() for key in self.device.raw}
+        self.device.last_message = time.monotonic()
+
+    def test_notification_name_matches_the_fluidd_socket_handler(self):
+        self.server.register_notification.assert_called_once_with(
+            'k2_device:status_changed', 'k2_device_status_changed')
+
+    def test_native_deltas_keep_unchanged_zero_fans_and_idle_flags_valid(self):
+        for key in ('state', 'feedState', 'modelFanPct', 'caseFanPct', 'auxiliaryFanPct'):
+            self.device.seen[key] = time.monotonic() - 60
+        self.assertEqual(self.device.status()['fans']['model'], 0)
+        self.assertTrue(self.device.status()['can_feed'])
+        self.device.last_message = time.monotonic() - 11
+        self.assertIsNone(self.device.status()['fans']['model'])
+        self.assertFalse(self.device.status()['can_feed'])
 
     async def test_exact_native_filament_payload_and_no_repeat(self):
         request = Request(box_id=1, slot_id=0, action='feed')

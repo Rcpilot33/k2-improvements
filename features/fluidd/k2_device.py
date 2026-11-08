@@ -57,6 +57,8 @@ def slots_from_info(info):
                 continue
             seen.add(key)
             color = str(material.get("color", "")).lstrip("#")
+            if len(color) == 7 and color.startswith('0'):
+                color = color[1:]
             if len(color) == 8:
                 color = color[2:]
             color = "#" + color if len(color) == 6 and all(
@@ -83,6 +85,7 @@ class K2Device:
         self.closing = False
         self.raw = {}
         self.seen = {}
+        self.last_message = 0.
         self.pending_until = 0.
         self.command_lock = asyncio.Lock()
         self.server.register_endpoint("/server/k2_device/status", RequestType.GET,
@@ -91,13 +94,18 @@ class K2Device:
                                       self._fan_request)
         self.server.register_endpoint("/server/k2_device/filament", RequestType.POST,
                                       self._filament_request)
-        self.server.register_notification("k2_device:status_changed")
+        self.server.register_notification("k2_device:status_changed", "k2_device_status_changed")
 
     async def component_init(self):
         self.task = asyncio.create_task(self._connect())
 
     def _fresh(self, key):
-        return self.ws is not None and time.monotonic() - self.seen.get(key, -100.) < 10.
+        # Native status is a full snapshot on connect followed by deltas.
+        # Unchanged fan speeds and idle flags remain valid while messages
+        # arrive on this connection. CFS snapshots still expire independently.
+        updated = self.seen.get(key) if key in ('boxsInfo', 'boxConfig') else self.last_message
+        return (self.ws is not None and key in self.seen and updated is not None
+                and time.monotonic() - updated < 10.)
 
     def status(self):
         fresh = self._fresh("state") and self._fresh("feedState")
@@ -197,6 +205,7 @@ class K2Device:
                 self.ws = await websocket_connect("ws://127.0.0.1:9999", connect_timeout=5.,
                                                   max_message_size=1024 * 1024)
                 self.raw, self.seen = {}, {}
+                self.last_message = 0.
                 poll = asyncio.create_task(self._poll())
                 while True:
                     message = await asyncio.wait_for(self.ws.read_message(), 12.)
@@ -209,6 +218,7 @@ class K2Device:
                         data = data.get("params", data)
                         if not isinstance(data, dict):
                             continue
+                        self.last_message = time.monotonic()
                         for key in QUERY:
                             if key in data and (key != "boxConfig" or isinstance(data[key], dict)):
                                 self.raw[key] = data[key]
@@ -230,6 +240,7 @@ class K2Device:
                     self.ws.close()
                 self.ws = None
                 self.raw, self.seen = {}, {}
+                self.last_message = 0.
                 self._notify()
             if not self.closing:
                 await asyncio.sleep(5.)
