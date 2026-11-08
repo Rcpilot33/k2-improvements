@@ -36,6 +36,9 @@ def prepare(archive, staging):
             digest.update(chunk)
     (staging / 'k2-installed-build.json').write_text(
         json.dumps({'sha256': digest.hexdigest()}) + '\n', encoding='utf-8')
+    # mktemp creates this directory as 0700. rglob only visits its children;
+    # nginx must also be able to traverse the UI root after the directory swap.
+    staging.chmod(0o755)
     for path in staging.rglob('*'):
         path.chmod(0o755 if path.is_dir() else 0o644)
 

@@ -172,6 +172,7 @@ case-fan-restore-preflight-target-v9|macros|is_macros|Heated-bed deformation pre
 fluidd-release-source-v1|fluidd|is_fluidd|Align Fluidd release metadata with the preserved Rcpilot33 update source
 fluidd-stale-update-cache-v2|fluidd|is_fluidd|Clear the previous Fluidd repository's cached release and download URL before checking Rcpilot33/fluidd
 fluidd-consolidated-device-cards-v3|fluidd|is_fluidd|Install consolidated Fluidd settings dialogs and the local K2 fan/CFS bridge
+fluidd-web-root-permissions-v4|fluidd|is_fluidd|Restore nginx access to the installed Fluidd directory and verify the web page loads
 chamber-fan-output-resync-v1|macros|is_macros|Resynchronize the chamber thermostat output after releasing Creality's direct case-fan request
 nozzle-camera-jimmyv-removal-v1|nozzle-camera-mount-compatibility|is_nozzle_camera_mount_compatible|Remove the managed stock nozzle-camera stream from JimmyV mounts without switching off shared USB power
 nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer|is_nozzle_usb_cartographer|Refresh opted-in nozzle-camera AI and USB power protection without changing the selected wiring mode

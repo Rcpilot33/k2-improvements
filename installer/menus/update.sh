@@ -506,6 +506,8 @@ migration_repair_component() {
             else
                 HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_device.py" || return 1
             fi
+            # Repair builds installed before the mktemp directory permission fix.
+            chmod a+rx "$(readlink -f /usr/share/fluidd)" || return 1
             python3 "$INSTALLER_DIR/features/fluidd/set_release_source.py" \
                 /usr/share/fluidd/release_info.json Rcpilot33 fluidd &&
             mkdir -p "$pwd_home/printer_data/config/updates" &&

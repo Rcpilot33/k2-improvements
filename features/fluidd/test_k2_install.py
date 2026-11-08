@@ -10,6 +10,8 @@ from zipfile import ZipFile
 import configure_device
 import prepare_bundle
 import get_latest_release
+import io
+from unittest.mock import Mock, call
 
 
 class InstallationTests(unittest.TestCase):
@@ -100,6 +102,30 @@ class InstallationTests(unittest.TestCase):
             self.make_bundle(archive)
             prepare_bundle.prepare(archive, stage)
             self.assertTrue((stage / 'index.html').is_file())
+
+    def test_ui_root_itself_gets_traversal_permissions_not_only_children(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stage = root / 'stage'
+            stage.mkdir(mode=0o700)
+            archive = root / 'fluidd.zip'
+            self.make_bundle(archive)
+            with patch.object(Path, 'chmod', autospec=True) as chmod:
+                prepare_bundle.prepare(archive, stage)
+            self.assertIn(call(stage, 0o755), chmod.call_args_list)
+            self.assertIn(call(stage / 'index.html', 0o644), chmod.call_args_list)
+
+    def test_live_verifier_requires_nginx_to_serve_the_application(self):
+        for page, valid in [(b'<div id="app"></div>', True), (b'403 Forbidden', False)]:
+            opener = Mock()
+            opener.open.side_effect = [io.BytesIO(json.dumps({'result': {'fans': {}, 'slots': []}}).encode()),
+                                       io.BytesIO(page)]
+            with patch.object(configure_device.urllib.request, 'build_opener', return_value=opener):
+                if valid:
+                    configure_device.verify_live()
+                else:
+                    with self.assertRaises(ValueError):
+                        configure_device.verify_live()
 
 
 if __name__ == '__main__':

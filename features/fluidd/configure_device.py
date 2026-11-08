@@ -83,6 +83,12 @@ def verify_live():
         state = json.load(response)['result']
     if not isinstance(state.get('fans'), dict) or not isinstance(state.get('slots'), list):
         raise ValueError('Moonraker has not loaded the K2 device bridge')
+    # An operational Moonraker bridge does not prove nginx can serve the UI.
+    web_url = os.environ.get('K2_FLUIDD_URL', 'http://127.0.0.1:4408/')
+    with opener.open(web_url, timeout=5) as response:
+        page = response.read()
+    if b'id="app"' not in page and b"id='app'" not in page:
+        raise ValueError('Fluidd web endpoint did not serve the application page')
 
 
 if __name__ == '__main__':
