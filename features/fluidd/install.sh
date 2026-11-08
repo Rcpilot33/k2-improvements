@@ -54,7 +54,7 @@ DOWNLOAD=$(mktemp -d "$HOME/fluidd-download.XXXXXX")
 trap 'rm -rf "$STAGING" "$DOWNLOAD"' EXIT
 if [ -z "$ARCHIVE" ]; then
     cd "$DOWNLOAD"
-    python3 "$SCRIPT_DIR/get_latest_release.py" Rcpilot33/fluidd --asset-name fluidd.zip
+    python3 "$SCRIPT_DIR/download_build.py" "$DOWNLOAD/fluidd.zip"
     ARCHIVE="$DOWNLOAD/fluidd.zip"
 fi
 python3 "$SCRIPT_DIR/prepare_bundle.py" "$ARCHIVE" "$STAGING"

@@ -500,7 +500,8 @@ migration_repair_component() {
         fluidd)
             # Existing complete builds only need the printer-side bridge
             # refreshed. Older UIs must first obtain the combined release.
-            if [ "$(cat /usr/share/fluidd/k2-device-cards-api.txt 2>/dev/null)" != 1 ]; then
+            if [ "$(cat /usr/share/fluidd/k2-device-cards-api.txt 2>/dev/null)" != 1 ] ||
+               ! python3 "$INSTALLER_DIR/features/fluidd/download_build.py" --check-installed /usr/share/fluidd; then
                 HOME="$pwd_home" sh "$INSTALLER_DIR/features/fluidd/install.sh" --nocam || return 1
             else
                 HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_device.py" || return 1
@@ -640,6 +641,7 @@ migration_reconcile_fluidd_layout() {
             ;;
         fluidd)
             HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_device.py" --check --live || return 1
+            python3 "$INSTALLER_DIR/features/fluidd/download_build.py" --check-installed /usr/share/fluidd || return 1
             [ "$(cat /usr/share/fluidd/k2-device-cards-api.txt 2>/dev/null)" = 1 ] || return 1
             python3 - /usr/share/fluidd/release_info.json <<'PY'
 import json

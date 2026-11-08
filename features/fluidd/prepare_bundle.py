@@ -2,6 +2,7 @@
 """Validate a complete K2 Fluidd build before touching the installed UI."""
 import argparse
 import json
+import hashlib
 from pathlib import Path, PurePosixPath
 import stat
 from zipfile import ZipFile
@@ -29,6 +30,12 @@ def prepare(archive, staging):
             if not bundle.read(required):
                 raise ValueError("Missing Fluidd entry point: " + required)
         bundle.extractall(staging)
+    digest = hashlib.sha256()
+    with Path(archive).open('rb') as source:
+        for chunk in iter(lambda: source.read(65536), b''):
+            digest.update(chunk)
+    (staging / 'k2-installed-build.json').write_text(
+        json.dumps({'sha256': digest.hexdigest()}) + '\n', encoding='utf-8')
     for path in staging.rglob('*'):
         path.chmod(0o755 if path.is_dir() else 0o644)
 

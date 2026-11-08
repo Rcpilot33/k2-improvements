@@ -26,6 +26,26 @@ updates continue through Fluidd's existing Moonraker web updater.
 
 ## Testing before promotion
 
+### RC1 through the existing installer menus
+
+Bootstrap branch `fluidd-ui-consolidation`, then select **6. Update installer /
+apply updates -> 2. Review pending update actions -> Fluidd settings dialogs and
+K2 device cards**. The normal maintenance/reinstall entry also uses the same
+Fluidd core installer. No manual ZIP transfer is required.
+
+On this branch, `test-release.json` pins the `k2-cards-test-1` prerelease asset in
+`Rcpilot33/fluidd` by URL, SHA256 and Fluidd source commit. The installer verifies
+the checksum before validating or replacing the UI. Its post-restart checks
+verify that the exact test build and bridge are installed. The test source is
+selected only on branch `fluidd-ui-consolidation`; other branches retain stable
+release selection. Retire this manifest before promotion to release branches.
+
+The prerelease is excluded from GitHub's latest stable release endpoint. The
+Fluidd web updater continues to point at stable releases, so use the installer
+menus to install/refresh the test build during RC1 testing.
+
+### Optional local ZIP installation
+
 Use K2-improvements branch `fluidd-ui-consolidation` with Fluidd branch
 `k2-dashboard-cards`, based on `k2`. The Fluidd test workflow uploads an artifact
 containing `fluidd.zip`; it never creates a release. A local build can be packaged
