@@ -33,7 +33,7 @@ apply updates -> 2. Review pending update actions -> Fluidd settings dialogs and
 K2 device cards**. The normal maintenance/reinstall entry also uses the same
 Fluidd core installer. No manual ZIP transfer is required.
 
-On this branch, `test-release.json` pins the `k2-cards-test-1` prerelease asset in
+On this branch, `test-release.json` pins the `k2-cards-test-2` prerelease asset in
 `Rcpilot33/fluidd` by URL, SHA256 and Fluidd source commit. The installer verifies
 the checksum before validating or replacing the UI. Its post-restart checks
 verify that the exact test build and bridge are installed. The test source is
