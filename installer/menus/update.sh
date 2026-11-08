@@ -513,8 +513,7 @@ migration_repair_component() {
             mkdir -p "$pwd_home/printer_data/config/updates" &&
             python3 "$INSTALLER_DIR/features/fluidd/reset_update_cache.py" restore \
                 "$pwd_home/printer_data/config/updates/fluidd.cfg" &&
-            cp "$INSTALLER_DIR/features/fluidd/update-manager.cfg" \
-                "$pwd_home/printer_data/config/updates/fluidd.cfg" &&
+            HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_update_manager.py" &&
             HOME="$pwd_home" python3 \
                 "$INSTALLER_DIR/scripts/moonraker_include.py" updates/fluidd.cfg || return 1
             if ! migration_is_complete fluidd-stale-update-cache-v2; then
@@ -644,6 +643,7 @@ migration_reconcile_fluidd_layout() {
         fluidd)
             HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_device.py" --check --live || return 1
             python3 "$INSTALLER_DIR/features/fluidd/download_build.py" --check-installed /usr/share/fluidd || return 1
+            HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_update_manager.py" --check || return 1
             [ "$(cat /usr/share/fluidd/k2-device-cards-api.txt 2>/dev/null)" = 1 ] || return 1
             python3 - /usr/share/fluidd/release_info.json <<'PY'
 import json

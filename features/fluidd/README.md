@@ -40,9 +40,12 @@ verify that the exact test build and bridge are installed. The test source is
 selected only on branch `fluidd-ui-consolidation`; other branches retain stable
 release selection. Retire this manifest before promotion to release branches.
 
-The prerelease is excluded from GitHub's latest stable release endpoint. The
-Fluidd web updater continues to point at stable releases, so use the installer
-menus to install/refresh the test build during RC1 testing.
+The prerelease is excluded from GitHub's latest stable release endpoint. While
+the pinned test build is installed on this test branch, its stable Fluidd web
+updater is disabled so **Update All** cannot replace the test UI. Fluidd is
+therefore absent from the web software-update list during testing; use the
+installer menus to install/refresh it. Other updater entries are untouched.
+Normal stable installs restore the usual `Rcpilot33/fluidd` web updater.
 
 ### Optional local ZIP installation
 
@@ -63,9 +66,8 @@ This installs the bridge, backs up the previous UI once as
 `~/fluidd.before-k2-cards`, activates the validated build and restarts nginx and
 Moonraker. A factory UI stored directly in `/usr/share/fluidd` is retained as
 `/usr/share/fluidd.before-k2-cards`. Refresh the browser afterward. The normal
-release updater still points to `Rcpilot33/fluidd`; do not use its Fluidd Update
-button during local-ZIP testing, because that would replace the test UI with
-the published release.
+Fluidd web updater is disabled for the branch's verified pinned test ZIP, and
+the installer menu remains responsible for its updates during testing.
 
 Verify each fan against the touchscreen, CFS colors/materials and external spool,
 slot removal/reconnection, Feed/Retract while idle, and disabled controls while

@@ -67,9 +67,11 @@ def fetch_fluidd_status(api_url):
     return payload["result"]["version_info"].get("fluidd")
 
 
-def matches(mode, status):
+def matches(mode, status, test_updater_disabled=False):
     if mode == "check-absent":
         return status is None
+    if mode == "check-fresh" and test_updater_disabled and status is None:
+        return True
     if not isinstance(status, dict):
         return False
     owner = str(status.get("owner", "")).casefold()
@@ -81,12 +83,17 @@ def matches(mode, status):
 
 
 def wait_for_state(mode, api_url, timeout=30):
+    # A checksum-pinned test UI intentionally has no stable web updater.
+    # Only accept absence after validating the branch, installed receipt,
+    # and managed updater config; stable installs still require their entry.
+    from configure_update_manager import test_updates_disabled
+    disabled = mode == 'check-fresh' and test_updates_disabled()
     deadline = time.monotonic() + timeout
     last_error = None
     while True:
         try:
             status = fetch_fluidd_status(api_url)
-            if matches(mode, status):
+            if matches(mode, status, disabled):
                 return
             last_error = "unexpected Fluidd updater state: %s" % status
         except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError) as exc:
