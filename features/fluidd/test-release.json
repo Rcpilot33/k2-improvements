@@ -1,6 +1,6 @@
 {
   "installer_branch": "fluidd-ui-consolidation",
-  "url": "https://github.com/Rcpilot33/fluidd/releases/download/k2-cards-test-2/fluidd.zip",
-  "sha256": "c00a47a0459220e331436f70a8353afce5f80ed8b149c468457e324a3605ec7c",
-  "fluidd_commit": "d3a313788db6a4609b892ccf780c0720887ff3d1"
+  "url": "https://github.com/Rcpilot33/fluidd/releases/download/k2-cards-test-3/fluidd.zip",
+  "sha256": "45d9ea3c4cb10f4f2d353208747e5e69d9411e2bf611f89b070ae3c16a8168b2",
+  "fluidd_commit": "95c1e8800a215389c57e6c15034cbc649c8900a2"
 }
