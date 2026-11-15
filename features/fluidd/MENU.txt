@@ -1,0 +1,13 @@
+Fluidd-first upgrade compatibility test
+
+Installs the pinned compatibility prerelease ZIP, with checksum verification.
+Keeps a backup at ~/fluidd.before-upgrade-compatibility.
+Does not install the Creality device bridge or change settings backends.
+The existing Bed Assist and offset installers remain unchanged.
+Fluidd web updates are temporarily disabled to keep the stable ZIP from
+replacing this test build. Use these menus for test updates.
+
+After installation, refresh the browser and test the existing settings dialogs.
+Rerun the installed Bed Assist and offset feature installers; they should report
+that shared Fluidd settings controls are already installed and preserve this UI.
+Fan/CFS cards are hidden until a later bridge installation.

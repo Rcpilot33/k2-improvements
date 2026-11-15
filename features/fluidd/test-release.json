@@ -1,0 +1,6 @@
+{
+  "installer_branch": "fluidd-upgrade-compatibility-test",
+  "url": "https://github.com/Rcpilot33/fluidd/releases/download/k2-upgrade-compatibility-test-1/fluidd.zip",
+  "sha256": "3777714481b2d1c3e052b9830946c0f621cb4e47b928a1fab6d878404a3ea17d",
+  "fluidd_commit": "1acfe5224c06a04edb214ab53b54aa3791298ed2"
+}

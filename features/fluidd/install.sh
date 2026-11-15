@@ -34,15 +34,25 @@ if ! command -v unzip > /dev/null; then
     opkg install unzip
 fi
 
-rm -fr fluidd
-
-mkdir -p fluidd
-cd fluidd
-python3 ${SCRIPT_DIR}/get_latest_release.py Rcpilot33/fluidd
-unzip fluidd.zip
-rm -f fluidd.zip
-python3 ${SCRIPT_DIR}/set_release_source.py release_info.json Rcpilot33 fluidd
-cd ..
+# Download and validate before replacing the working UI. No bridge is installed
+# on this compatibility test branch: existing settings backends stay unchanged.
+STAGING=$(mktemp -d "$HOME/fluidd-stage.XXXXXX")
+DOWNLOAD=$(mktemp -d "$HOME/fluidd-download.XXXXXX")
+trap 'rm -rf "$STAGING" "$DOWNLOAD"' EXIT
+cd "$DOWNLOAD"
+python3 "$SCRIPT_DIR/download_build.py" "$DOWNLOAD/fluidd.zip"
+python3 "$SCRIPT_DIR/prepare_bundle.py" "$DOWNLOAD/fluidd.zip" "$STAGING"
+cd "$HOME"
+if [ -e "$HOME/fluidd" ]; then
+    if [ ! -e "$HOME/fluidd.before-upgrade-compatibility" ]; then
+        cp -a "$HOME/fluidd" "$HOME/fluidd.before-upgrade-compatibility"
+    fi
+    mv "$HOME/fluidd" "$DOWNLOAD/previous"
+fi
+if ! mv "$STAGING" "$HOME/fluidd"; then
+    [ ! -e "$DOWNLOAD/previous" ] || mv "$DOWNLOAD/previous" "$HOME/fluidd"
+    exit 1
+fi
 
 # replace the existing Fluidd
 rm -fr /usr/share/fluidd
@@ -52,7 +62,7 @@ ln -sf ~/fluidd /usr/share/fluidd
 /etc/init.d/nginx restart
 # register for updates
 mkdir -p ~/printer_data/config/updates
-cp ${SCRIPT_DIR}/update-manager.cfg ~/printer_data/config/updates/fluidd.cfg
+python3 "$SCRIPT_DIR/configure_update_manager.py"
 python3 ${SCRIPT_DIR}/../../scripts/moonraker_include.py updates/fluidd.cfg
 
 # TODO: should this should be gated on a port check?
