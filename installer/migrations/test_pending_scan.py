@@ -114,11 +114,11 @@ migration_is_complete() {
                                           "b|start-print-fast-stop|second"] if eligible else [])
                 self.assertEqual(calls, ["eligible"])
 
-    def test_component_order_and_unique_count_stay_unchanged(self):
+    def test_fluidd_precedes_dependent_components_and_count_stays_unique(self):
         catalog = ["f|fluidd|check|reason", "m|macros|check|reason",
                    "c|cartographer|check|reason", "m2|macros|check|reason"]
         for command, expected in (
-            ("migration_pending_components", ["cartographer", "macros", "fluidd"]),
+            ("migration_pending_components", ["fluidd", "cartographer", "macros"]),
             ("migration_pending_component_count", ["3"]),
         ):
             with self.subTest(command=command):
@@ -128,6 +128,16 @@ migration_is_complete() {
                 self.assertEqual(output, expected)
                 self.assertEqual(calls, ["installed:fluidd", "installed:macros",
                                          "installed:cartographer"])
+
+    def test_fluidd_runs_after_moonraker_and_before_all_settings_dependents(self):
+        components = ('global-touch-offsets', 'material-z-offsets', 'macros',
+                      'global-prtouch-offsets', 'fluidd', 'moonraker-source')
+        output, _ = self.run_scan(
+            [f'future-{c}|{c}|check|reason' for c in components],
+            installed=components, script='migration_pending_components',
+        )
+        self.assertEqual(output[:2], ['moonraker-source', 'fluidd'])
+        self.assertEqual(set(output[2:]), set(components) - {'moonraker-source', 'fluidd'})
 
     def test_applicability_and_completion_are_refreshed_on_every_scan(self):
         output, calls = self.run_scan(

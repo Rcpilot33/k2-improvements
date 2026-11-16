@@ -337,7 +337,7 @@ and recovery**.
 |---|---|
 | [Cartographer offset setup](./installer/extras/cartographer-offset-setup/README.md) | Select Jamin, JimmyV legacy/final, or custom offsets; requires Cartographer. |
 | Cartographer plate workflow ([macros](./installer/extras/cartographer-macros/README.md), [automatic selection](./installer/extras/surface-selection-wrapper/README.md)) | Reveals the four named plate selectors and installs slicer-driven surface selection; the default selector and shared actions are installed with Cartographer. |
-| [Global Carto Touch Z Offsets](./installer/extras/global-touch-offsets/README.md) | Adds a live editor for saved Cartographer Touch-model `z_offset` values; includes its tested Jacob Fluidd v1.37.4 UI overlay. |
+| [Global Carto Touch Z Offsets](./installer/extras/global-touch-offsets/README.md) | Adds a live editor for saved Cartographer Touch-model `z_offset` values; requires the combined Rcpilot33 Fluidd build. |
 | [Remove legacy Axis Twist](./installer/extras/axis-twist-removal/README.md) | Manual Extras action shown only when ATC is detected; never included in Apply all updates. Backs up ATC files/calibration, restores the firmware-matched stock probe, preserves Cartographer XY offsets, and performs the protected restart. The option disappears after removal. Re-mesh and recheck Z offsets afterward. |
 | [KAMP adaptive purge](./installer/extras/kamp-adaptive-purge/README.md) | Installs the patched adaptive purge workflow and slicer templates. |
 | [Plate-aware saved meshes](./installer/extras/plate-aware-mesh/README.md) | Separates stock PR Touch meshes by slicer plate choice, bed temperature, and chamber temperature. |

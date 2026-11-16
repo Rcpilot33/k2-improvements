@@ -1,15 +1,11 @@
-# Shared Fluidd settings controls
+# Fluidd settings capability check
 
-This internal installer carries one verified Jacob Fluidd `v1.37.4` overlay for
-the core Bed Assist editor and the optional Global Carto Scan/Touch, Global
-No-Carto, and Material Z-offset editors. Keeping all four dialogs in one archive prevents one feature
-from replacing another feature's UI.
+The settings dialogs now live in the Rcpilot33/fluidd source and release ZIP.
+This compatibility entry point checks the legacy k2-ui-overlay-support.txt (8 or newer)
+and the native k2-settings-api.txt (1) marker shipped in Fluidd v1.37.5.
+It never installs an archive, swaps Fluidd files, or restarts nginx.
 
-The normal Fluidd core installer and update source are unchanged. The overlay
-uses an atomic directory swap, retains the original pre-overlay backup, and
-restarts only nginx after a successful validation.
-
-For audit/reproduction, apply `fluidd-v1.37.4.patch` to Jacob's matching
-Fluidd source tree with `git apply --unidiff-zero`, build it, preserve Jacob's
-`v1.37.4` release metadata, then package the dist directory using
-`build_bundle.py`.
+Bed Assist, Global Carto Scan/Touch, Global No-Carto, and Material Z-offset
+editors continue to call this entry point before installing their backend.
+Older Fluidd builds must be upgraded through the Fluidd core installer first.
+The previous bundled v1.37.4 ZIP and source patch have been retired.

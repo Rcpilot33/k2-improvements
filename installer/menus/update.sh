@@ -29,7 +29,7 @@ migration_component_label() {
         nozzle-camera) echo 'Stock nozzle camera stream' ;;
         nozzle-usb-cartographer) echo 'Nozzle-camera AI / USB protection' ;;
         nozzle-camera-mount-compatibility) echo 'Remove stock camera from JimmyV mount' ;;
-        fluidd) echo 'Fluidd update source metadata' ;;
+        fluidd) echo 'Fluidd settings dialogs and K2 device cards' ;;
         better-init) echo 'Improved Init service management' ;;
         start-print-fast-stop) echo 'START_PRINT Fast Stop (firmware 1.1.5.5+)' ;;
         *) echo "$1" ;;
@@ -84,7 +84,12 @@ migration_component_applicable() {
         is_start_print_fast_stop_eligible
         return
     fi
-    migration_component_installed "$1" 2>/dev/null && return 0
+    # Reuse the maintained-fork probe within this pending scan only.
+    if [ "$1" = moonraker-source ] && [ "${moonraker_verified:-unknown}" != unknown ]; then
+        [ "$moonraker_verified" != yes ] || return 0
+    else
+        migration_component_installed "$1" 2>/dev/null && return 0
+    fi
     migration_component_present "$1" 2>/dev/null && return 0
     [ -f "$MIGRATION_INSTALLED_SNAPSHOT" ] &&
         grep -qxF "$1" "$MIGRATION_INSTALLED_SNAPSHOT" 2>/dev/null
@@ -186,7 +191,7 @@ migration_is_complete() {
 }
 
 migration_pending_entries() {
-    local id component detector reason applicable_components inapplicable_components usb_verified
+    local id component detector reason applicable_components inapplicable_components usb_verified moonraker_verified
     # Read completion state once and discard acknowledged entries before any
     # installation probes. Most menu redraws have no outstanding migrations.
     # A missing/unreadable completion file still means nothing is acknowledged.
@@ -201,12 +206,23 @@ migration_pending_entries() {
         applicable_components='|'
         inapplicable_components='|'
         usb_verified=unknown
+        moonraker_verified=unknown
         while IFS='|' read -r id component detector reason; do
             [ -n "$id" ] || continue
             # Older direct installs may have correct files but no updater receipt.
             # Verify only these released migrations without touching printer state.
             # Never auto-suppress future migrations or a partial installation.
             case "$id" in
+                moonraker-maintained-fork-v1)
+                    # Fresh installs already select the maintained fork. Verify
+                    # the checkout before offering this source-only migration;
+                    # keep future Moonraker migrations independent of this one.
+                    if migration_component_installed moonraker-source 2>/dev/null; then
+                        moonraker_verified=yes
+                        continue
+                    fi
+                    moonraker_verified=no
+                    ;;
                 nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer-boot-dependencies-v2)
                     if [ "$usb_verified" = unknown ]; then
                         usb_verified=no
@@ -241,14 +257,14 @@ migration_pending_entries() {
 }
 
 migration_pending_components() {
-    # Keep the existing repair order without launching a grep per component.
+    # Install Fluidd before the macros and editors that require its settings API.
     migration_pending_entries | awk -F '|' '
         NF >= 2 { pending[$2] = 1 }
         END {
-            count = split("moonraker-source cartographer save-config-restart virtual-sdcard-guard abort_homing " \
+            count = split("moonraker-source fluidd cartographer save-config-restart virtual-sdcard-guard abort_homing " \
                 "screws_tilt_adjust macros r3men-bed kamp-adaptive-purge " \
                 "cartographer-plate-workflow global-touch-offsets global-prtouch-offsets " \
-                "material-z-offsets plate-aware-mesh nozzle-camera nozzle-camera-mount-compatibility nozzle-usb-cartographer fluidd better-init " \
+                "material-z-offsets plate-aware-mesh nozzle-camera nozzle-camera-mount-compatibility nozzle-usb-cartographer better-init " \
                 "start-print-fast-stop", components, " ")
             for (i = 1; i <= count; i++)
                 if (components[i] in pending)
@@ -490,13 +506,24 @@ migration_repair_component() {
                 sh "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/install.sh" --refresh
             ;;
         fluidd)
+            # Existing complete builds only need the printer-side bridge
+            # refreshed. Older UIs must first obtain the combined release.
+            if [ "$(cat /usr/share/fluidd/k2-device-cards-api.txt 2>/dev/null)" != 1 ] ||
+               [ "$(cat /usr/share/fluidd/k2-settings-api.txt 2>/dev/null)" != 1 ] ||
+               [ "$(cat /usr/share/fluidd/k2-ui-overlay-support.txt 2>/dev/null)" != 8 ] ||
+               ! python3 "$INSTALLER_DIR/features/fluidd/download_build.py" --check-installed /usr/share/fluidd; then
+                HOME="$pwd_home" sh "$INSTALLER_DIR/features/fluidd/install.sh" --nocam || return 1
+            else
+                HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_device.py" || return 1
+            fi
+            # Repair builds installed before the mktemp directory permission fix.
+            chmod a+rx "$(readlink -f /usr/share/fluidd)" || return 1
             python3 "$INSTALLER_DIR/features/fluidd/set_release_source.py" \
                 /usr/share/fluidd/release_info.json Rcpilot33 fluidd &&
             mkdir -p "$pwd_home/printer_data/config/updates" &&
             python3 "$INSTALLER_DIR/features/fluidd/reset_update_cache.py" restore \
                 "$pwd_home/printer_data/config/updates/fluidd.cfg" &&
-            cp "$INSTALLER_DIR/features/fluidd/update-manager.cfg" \
-                "$pwd_home/printer_data/config/updates/fluidd.cfg" &&
+            HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_update_manager.py" &&
             HOME="$pwd_home" python3 \
                 "$INSTALLER_DIR/scripts/moonraker_include.py" updates/fluidd.cfg || return 1
             if ! migration_is_complete fluidd-stale-update-cache-v2; then
@@ -624,6 +651,12 @@ migration_reconcile_fluidd_layout() {
             HOME="$pwd_home" python3 "$layout" || return 1
             ;;
         fluidd)
+            HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_device.py" --check --live || return 1
+            python3 "$INSTALLER_DIR/features/fluidd/download_build.py" --check-installed /usr/share/fluidd || return 1
+            HOME="$pwd_home" python3 "$INSTALLER_DIR/features/fluidd/configure_update_manager.py" --check || return 1
+            [ "$(cat /usr/share/fluidd/k2-device-cards-api.txt 2>/dev/null)" = 1 ] || return 1
+            [ "$(cat /usr/share/fluidd/k2-settings-api.txt 2>/dev/null)" = 1 ] || return 1
+            [ "$(cat /usr/share/fluidd/k2-ui-overlay-support.txt 2>/dev/null)" = 8 ] || return 1
             python3 - /usr/share/fluidd/release_info.json <<'PY'
 import json
 import sys

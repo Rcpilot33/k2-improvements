@@ -26,17 +26,12 @@ if it changed.
 The values are available in the current session and reload from the saved
 configuration after a restart. It never invokes `SAVE_CONFIG`.
 
-The feature uses the tested shared Z-offset overlay for Jacob Fluidd
-`v1.37.4` carried inside this repository. The shared archive contains both
-optional Z-offset dialogs so installing either editor cannot remove the other
-one. It does not use or update another Fluidd repository. The installer
-verifies the installed version, preserves the original pre-overlay web files,
-swaps in the bundled build, and restarts nginx. Reinstalling the core Fluidd
-component restores Jacob's unmodified build.
+The feature uses the settings dialogs included in the Rcpilot33 Fluidd release.
+The installer checks that the installed build provides the required dialogs;
+it does not replace Fluidd. Install the combined Fluidd release first.
 
 Installation also performs the required Klippy code reload and protected
 firmware restart automatically. Refresh Fluidd after installation so its
 service worker loads the new dialog.
 
-The shared bundle and reproducible source patch are under
-`installer/extras/fluidd-ui-overlay`.
+The shared capability check is under `installer/extras/fluidd-ui-overlay`.
