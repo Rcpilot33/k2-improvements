@@ -84,7 +84,12 @@ migration_component_applicable() {
         is_start_print_fast_stop_eligible
         return
     fi
-    migration_component_installed "$1" 2>/dev/null && return 0
+    # Reuse the maintained-fork probe within this pending scan only.
+    if [ "$1" = moonraker-source ] && [ "${moonraker_verified:-unknown}" != unknown ]; then
+        [ "$moonraker_verified" != yes ] || return 0
+    else
+        migration_component_installed "$1" 2>/dev/null && return 0
+    fi
     migration_component_present "$1" 2>/dev/null && return 0
     [ -f "$MIGRATION_INSTALLED_SNAPSHOT" ] &&
         grep -qxF "$1" "$MIGRATION_INSTALLED_SNAPSHOT" 2>/dev/null
@@ -186,7 +191,7 @@ migration_is_complete() {
 }
 
 migration_pending_entries() {
-    local id component detector reason applicable_components inapplicable_components usb_verified
+    local id component detector reason applicable_components inapplicable_components usb_verified moonraker_verified
     # Read completion state once and discard acknowledged entries before any
     # installation probes. Most menu redraws have no outstanding migrations.
     # A missing/unreadable completion file still means nothing is acknowledged.
@@ -201,6 +206,7 @@ migration_pending_entries() {
         applicable_components='|'
         inapplicable_components='|'
         usb_verified=unknown
+        moonraker_verified=unknown
         while IFS='|' read -r id component detector reason; do
             [ -n "$id" ] || continue
             # Older direct installs may have correct files but no updater receipt.
@@ -212,8 +218,10 @@ migration_pending_entries() {
                     # the checkout before offering this source-only migration;
                     # keep future Moonraker migrations independent of this one.
                     if migration_component_installed moonraker-source 2>/dev/null; then
+                        moonraker_verified=yes
                         continue
                     fi
+                    moonraker_verified=no
                     ;;
                 nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer-boot-dependencies-v2)
                     if [ "$usb_verified" = unknown ]; then
@@ -249,14 +257,14 @@ migration_pending_entries() {
 }
 
 migration_pending_components() {
-    # Keep the existing repair order without launching a grep per component.
+    # Install Fluidd before the macros and editors that require its settings API.
     migration_pending_entries | awk -F '|' '
         NF >= 2 { pending[$2] = 1 }
         END {
-            count = split("moonraker-source cartographer save-config-restart virtual-sdcard-guard abort_homing " \
+            count = split("moonraker-source fluidd cartographer save-config-restart virtual-sdcard-guard abort_homing " \
                 "screws_tilt_adjust macros r3men-bed kamp-adaptive-purge " \
                 "cartographer-plate-workflow global-touch-offsets global-prtouch-offsets " \
-                "material-z-offsets plate-aware-mesh nozzle-camera nozzle-camera-mount-compatibility nozzle-usb-cartographer fluidd better-init " \
+                "material-z-offsets plate-aware-mesh nozzle-camera nozzle-camera-mount-compatibility nozzle-usb-cartographer better-init " \
                 "start-print-fast-stop", components, " ")
             for (i = 1; i <= count; i++)
                 if (components[i] in pending)

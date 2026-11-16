@@ -42,6 +42,11 @@ Migration `fluidd-stable-consolidated-release-v9` also covers printers that
 completed the earlier test migrations. It restores the normal Fluidd web updater,
 so future stable ZIP releases appear in Fluidd's software-update list.
 
+Migration `fluidd-stable-build-verification-v10` also checks release metadata so
+printers that completed v9 while still running a test UI receive the stable
+release. Compatible stable installations keep their UI. Apply-all updates run
+Fluidd after Moonraker and before the macros and Z-offset settings installers.
+
 ### Optional local ZIP installation
 
 Use K2-improvements branch `fluidd-ui-consolidation` with Fluidd branch

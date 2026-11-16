@@ -52,7 +52,24 @@ class PinnedBuildTests(unittest.TestCase):
             self.assertTrue(download_build.check_installed(self.build(), root))
             (root / 'k2-build.json').write_text(json.dumps({'commit': 'b' * 40}))
             self.assertFalse(download_build.check_installed(self.build(), root))
-            self.assertTrue(download_build.check_installed(None, root))
+            self.assertFalse(download_build.check_installed(None, root))
+
+    def test_stable_transition_rejects_test_missing_and_mismatched_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertFalse(download_build.check_installed(None, root))
+            for version, accepted in [('v1.37.5', True), ('v1.38.0', True),
+                                      ('v1.37.5-rc.2', False),
+                                      ('k2-cards-test-3', False), ('', False)]:
+                (root / '.version').write_text(version + '\n')
+                release = dict(version=version, project_owner='Rcpilot33', project_name='fluidd')
+                (root / 'release_info.json').write_text(json.dumps(release))
+                self.assertEqual(download_build.check_installed(None, root), accepted, version)
+            (root / '.version').write_text('v1.37.5\n')
+            for release in (dict(version='v1.37.5-rc.2', project_owner='Rcpilot33', project_name='fluidd'),
+                            dict(version='v1.37.5', project_owner='other', project_name='fluidd'), []):
+                (root / 'release_info.json').write_text(json.dumps(release))
+                self.assertFalse(download_build.check_installed(None, root))
 
 
 if __name__ == '__main__':

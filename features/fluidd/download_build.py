@@ -71,9 +71,17 @@ def download(build, destination):
 
 
 def check_installed(build, root):
-    if build is None:
-        return True
     try:
+        if build is None:
+            # Capability markers are shared by test and stable builds. Keep a
+            # compatible stable UI, but replace prereleases when leaving tests.
+            version = (Path(root) / '.version').read_text().strip()
+            release = json.loads((Path(root) / 'release_info.json').read_text())
+            return (isinstance(release, dict)
+                    and re.fullmatch(r'v?\d+\.\d+\.\d+', version) is not None
+                    and release.get('version') == version
+                    and release.get('project_owner') == 'Rcpilot33'
+                    and release.get('project_name') == 'fluidd')
         receipt = json.loads((Path(root) / 'k2-installed-build.json').read_text())
         source = json.loads((Path(root) / 'k2-build.json').read_text())
         return receipt.get('sha256') == build['sha256'] and source.get('commit') == build['fluidd_commit']
