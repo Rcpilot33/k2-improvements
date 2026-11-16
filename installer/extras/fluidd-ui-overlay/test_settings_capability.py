@@ -17,7 +17,9 @@ class SettingsCapabilityTests(unittest.TestCase):
             root = Path(directory)
             index = root / 'index.html'
             index.write_text('installed UI sentinel')
-            for value, expected in [('8', 1), ('9', 0), ('10', 0), ('garbage', 1), ('', 1)]:
+            for value, api, expected in [('8', '1', 0), ('9', '1', 0), ('10', '1', 0),
+                                         ('8', '', 1), ('7', '1', 1), ('garbage', '1', 1), ('', '1', 1)]:
+                (root / 'k2-settings-api.txt').write_text(api)
                 (root / 'k2-ui-overlay-support.txt').write_text(value)
                 before = {p.name: p.read_bytes() for p in root.iterdir()}
                 result = subprocess.run([BASH, (HERE / 'install.sh').as_posix()],

@@ -4,8 +4,8 @@ Installs the K2-compatible Fluidd build used by this project. It replaces the
 older factory web interface, enables the K2 camera integration, registers
 Fluidd with Moonraker's update manager, and restarts the web services.
 
-Updated Moonraker must be installed first. Fluidd must provide settings capability
-9 and device-cards API 1. Older releases are rejected before replacing any UI.
+Updated Moonraker must be installed first. Fluidd must provide native settings API 1, legacy overlay marker
+8 with Unix line endings, and device-cards API 1. Older releases are rejected before replacing any UI.
 
 Bed Assist, Global Carto Scan/Touch, Global No-Carto and Material Z-offset dialogs
 now ship in the Fluidd source and release ZIP. The former overlay installer only
@@ -33,19 +33,14 @@ apply updates -> 2. Review pending update actions -> Fluidd settings dialogs and
 K2 device cards**. The normal maintenance/reinstall entry also uses the same
 Fluidd core installer. No manual ZIP transfer is required.
 
-On this branch, `test-release.json` pins the `k2-cards-test-3` prerelease asset in
-`Rcpilot33/fluidd` by URL, SHA256 and Fluidd source commit. The installer verifies
-the checksum before validating or replacing the UI. Its post-restart checks
-verify that the exact test build and bridge are installed. The test source is
-selected only on branch `fluidd-ui-consolidation`; other branches retain stable
-release selection. Retire this manifest before promotion to release branches.
+This branch now downloads the latest stable `fluidd.zip` from `Rcpilot33/fluidd`
+(currently v1.37.5). The prerelease pin has been removed. Capability validation
+runs before replacing any UI. A printer already on the compatible stable UI
+keeps that UI while the installer adds or refreshes the bridge.
 
-The prerelease is excluded from GitHub's latest stable release endpoint. While
-the pinned test build is installed on this test branch, its stable Fluidd web
-updater is disabled so **Update All** cannot replace the test UI. Fluidd is
-therefore absent from the web software-update list during testing; use the
-installer menus to install/refresh it. Other updater entries are untouched.
-Normal stable installs restore the usual `Rcpilot33/fluidd` web updater.
+Migration `fluidd-stable-consolidated-release-v9` also covers printers that
+completed the earlier test migrations. It restores the normal Fluidd web updater,
+so future stable ZIP releases appear in Fluidd's software-update list.
 
 ### Optional local ZIP installation
 
@@ -66,8 +61,7 @@ This installs the bridge, backs up the previous UI once as
 `~/fluidd.before-k2-cards`, activates the validated build and restarts nginx and
 Moonraker. A factory UI stored directly in `/usr/share/fluidd` is retained as
 `/usr/share/fluidd.before-k2-cards`. Refresh the browser afterward. The normal
-Fluidd web updater is disabled for the branch's verified pinned test ZIP, and
-the installer menu remains responsible for its updates during testing.
+Fluidd web updater remains enabled for stable releases.
 
 Verify each fan against the touchscreen, CFS colors/materials and external spool,
 slot removal/reconnection, Feed/Retract while idle, and disabled controls while

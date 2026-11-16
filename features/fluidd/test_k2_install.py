@@ -78,9 +78,9 @@ class InstallationTests(unittest.TestCase):
             self.assertFalse((root / 'moonraker/components/k2_device.py').exists())
 
     def make_bundle(self, archive, **overrides):
-        entries = {'.version': 'v1.37.1', 'release_info.json': json.dumps({
-            'project_name': 'fluidd', 'project_owner': 'Rcpilot33', 'version': 'v1.37.1'}),
-            'k2-ui-overlay-support.txt': '9', 'k2-device-cards-api.txt': '1',
+        entries = {'.version': 'v1.37.5', 'release_info.json': json.dumps({
+            'project_name': 'fluidd', 'project_owner': 'Rcpilot33', 'version': 'v1.37.5'}),
+            'k2-ui-overlay-support.txt': '8\n', 'k2-settings-api.txt': '1', 'k2-device-cards-api.txt': '1',
             'index.html': '<html></html>', 'sw.js': '/* worker */'}
         entries.update(overrides)
         with ZipFile(archive, 'w') as bundle:
@@ -93,7 +93,9 @@ class InstallationTests(unittest.TestCase):
             stage = root / 'stage'
             stage.mkdir()
             archive = root / 'fluidd.zip'
-            for overrides in ({'k2-ui-overlay-support.txt': '8'}, {'../escape': 'bad'},
+            for overrides in ({'k2-ui-overlay-support.txt': '9'},
+                              {'k2-ui-overlay-support.txt': '8\r\n'},
+                              {'k2-settings-api.txt': ''}, {'../escape': 'bad'},
                               {'k2-device-cards-api.txt': '2'}, {'sw.js': ''}):
                 self.make_bundle(archive, **overrides)
                 with self.assertRaises(ValueError):

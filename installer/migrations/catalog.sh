@@ -177,6 +177,7 @@ fluidd-native-status-deltas-v5|fluidd|is_fluidd|Correct live card notifications,
 fluidd-cfs-humidity-footer-v6|fluidd|is_fluidd|Update Fluidd to show humidity once per CFS unit in the card's lower-right corner
 fluidd-k2-right-column-default-v7|fluidd|is_fluidd|Update Fluidd factory defaults to place K2 Fans and K2 Filament / CFS below Console in the right column
 fluidd-test-updater-isolation-v8|fluidd|is_fluidd|Keep the stable Fluidd web updater from replacing the pinned test UI through Update All
+fluidd-stable-consolidated-release-v9|fluidd|is_fluidd|Use stable consolidated Fluidd, refresh the K2 bridge and restore normal Fluidd web updates
 chamber-fan-output-resync-v1|macros|is_macros|Resynchronize the chamber thermostat output after releasing Creality's direct case-fan request
 nozzle-camera-jimmyv-removal-v1|nozzle-camera-mount-compatibility|is_nozzle_camera_mount_compatible|Remove the managed stock nozzle-camera stream from JimmyV mounts without switching off shared USB power
 nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer|is_nozzle_usb_cartographer|Refresh opted-in nozzle-camera AI and USB power protection without changing the selected wiring mode

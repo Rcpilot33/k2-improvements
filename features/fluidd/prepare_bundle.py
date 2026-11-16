@@ -23,7 +23,8 @@ def prepare(archive, staging):
         if (release.get("project_owner") != "Rcpilot33" or
                 release.get("project_name") != "fluidd" or release.get("version") != version):
             raise ValueError("Expected matching Rcpilot33 Fluidd release metadata")
-        if (int(bundle.read("k2-ui-overlay-support.txt").decode().strip()) < 9 or
+        if (bundle.read("k2-ui-overlay-support.txt").rstrip(b"\n") != b"8" or
+                bundle.read("k2-settings-api.txt").decode().strip() != "1" or
                 bundle.read("k2-device-cards-api.txt").decode().strip() != "1"):
             raise ValueError("Build does not include the consolidated K2 dialogs and device cards")
         for required in ("index.html", "sw.js"):
