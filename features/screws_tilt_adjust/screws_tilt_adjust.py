@@ -51,6 +51,10 @@ class ScrewsTiltAdjust:
         self.max_diff = None
         self.max_diff_error = False
         # Read config
+        self.bed_drop_distance = config.getfloat(
+            'bed_drop_distance', ADJUSTMENT_ACCESS_BED_DROP, minval=0.)
+        if not math.isfinite(self.bed_drop_distance):
+            raise config.error('bed_drop_distance must be finite')
         for i in range(99):
             prefix = "screw%d" % (i + 1,)
             if config.get(prefix, None) is None:
@@ -184,7 +188,10 @@ class ScrewsTiltAdjust:
         maximum = toolhead.get_status(eventtime)['axis_maximum']
         axis_maximum_z = self._coord_value(maximum, 2, 'z')
         current_z = float(toolhead.get_position()[2])
-        target_z = calculate_bed_access_z(current_z, axis_maximum_z)
+        if self.bed_drop_distance == 0.:
+            return
+        target_z = calculate_bed_access_z(
+            current_z, axis_maximum_z, distance=self.bed_drop_distance)
         if target_z <= current_z:
             gcmd.respond_info(
                 "SCREWS_TILT_CALCULATE: bed is already at its safe "
