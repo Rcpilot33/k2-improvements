@@ -24,6 +24,17 @@ Root-level `pytest .` collection is not the supported runner.
 
 ## Firmware validation summary
 
+### Firmware `1.1.8.0` (November 18, 2026)
+
+The maintainer confirmed that both no-Cartographer / stock PR Touch and
+Cartographer setups have been run on firmware `1.1.8.0` with no issues. Both
+setups are validated. The Cartographer installation route was not specified,
+so a separate stock-to-Cartographer conversion result is not claimed.
+This report does not extend every historical optional-feature test below to
+`1.1.8.0`, or establish hardware validation of the new configurable bed drop.
+
+### Historical full installation matrix
+
 The current menu/bootstrap redesign completed full install-and-print validation
 on all three supported Creality firmware versions.
 

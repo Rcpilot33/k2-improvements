@@ -13,9 +13,26 @@ the toolhead and sensor, the command uses the closest point inside a 0.5 mm
 boundary margin and reports that substitution before moving.
 
 After a successful probing pass finishes and the probe session closes, the
-command lowers the bed by up to 200 mm to provide room to remove the build
+command lowers the bed by up to 200 mm by default to provide room to remove the build
 plate and reach the adjustment screws. The final position is automatically
 limited to 0.5 mm below the configured Z maximum.
+
+Set the distance in millimeters in `custom/overrides.cfg` (merge these options
+into an existing `[screws_tilt_adjust]` section if present):
+
+```ini
+[screws_tilt_adjust]
+bed_drop_distance: 100
+```
+
+This is additional travel from the position after probing, not an absolute Z
+target. Use `0` to disable the final drop. Negative and non-finite values are
+rejected. Larger distances remain capped at Z maximum minus 0.5 mm. The setting
+does not change screw-to-screw travel speed or the final drop speed.
+
+Install this module update through the installer updater so its protected
+Klippy code reload runs. Later changes to the setting require a protected
+configuration restart (`FIRMWARE_RESTART`).
 
 Repeat the command and adjustments until the reported values are close to
 zero. See Klipper's

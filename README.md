@@ -53,13 +53,18 @@ insert a separate Creality-controlled bed-stabilization delay before
 
 ## Validated firmware
 
-All three installation paths have completed real install-and-print validation:
+The following installation paths have completed hardware validation:
 
 | Creality firmware | Stock PR Touch | Straight Cartographer | Stock → Cartographer |
 |---|:---:|:---:|:---:|
 | `1.1.3.13` | PASS | PASS | PASS |
 | `1.1.5.2` | PASS | PASS | PASS |
 | `1.1.5.5` | PASS | PASS | PASS |
+| `1.1.8.0` | PASS | PASS* | Not separately confirmed |
+
+*On November 18, 2026, the maintainer confirmed successful no-Cartographer and
+Cartographer operation on `1.1.8.0` with no issues. The Cartographer installation
+route was not specified; the conversion path is not separately recorded.
 
 Testing covered material offsets, KAMP and standard purge profiles,
 Cartographer default fallback and plate selection, and switching between PLA

@@ -35,7 +35,9 @@ Complete the factory setup before installing, leave **Print Calibration**
 disabled when sending prints, then use the provided manual calibration,
 bed-mesh, and tuning workflows.
 
-Validated Creality firmware versions are `1.1.3.13`, `1.1.5.2`, and `1.1.5.5`.
+Validated Creality firmware versions are `1.1.3.13`, `1.1.5.2`, `1.1.5.5`, and
+`1.1.8.0`. For `1.1.8.0`, the maintainer confirmed successful stock-probe and
+Cartographer operation; the conversion path was not separately recorded.
 See [VALIDATION.md](./VALIDATION.md) for the complete test matrix.
 
 ## Before installation
