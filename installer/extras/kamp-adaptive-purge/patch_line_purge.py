@@ -23,6 +23,59 @@ gcode:
 '''
 
 
+FRONT_PURGE = r'''
+[gcode_macro _KAMP_FRONT_CENTER_PURGE]
+description: K2 Plus CP-style front-center fallback for a full print area
+gcode:
+    {% set flow = params.FLOW | default(12) | float %}
+    {% set tip = params.TIP | default(0) | float %}
+    {% set min_y = params.OBJECT_MIN_Y | default(-1) | float %}
+    {% set lo = printer.toolhead.axis_minimum %}
+    {% set hi = printer.toolhead.axis_maximum %}
+    {% if 'x' not in printer.toolhead.homed_axes or 'y' not in printer.toolhead.homed_axes or 'z' not in printer.toolhead.homed_axes %}
+        {action_respond_info("KAMP front-center fallback requires XYZ homed; purge skipped.")}
+    {% elif not (lo.x <= 150 and hi.x >= 205 and lo.y <= -1 and hi.y >= -1 and lo.z <= 0 and hi.z >= 3) %}
+        {action_respond_info("KAMP has no adaptive purge space and the CP front-center fallback requires X150..205, Y=-1, Z0..3 within configured travel; purge skipped.")}
+    {% elif not (min_y >= 0 and flow > 0 and flow <= 100 and tip >= 0 and tip <= 100) %}
+        {action_respond_info("KAMP front-center fallback requires a print footprint at Y>=0 and valid flow/tip settings; purge skipped.")}
+    {% elif not printer.extruder.can_extrude %}
+        {action_respond_info("Heat the nozzle with M109 before the KAMP front-center fallback; purge skipped.")}
+    {% elif printer.configfile.settings.extruder.max_extrude_cross_section | float < 0.87 %}
+        {action_respond_info("KAMP front-center fallback requires max_extrude_cross_section of at least 0.87; purge skipped.")}
+    {% else %}
+    {action_respond_info("KAMP: no adaptive corridor; using CP-style front-center purge at Y=-1 (outside the active mesh if necessary).")}
+    SAVE_GCODE_STATE NAME=KAMP_Front_Center_State
+    G90
+    M83
+    # Return from the CFS wipe before any Z or cross-bed travel.
+    {% set pos = printer.toolhead.position %}
+    {% if pos.y > hi.y %}
+        G0 Y{hi.y - 2.0} F12000
+    {% elif pos.y < lo.y %}
+        G0 Y{lo.y + 2.0} F12000
+    {% endif %}
+    G1 Z3 F600
+    G1 X150 Y-1 F30000
+    {% if tip > 0 %}
+        G1 E{tip} F300
+    {% endif %}
+    G1 Z0.3 F1200
+    # CP 7.3 line geometry; use KAMP flow_rate in place of the slicer variable.
+    G1 X175 E9 F{flow / (24.0 / 20.0) * 60}
+    G1 X180 E0.3742 F{flow / (0.3 * 0.5) / 4 * 60}
+    G1 X185 E0.3742 F{flow / (0.3 * 0.5) * 60}
+    G1 X190 E0.3742 F{flow / (0.3 * 0.5) / 4 * 60}
+    G1 X195 E0.3742 F{flow / (0.3 * 0.5) * 60}
+    G1 X200 E0.3742 F{flow / (0.3 * 0.5) / 4 * 60}
+    G1 X201 Z0
+    G1 X205
+    G1 Z1 F600
+    # Restore XYZ/E modes and the slicer's extrusion origin without moving back.
+    RESTORE_GCODE_STATE NAME=KAMP_Front_Center_State MOVE=0
+    {% endif %}
+'''
+
+
 BOUNDARY_CALCULATIONS = r'''    # k2-improvements: constrain the complete LINE_PURGE motion path
     # Include the 10mm string-break move when selecting a safe corridor.
     {% set boundary_inset = 0.5 | float %}
@@ -123,10 +176,11 @@ BOUNDARY_EXECUTION = r'''    # Calculate purge speed
         {% else %}
             {action_respond_info("KAMP boundary safety: no exclude-object geometry is available and stock purge fallback is disabled; purge skipped.")}
         {% endif %}
+    {% elif purge_side == 'none' %}
+        # Known full-bed footprint: use the CP front-center line by default.
+        _KAMP_FRONT_CENTER_PURGE FLOW={flow_rate} TIP={tip_distance} OBJECT_MIN_Y={object_y_min}
     {% elif cross_section < 5 %}
         {action_respond_info("[Extruder] max_extrude_cross_section is insufficient for purge, please set it to 5 or greater. Purge skipped.")}
-    {% elif purge_side == 'none' %}
-        {action_respond_info("KAMP boundary safety: no safe purge corridor exists inside the active mesh/machine area; adaptive purge skipped.")}
     {% else %}
         {% if verbose_enable == True %}
             {action_respond_info("KAMP boundary safety selected the {} side; complete path ({:.1f},{:.1f}) to ({:.1f},{:.1f}) is inside X[{:.1f},{:.1f}] Y[{:.1f},{:.1f}].".format(
@@ -293,7 +347,7 @@ def add_prime_tower_wait_wrapper(text):
     internal_header = "[gcode_macro _KAMP_LINE_PURGE]"
     if text.count(header) != 1 or internal_header in text:
         fail("LINE_PURGE macro header is not recognized")
-    return WAIT_WRAPPER + text.replace(header, internal_header, 1)
+    return WAIT_WRAPPER + text.replace(header, internal_header, 1) + FRONT_PURGE
 
 
 def write_atomic(destination, text, mode):

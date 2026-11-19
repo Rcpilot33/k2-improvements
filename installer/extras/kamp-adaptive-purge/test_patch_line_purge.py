@@ -4,6 +4,12 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace as NS
+
+try:
+    import jinja2
+except ImportError:
+    jinja2 = None
 
 
 MODULE_PATH = Path(__file__).with_name("patch_line_purge.py")
@@ -58,7 +64,7 @@ class LinePurgePatchTests(unittest.TestCase):
         for side in ("front_fits", "left_fits", "rear_fits", "right_fits"):
             self.assertIn(side, result)
         self.assertIn("purge_side == 'none'", result)
-        self.assertIn("no safe purge corridor exists", result)
+        self.assertIn("_KAMP_FRONT_CENTER_PURGE FLOW={flow_rate}", result)
         self.assertIn("no exclude-object geometry is available", result)
         self.assertIn("one or more purge settings are invalid", result)
 
@@ -150,6 +156,70 @@ class LinePurgePatchTests(unittest.TestCase):
             self.assertIn(PATCHER.BOUNDARY_MARKER, installed)
             self.assertEqual(installed.count(PATCHER.MARKER), 2)
             self.assertEqual(installed.count(PATCHER.WAIT_MARKER), 1)
+
+
+@unittest.skipIf(jinja2 is None, "Install Jinja2 to run macro rendering tests")
+class FrontCenterRenderTests(unittest.TestCase):
+    def setUp(self):
+        self.env = jinja2.Environment(variable_start_string="{", variable_end_string="}")
+        self.messages = []
+        self.printer = {
+            "toolhead": NS(axis_minimum=NS(x=0, y=-5, z=0),
+                           axis_maximum=NS(x=350, y=350, z=350),
+                           position=NS(x=133, y=378, z=3), homed_axes="xyz"),
+            "extruder": NS(can_extrude=True),
+            "configfile": NS(settings=NS(extruder=NS(max_extrude_cross_section=5))),
+            "exclude_object": NS(objects=[NS(polygon=[[0, 0], [350, 0], [350, 350], [0, 350]])]),
+            "gcode_macro _KAMP_Settings": NS(stock_purge_fallback=0),
+        }
+
+    def render(self, source, **values):
+        return self.env.from_string(source).render(
+            printer=self.printer, action_respond_info=lambda msg: self.messages.append(msg) or "",
+            **values)
+
+    def fallback(self):
+        return self.render(PATCHER.FRONT_PURGE.split("gcode:\n", 1)[1],
+                           params={"FLOW": 12, "TIP": 0, "OBJECT_MIN_Y": 0})
+
+    def test_full_bed_selects_fallback_without_opt_in(self):
+        result = self.render(PATCHER.BOUNDARY_CALCULATIONS + PATCHER.BOUNDARY_EXECUTION,
+                             purge_amount=25, purge_margin=10, purge_height=.4,
+                             flow_rate=12, tip_distance=0, cross_section=5,
+                             verbose_enable=False, travel_speed=12000)
+        self.assertIn("_KAMP_FRONT_CENTER_PURGE FLOW=12 TIP=0 OBJECT_MIN_Y=0.0", result)
+        self.assertNotIn("SAVE_GCODE_STATE", result)
+
+    def test_small_print_retains_adaptive_purge(self):
+        self.printer["exclude_object"].objects = [NS(polygon=[[100, 100], [150, 150]])]
+        result = self.render(PATCHER.BOUNDARY_CALCULATIONS + PATCHER.BOUNDARY_EXECUTION,
+                             purge_amount=25, purge_margin=10, purge_height=.4,
+                             flow_rate=12, tip_distance=0, cross_section=5,
+                             verbose_enable=False, travel_speed=12000)
+        self.assertNotIn("_KAMP_FRONT_CENTER_PURGE", result)
+        self.assertIn("SAVE_GCODE_STATE NAME=Prepurge_State", result)
+
+    def test_front_line_and_cfs_exit_restore_state(self):
+        result = self.fallback()
+        self.assertIn("G1 X150 Y-1", result)
+        self.assertIn("G1 X200 E0.3742", result)
+        self.assertLess(result.index("G0 Y348.0"), result.index("G1 Z3"))
+        self.assertIn("RESTORE_GCODE_STATE NAME=KAMP_Front_Center_State MOVE=0", result)
+
+    def test_unreachable_y_skips_all_motion_without_error(self):
+        self.printer["toolhead"].axis_minimum.y = -0.4
+        result = self.fallback()
+        self.assertEqual(result.strip(), "")
+        self.assertIn("purge skipped", self.messages[-1])
+
+    def test_other_travel_limits_and_cold_nozzle_skip(self):
+        for axis, value in (("x", 204), ("z", 2)):
+            with self.subTest(axis=axis):
+                setattr(self.printer["toolhead"].axis_maximum, axis, value)
+                self.assertEqual(self.fallback().strip(), "")
+                setattr(self.printer["toolhead"].axis_maximum, axis, 350)
+        self.printer["extruder"].can_extrude = False
+        self.assertEqual(self.fallback().strip(), "")
 
 
 if __name__ == "__main__":
