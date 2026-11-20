@@ -193,12 +193,8 @@ Most extras are installed from **Optional extras**. Cartographer mount offsets
 are under **Cartographer tools**, and PR Touch `SAVE_CONFIG` cleanup is under
 **Maintenance and recovery**.
 
-Choose **Optional extras -> Install multiple optional extras** for a checkbox
-list with installed status and **Install / Cancel** buttons. Use arrow keys to
-move, Space to toggle, Tab to reach the buttons, and Enter to accept. All boxes
-start unchecked. Existing printers offer to install Entware's small `dialog`
-package if needed. Without checklist support, enter option numbers separated
-by spaces at the numbered prompt. Review the ordered selection, then answer
+Choose **Optional extras -> Install multiple optional extras** to enter several
+option numbers separated by spaces. Review the ordered selection, then answer
 any feature settings questions. Existing selections are reinstalled/refreshed.
 The batch runs while the printer is idle and defers activation until one final
 protected Klippy code reload and firmware restart. It stops on an installer

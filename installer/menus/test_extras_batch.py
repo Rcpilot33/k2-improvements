@@ -24,13 +24,6 @@ is_cartographer() { test "${CARTO:-0}" = 1; }
 is_stock_probe() { test "${CARTO:-0}" = 0; }
 is_macros() { return 0; }
 is_stock_nozzle_camera_available() { return 0; }
-extras_checklist_available() { test "${CHECKLIST:-0}" = 1; }
-is_kamp() { return 0; }
-dialog() {
-    printf 'DIALOG_ARG:%s\n' "$@"
-    printf '%s\n' "${PICKS:-}" >&2
-    return "${DIALOG_RC:-0}"
-}
 migration_require_idle() { test "${BUSY:-0}" = 0; }
 migration_mark_component_current() { echo "MARK:$1"; }
 extras_batch_install() {
@@ -56,6 +49,7 @@ exit "$result"
         self.assertEqual(result.returncode, 0, result.stderr)
         out = result.stdout
         self.assertEqual(out.count("INSTALL:"), 2)
+        self.assertNotIn("R3MEN is only", out)
         self.assertLess(out.index("INSTALL:kamp"), out.index("INSTALL:material"))
         self.assertEqual(out.count("RESTART:"), 1)
         self.assertIn("defer=1", out)
@@ -86,6 +80,11 @@ exit "$result"
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn("MARK:", result.stdout)
 
+    def test_r3men_notice_when_selected(self):
+        result = self.run_batch("1\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("R3MEN is only", result.stdout)
+
     def test_plate_workflow_for_each_probe_type(self):
         for carto, name in (("0", "plate-aware-mesh"),
                             ("1", "cartographer-plate-workflow")):
@@ -93,35 +92,6 @@ exit "$result"
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("INSTALL:%s:defer=1:plates=both" % name, result.stdout)
             self.assertNotIn("INSTALL:secure-auth", result.stdout)
-
-    def test_checkboxes_select_multiple_and_show_labels(self):
-        result = self.run_batch("", CHECKLIST="1", PICKS="6\n3")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.count("INSTALL:"), 2)
-        self.assertIn("KAMP adaptive purge [installed]", result.stderr)
-        self.assertIn("DIALOG_ARG:Install", result.stderr)
-        self.assertIn("DIALOG_ARG:Cancel", result.stderr)
-        self.assertEqual(result.stderr.count("DIALOG_ARG:off\n"), 6)
-        self.assertLess(result.stdout.index("INSTALL:kamp"),
-                        result.stdout.index("INSTALL:material"))
-
-    def test_checklist_cancel_escape_and_empty_do_not_install(self):
-        for code in ("0", "1", "255"):
-            result = self.run_batch("", CHECKLIST="1", DIALOG_RC=code)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertNotIn("INSTALL:", result.stdout)
-            self.assertNotIn("RESTART:", result.stdout)
-
-    def test_checklist_error_falls_back_to_numbers(self):
-        result = self.run_batch("3\n", CHECKLIST="1", DIALOG_RC="2", PICKS="6")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("INSTALL:kamp-adaptive-purge", result.stdout)
-        self.assertNotIn("INSTALL:material", result.stdout)
-
-    def test_invalid_checklist_output_is_rejected(self):
-        result = self.run_batch("", CHECKLIST="1", PICKS="999")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertNotIn("INSTALL:", result.stdout)
 
 
 if __name__ == "__main__":
