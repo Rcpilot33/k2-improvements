@@ -193,6 +193,19 @@ Most extras are installed from **Optional extras**. Cartographer mount offsets
 are under **Cartographer tools**, and PR Touch `SAVE_CONFIG` cleanup is under
 **Maintenance and recovery**.
 
+Choose **Optional extras -> Install multiple optional extras** to enter several
+option numbers separated by spaces. Review the ordered selection, then answer
+any feature settings questions. Existing selections are reinstalled/refreshed.
+The batch runs while the printer is idle and defers activation until one final
+protected Klippy code reload and firmware restart. It stops on an installer
+failure, still attempts the final restart for changes already made, and reports
+the incomplete batch. A failed restart leaves update verification pending;
+power-cycle before homing if the restart reports an error.
+
+Secure Auth, hardware conversion, legacy Axis Twist removal, and calibration
+remain separate actions. Only select the R3MEN thermistor profile if that
+replacement hardware is fitted. Run any required calibration after activation.
+
 | Extra | Documentation |
 |---|---|
 | Cartographer mount offsets | [Offset setup](./installer/extras/cartographer-offset-setup/README.md) |

@@ -208,10 +208,130 @@ run_axis_twist_removal() {
     press_enter
 }
 
+# Ordered allowlist: security, hardware conversion, removal and calibration
+# actions remain individual workflows. Plate selection precedes offset editors.
+extras_batch_names() {
+    printf '%s\n' r3men-bed
+    if is_stock_nozzle_camera_available; then printf '%s\n' nozzle-camera; fi
+    printf '%s\n' kamp-adaptive-purge
+    if is_cartographer; then
+        printf '%s\n' cartographer-plate-workflow global-touch-offsets
+    elif is_stock_probe; then
+        printf '%s\n' plate-aware-mesh global-prtouch-offsets
+    fi
+    if is_macros; then printf '%s\n' material-z-offsets; fi
+}
+
+extras_batch_install() {
+    local name="$1" line script req
+    if [ "$name" = cartographer-plate-workflow ]; then
+        is_cartographer || return 1
+        sh "$INSTALLER_DIR/installer/extras/cartographer-macros/install.sh" --show-plate-selectors || return 1
+        sh "$INSTALLER_DIR/installer/extras/surface-selection-wrapper/install.sh"
+        return $?
+    fi
+    line=$(extra_line "$name")
+    [ -n "$line" ] || return 1
+    req=$(printf '%s' "$line" | cut -d'|' -f5)
+    if [ -n "$req" ]; then "$req" || return 1; fi
+    script=$(printf '%s' "$line" | cut -d'|' -f4)
+    [ -f "$INSTALLER_DIR/$script" ] || return 1
+    sh "$INSTALLER_DIR/$script"
+}
+
+run_extras_batch() {
+    local names number name choices choice selected='' plate_slicers=''
+    local completed='' failed=0 attempted=0 pwd_home
+    names=$(extras_batch_names)
+    ui_heading 'INSTALL MULTIPLE OPTIONAL EXTRAS'
+    printf '\nSelect numbers separated by spaces. Installed extras will be refreshed.\n'
+    printf 'Secure Auth, hardware conversion, removal and calibration stay separate.\n'
+    number=0
+    for name in $names; do
+        number=$((number + 1))
+        printf '  %s. %s\n' "$number" "$name"
+    done
+    printf '\nSelection (Enter or 0 to go back): '
+    read_prompt choices
+    case "$choices" in ''|0) return 0 ;; esac
+    # Validate every token before any installer or settings prompt runs.
+    for choice in $choices; do
+        case "$choice" in *[!0-9]*|'') warn 'Invalid selection'; return 1 ;; esac
+        if ! printf '%s\n' "$names" | awk -v n="$choice" 'NR == n {found=1} END {exit !found}'; then
+            warn 'Invalid selection'; return 1
+        fi
+    done
+    number=0
+    for name in $names; do
+        number=$((number + 1))
+        for choice in $choices; do
+            if [ "$choice" -eq "$number" ]; then
+                selected="$selected $name"
+                break
+            fi
+        done
+    done
+    [ -n "$selected" ] || { warn 'No extras selected'; return 1; }
+    printf '\nInstall order:\n'
+    for name in $selected; do printf '  %s\n' "$name"; done
+    printf '\nR3MEN is only for the matching replacement bed thermistor.\n'
+    printf 'Feature settings questions still apply. One protected restart follows.\n'
+    confirm 'Install the selected extras?' || return 0
+    migration_require_idle || return 1
+    case " $selected " in
+        *' cartographer-plate-workflow '*|*' plate-aware-mesh '*) choose_plate_workflow_slicers || return 1 ;;
+    esac
+    pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
+    [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
+    for name in $selected; do
+        info "Installing $name"
+        attempted=1
+        # A subshell confines the exported batch settings; stdin remains the
+        # terminal so KAMP and other interactive installers keep their prompts.
+        if (
+            export HOME="$pwd_home" PATH="/opt/bin:/opt/sbin:$PATH"
+            export K2_DEFER_FIRMWARE_RESTART=1 K2_PLATE_SLICERS="$plate_slicers"
+            extras_batch_install "$name"
+        ); then
+            completed="$completed $name"
+        else
+            warn "$name failed; remaining selections were not attempted."
+            failed=1
+            break
+        fi
+    done
+    if [ "$attempted" -eq 1 ]; then
+        # Some extras install Python modules without setting the reload marker.
+        # Always reload the host, then use its protected firmware restart.
+        if ! K2_DEFER_FIRMWARE_RESTART=0 sh "$INSTALLER_DIR/scripts/klippy_code_restart.sh"; then
+            warn 'Final protected restart failed; power-cycle before homing. Updates remain pending.'
+            press_enter
+            return 1
+        fi
+    fi
+    for name in $completed; do
+        info "$name installed"
+        if command -v migration_mark_component_current >/dev/null 2>&1; then
+            migration_mark_component_current "$name" || {
+                warn "$name verification incomplete; review pending updates."
+                failed=1
+            }
+        fi
+    done
+    if [ "$failed" -eq 0 ]; then
+        info 'Selected extras installed and protected restart completed.'
+    else
+        warn 'Batch incomplete; review the failures above before printing.'
+    fi
+    press_enter
+    return "$failed"
+}
+
 menu_extras() {
     while :; do
         clear
         ui_heading 'OPTIONAL EXTRAS'
+        ui_menu_item 10 'Install multiple optional extras'
         printf '\n Hardware\n'
         ui_menu_item 1 'R3MEN bed thermistor profile' "$(extra_state r3men-bed)"
         printf '\n Camera\n'
@@ -229,17 +349,18 @@ menu_extras() {
             ui_menu_item 8 'Secure Auth' "$(extra_state secure-auth)"
             printf '\n Nozzle-camera replacement\n'
             ui_menu_item 9 'JimmyV AI / nozzle USB power protection' "$(if is_nozzle_usb_cartographer; then state_installed; else state_not_installed; fi)"
-            printf '\n  0. Back\n\nSelect [0-9]: '
+            printf '\n  0. Back\n\nSelect [0-10]: '
         else
             ui_menu_item 5 'Plate-aware saved meshes' "$(extra_state plate-aware-mesh)"
             ui_menu_item 6 'Global No-Carto Z Offsets' "$(extra_state global-prtouch-offsets)"
             ui_menu_item 7 'Material Z Offsets' "$(extra_state material-z-offsets)"
             printf '\n Security\n'
             ui_menu_item 8 'Secure Auth' "$(extra_state secure-auth)"
-            printf '\n  0. Back\n\nSelect [0-8]: '
+            printf '\n  0. Back\n\nSelect [0-8,10]: '
         fi
         read_prompt c
         case "$c" in
+            10) run_extras_batch ;;
             1) run_extra_name r3men-bed ;;
             2) run_extra_name nozzle-camera ;;
             3) run_extra_name kamp-adaptive-purge ;;
