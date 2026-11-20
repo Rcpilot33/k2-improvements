@@ -331,7 +331,6 @@ menu_extras() {
     while :; do
         clear
         ui_heading 'OPTIONAL EXTRAS'
-        ui_menu_item 10 'Install multiple optional extras'
         printf '\n Hardware\n'
         ui_menu_item 1 'R3MEN bed thermistor profile' "$(extra_state r3men-bed)"
         printf '\n Camera\n'
@@ -349,6 +348,8 @@ menu_extras() {
             ui_menu_item 8 'Secure Auth' "$(extra_state secure-auth)"
             printf '\n Nozzle-camera replacement\n'
             ui_menu_item 9 'JimmyV AI / nozzle USB power protection' "$(if is_nozzle_usb_cartographer; then state_installed; else state_not_installed; fi)"
+            printf '\n Batch install\n'
+            ui_menu_item 10 'Install multiple optional extras'
             printf '\n  0. Back\n\nSelect [0-10]: '
         else
             ui_menu_item 5 'Plate-aware saved meshes' "$(extra_state plate-aware-mesh)"
@@ -356,6 +357,8 @@ menu_extras() {
             ui_menu_item 7 'Material Z Offsets' "$(extra_state material-z-offsets)"
             printf '\n Security\n'
             ui_menu_item 8 'Secure Auth' "$(extra_state secure-auth)"
+            printf '\n Batch install\n'
+            ui_menu_item 10 'Install multiple optional extras'
             printf '\n  0. Back\n\nSelect [0-8,10]: '
         fi
         read_prompt c
