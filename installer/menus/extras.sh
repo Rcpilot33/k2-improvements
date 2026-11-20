@@ -239,20 +239,84 @@ extras_batch_install() {
     sh "$INSTALLER_DIR/$script"
 }
 
-run_extras_batch() {
-    local names number name choices choice selected='' plate_slicers=''
-    local completed='' failed=0 attempted=0 pwd_home
-    names=$(extras_batch_names)
-    ui_heading 'INSTALL MULTIPLE OPTIONAL EXTRAS'
-    printf '\nSelect numbers separated by spaces. Installed extras will be refreshed.\n'
-    printf 'Secure Auth, hardware conversion, removal and calibration stay separate.\n'
-    number=0
+extras_checklist_available() {
+    [ -t 0 ] && [ -t 1 ] || return 1
+    case "${TERM:-dumb}" in ''|dumb) return 1 ;; esac
+    command -v dialog >/dev/null 2>&1 || [ -x /opt/bin/dialog ]
+}
+
+extras_batch_label() {
+    case "$1" in
+        r3men-bed) printf 'R3MEN bed thermistor profile' ;;
+        nozzle-camera) printf 'Stock nozzle camera stream' ;;
+        kamp-adaptive-purge) printf 'KAMP adaptive purge' ;;
+        cartographer-plate-workflow) printf 'Cartographer plate workflow' ;;
+        plate-aware-mesh) printf 'Plate-aware saved meshes' ;;
+        global-touch-offsets) printf 'Global Carto Z Offsets' ;;
+        global-prtouch-offsets) printf 'Global No-Carto Z Offsets' ;;
+        material-z-offsets) printf 'Material Z Offsets' ;;
+    esac
+}
+
+# Sets the caller's choices. Return 1 for Cancel, 2 for text fallback.
+extras_batch_checklist() {
+    local names="$1" name number=0 label det status rc dialog_bin
+    extras_checklist_available || return 2
+    dialog_bin=$(command -v dialog) || dialog_bin=/opt/bin/dialog
+    set --
     for name in $names; do
         number=$((number + 1))
-        printf '  %s. %s\n' "$number" "$name"
+        label=$(extras_batch_label "$name")
+        if [ "$name" = cartographer-plate-workflow ]; then
+            det=is_carto_plate_workflow
+        else
+            det=$(extra_line "$name" | cut -d'|' -f2)
+        fi
+        status='not installed'
+        if [ -n "$det" ] && "$det" 2>/dev/null; then status=installed; fi
+        set -- "$@" "$number" "$label [$status]" off
     done
-    printf '\nSelection (Enter or 0 to go back): '
-    read_prompt choices
+    # Capture only selected tags. The screen remains on the original stdout.
+    if choices=$("$dialog_bin" --clear --title 'Install multiple optional extras' \
+        --ok-label Install --cancel-label Cancel --separate-output \
+        --checklist 'Space: toggle   Arrows: move   Tab: buttons   Enter: accept\nInstalled extras will be refreshed. Nothing is selected by default.' \
+        0 0 0 "$@" 3>&1 1>&2 2>&3); then
+        return 0
+    else
+        rc=$?
+        choices=''
+        case "$rc" in
+            1|255) return 1 ;;
+            *) warn 'Checklist unavailable; using numbered selection.'; return 2 ;;
+        esac
+    fi
+}
+
+run_extras_batch() {
+    local names number name choices choice selected='' plate_slicers=''
+    local completed='' failed=0 attempted=0 pwd_home picker_status=0
+    names=$(extras_batch_names)
+    # Existing printers may not have the optional Entware dialog package yet.
+    if [ -t 0 ] && [ -t 1 ] && [ "${TERM:-dumb}" != dumb ] && \
+       ! extras_checklist_available && [ -x /opt/bin/opkg ]; then
+        if confirm 'Install the small dialog package to enable checkbox selection?'; then
+            /opt/bin/opkg install dialog || warn 'Could not install dialog; using numbered selection.'
+        fi
+    fi
+    extras_batch_checklist "$names" || picker_status=$?
+    [ "$picker_status" -ne 1 ] || return 0
+    if [ "$picker_status" -eq 2 ]; then
+        ui_heading 'INSTALL MULTIPLE OPTIONAL EXTRAS'
+        printf '\nSelect numbers separated by spaces. Installed extras will be refreshed.\n'
+        printf 'Secure Auth, hardware conversion, removal and calibration stay separate.\n'
+        number=0
+        for name in $names; do
+            number=$((number + 1))
+            printf '  %s. %s\n' "$number" "$name"
+        done
+        printf '\nSelection (Enter or 0 to go back): '
+        read_prompt choices
+    fi
     case "$choices" in ''|0) return 0 ;; esac
     # Validate every token before any installer or settings prompt runs.
     for choice in $choices; do

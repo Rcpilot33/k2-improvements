@@ -80,6 +80,8 @@ rm -f /bin/wget
 # ensure newly installed wget-ssl is in path
 export PATH=/opt/bin:$PATH
 /opt/bin/opkg install entware-opt git git-http curl jq unzip
+# Optional terminal checklists must not block the core package installation.
+/opt/bin/opkg install dialog || echo 'W: dialog unavailable; installer will use numbered menus'
 
 
 echo "Info: Installing SFTP server support..."
