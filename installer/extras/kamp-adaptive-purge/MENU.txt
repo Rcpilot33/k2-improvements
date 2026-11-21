@@ -23,7 +23,10 @@ The selected G-code is scanned for actual prime-tower extrusion paths before
 START_PRINT preparation. Large files can show a visible preflight delay; the
 size-scaled, cancelable scan reports its final details in klippy.log.
 
-Creality Print templates:
+K2 Pro Creality Print templates are under slicer-templates/k2-pro/.
+Choose the same Creality Print filename as the corresponding Plus variant below.
+
+K2 Plus Creality Print templates:
   slicer-templates/creality-start-material-only.gcode
   slicer-templates/creality-start-material-kamp.gcode
   slicer-templates/creality-start-material-surface-profiles.gcode

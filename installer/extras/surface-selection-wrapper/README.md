@@ -39,8 +39,8 @@ wrapper falls back to `default` when `SURFACE` is omitted; the supplied
 Creality Print template explicitly falls back to `textured_pei` for an
 unrecognized bed type.
 
-Creality Print users can copy one of these complete machine-start G-code
-templates:
+K2 Pro users can select a [Pro Creality Print template](../kamp-adaptive-purge/slicer-templates/README.md#k2-pro-creality-print).
+K2 Plus users can copy one of these complete machine-start G-code templates:
 
 - [material pass only](../kamp-adaptive-purge/slicer-templates/creality-start-material-only.gcode), which loads `default`;
 - [surface profiles](../kamp-adaptive-purge/slicer-templates/creality-start-material-surface-profiles.gcode);

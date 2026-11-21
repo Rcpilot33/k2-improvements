@@ -1,6 +1,23 @@
 # KAMP Slicer Templates
 
-These files replace the complete machine-start G-code block in a K2 Plus
+## K2 Pro Creality Print
+
+Copy one complete file into **Machine start G-code** in a K2 Pro 0.4 mm user preset. All four pass the bed, nozzle and chamber temperatures and the quoted filament type to `START_PRINT`.
+
+| Template | Plate selection | Purge before the first layer |
+|---|---|---|
+| [Material only](./k2-pro/creality-start-material-only.gcode) | Uses the configured default | Front-left corner |
+| [Material + surface profiles](./k2-pro/creality-start-material-surface-profiles.gcode) | Passes the selected plate | Front-left corner |
+| [Material + KAMP](./k2-pro/creality-start-material-kamp.gcode) | Uses the configured default | `LINE_PURGE` |
+| [Material + surface profiles + KAMP](./k2-pro/creality-start-material-surface-profiles-kamp.gcode) | Passes the selected plate | `LINE_PURGE` |
+
+Creality Print evaluates `multicolor_method` when slicing. With **Calculation of flush amount slice** enabled, each template includes the Pro's rear-chute load, flush and wipe sequence from the 7.3 system preset. With it disabled, the template selects the initial tool directly. Both paths then use the purge listed above. The KAMP variants require an installed `LINE_PURGE` macro and let it choose the purge location. For stock-probe RC3 testing without KAMP or plate selection, start with **Material only**.
+
+Creality Print 7.3 exported all four variants with the flush setting both enabled and disabled. A native 7.1 export and physical Pro runs with these templates still need confirmation.
+
+## K2 Plus
+
+The files in this directory replace the complete machine-start G-code block in a K2 Plus
 slicer profile. Each slicer has four variants so material-based Z offsets,
 plate selection, and KAMP can be enabled independently or together. Keep
 Creality's system preset unchanged as a fallback.

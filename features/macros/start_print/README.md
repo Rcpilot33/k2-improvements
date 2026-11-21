@@ -155,8 +155,8 @@ START_PRINT EXTRUDER_TEMP=[nozzle_temperature_initial_layer] BED_TEMP=[bed_tempe
 
 Optional extensions such as KAMP, Cartographer plate selection, or stock-probe
 plate-aware meshes may require the complete machine-start templates supplied
-with those features. The four validated Creality Print variants are documented in the
-[slicer-template guide](../../../installer/extras/kamp-adaptive-purge/slicer-templates/README.md):
+with those features. The [slicer-template guide](../../../installer/extras/kamp-adaptive-purge/slicer-templates/README.md)
+lists separate Creality Print files for the K2 Pro and K2 Plus. Each model has four variants:
 
 - material only;
 - material + KAMP;

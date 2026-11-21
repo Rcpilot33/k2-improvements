@@ -140,8 +140,8 @@ patch.
 
 ## Slicer setup
 
-For Creality Print, choose the template matching the features enabled in that
-printer profile. Keep the slicer's system preset unchanged as a fallback.
+For a K2 Pro, choose from the [four Pro Creality Print templates](./slicer-templates/README.md#k2-pro-creality-print).
+The table below lists the K2 Plus templates. Choose the file that matches the features enabled in your printer profile.
 
 | Template | Material | Plate selection | KAMP purge |
 |---|---|---|---|
