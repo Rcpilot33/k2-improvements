@@ -120,9 +120,11 @@ python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githu
 ```
 
 Bootstrap installs Entware when needed, prepares the installer checkout, and
-configures root's persistent home. Answer `y` at the menu prompt to display the
-read-only Pro diagnostic report. To repeat the report later, run
-`sh /mnt/UDISK/root/k2-improvements/menu.sh`.
+configures root's persistent home. Answer `y` at the menu prompt to open the
+K2 Pro development installer. Choose **1. Status and diagnostics** for the
+read-only Pro report. To reopen the menu later, run
+`sh /mnt/UDISK/root/k2-improvements/menu.sh`. Printer feature installation
+on the Pro is still awaiting hardware validation.
 
 ### Bootstrap without the menu prompt
 

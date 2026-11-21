@@ -47,7 +47,7 @@ BASE_URL="https://raw.githubusercontent.com/$REPO/$BRANCH"
 
 # Other branches can still expose the Plus setup menu on a Pro.
 if [ "$MODEL" = F012 ] && [ "$BRANCH" != k2-pro-support ]; then
-    echo 'K2 Pro bootstrap requires --branch k2-pro-support for the diagnostics menu.' >&2
+    echo 'K2 Pro bootstrap requires --branch k2-pro-support for the development menu.' >&2
     exit 1
 fi
 

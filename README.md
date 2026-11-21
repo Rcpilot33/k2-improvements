@@ -9,7 +9,8 @@
 > [!IMPORTANT]
 > **Printer features are supported on the Creality K2 Plus.** On the
 > `k2-pro-support` development branch, K2 Pro testing starts with bootstrap
-> and a read-only diagnostic report. Use the [K2 Pro bootstrap instructions](./INSTALL.md#k2-pro-development-bootstrap).
+> and an interactive development menu. Option 1 shows the read-only diagnostic report.
+> Use the [K2 Pro bootstrap instructions](./INSTALL.md#k2-pro-development-bootstrap).
 
 This fork is built on the primary technical work maintained by
 [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements).

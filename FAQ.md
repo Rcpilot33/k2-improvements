@@ -2,8 +2,9 @@
 
 ## Can I install this on a Creality K2 Pro or another K2 model?
 
-The `k2-pro-support` development branch provides bootstrap and read-only
-diagnostics on the K2 Pro. Printer features and setup workflows are currently
+The `k2-pro-support` development branch provides bootstrap and the interactive
+menu on the K2 Pro, including a read-only report under **Status and diagnostics**.
+Printer features and setup workflows are currently
 supported on the K2 Plus. See the [K2 Pro bootstrap instructions](./INSTALL.md#k2-pro-development-bootstrap).
 
 ## Can I still use the automatic calibration features?

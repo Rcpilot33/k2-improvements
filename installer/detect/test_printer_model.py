@@ -38,10 +38,6 @@ class ModelRoutingTests(unittest.TestCase):
     def test_public_entry_points(self):
         with tempfile.TemporaryDirectory() as tmp:
             tools = Path(tmp)
-            shim = tools / "python3"
-            shim.write_bytes(b'#!/bin/sh\n[ "$1" = -B ] && [ -f "$2" ] && '
-                             b'[ "${2##*/}" = printer_baseline.py ] && echo baseline-report\n')
-            shim.chmod(0o755)
             for entry in ENTRIES:
                 for model in ("F008", "F012", "F021", ""):
                     with self.subTest(entry=entry, model=model):
@@ -53,12 +49,44 @@ class ModelRoutingTests(unittest.TestCase):
                             self.assertIn("reached-install k2-pro-support", result.stderr)
                             self.assertEqual(result.returncode, 73)
                         elif model == "F012" and entry == "menu.sh":
-                            self.assertEqual(result.returncode, 0, result.stderr)
-                            self.assertIn("baseline-report", result.stdout)
+                            # Both models proceed to the normal menu lock.
+                            self.assertEqual(result.returncode, 73, result.stderr)
                         else:
                             self.assertEqual(result.returncode, 1, result.stderr)
                             self.assertNotIn("reached-install", result.stderr)
                             self.assertIn(model or "unknown", result.stdout + result.stderr)
+
+    def test_pro_menu_browse_diagnostics_and_exit(self):
+        # Run the entry point with its lock and state confined to the fixture.
+        menu = (ROOT / "menu.sh").read_text().replace(
+            "INSTALLER_LOCK=/tmp/k2-improvements-installer.lock",
+            'INSTALLER_LOCK="$FIXTURE/menu.lock"',
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = """
+            get_sn_mac.sh() { echo F012; }
+            id() { echo 0; }
+            clear() { :; }
+            python3() {
+                if [ "$1" = -B ] && [ "$2" = "$INSTALLER_DIR/scripts/printer_baseline.py" ]; then
+                    echo baseline-report
+                else
+                    return 1
+                fi
+            }
+            """
+            result = subprocess.run(
+                [BASH, "-c", harness + menu, (ROOT / "menu.sh").as_posix()],
+                input=b"2\n0\n1\n\n0\n", capture_output=True, timeout=30,
+                env=dict(os.environ, FIXTURE=Path(tmp).as_posix(), HOME=Path(tmp).as_posix(),
+                         MIGRATION_STATE_DIR=(Path(tmp) / "updates").as_posix()),
+            )
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        output = result.stdout.decode()
+        self.assertLess(output.index("K2 PRO DEVELOPMENT INSTALLER"), output.index("INSTALL OR CHANGE SETUP"))
+        self.assertLess(output.index("SYSTEM STATUS AND DIAGNOSTICS"), output.index("baseline-report"))
+        self.assertEqual(output.count("baseline-report"), 1)
+        self.assertIn("K2 PRO DEVELOPMENT INSTALLER", output.split("baseline-report")[1])
 
     def test_pro_bootstrap_branch_selection(self):
         with tempfile.TemporaryDirectory() as tmp:

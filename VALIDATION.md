@@ -1,5 +1,50 @@
 # Validation Status
 
+## K2 Pro bootstrap and diagnostics (November 20, 2026)
+
+RC3, a stock-probe K2 Pro on firmware `1.1.8.3`, completed a fresh Entware
+installation and cloned `k2-pro-support`. Accepting the bootstrap menu prompt
+opened the read-only diagnostic, which identified model `F012` and board
+`CR0CN200400C10` and returned to the SSH prompt.
+
+| Axis | Loaded stepper limits (mm) | Reported toolhead limits (mm) |
+| --- | --- | --- |
+| X | −13 to 302 | −9.3 to 302 |
+| Y | −6.5 to 332 | −6.5 to 302 |
+| Z | −10 to 303 | −10 to 303 |
+
+The saved stepper limits matched the loaded settings. `PRINTER_PARAM` reported
+a Y maximum of 302 mm. Moonraker reported `standby`, `motor_ready=true`, and
+an empty `homed_axes` string. This run validates bootstrap and diagnostic
+routing. Pro feature installation, motion, and restart recovery still need
+their own hardware tests.
+
+### RC3 web interface and Moonraker baseline
+
+On firmware `1.1.8.3`, nginx served Fluidd `v1.30.0` on port 4408.
+Moonraker on port 7125 reported API `1.0.5`, Klippy ready, and no failed
+components. Read-only requests returned heater temperatures, homing and print
+state, file roots, database namespaces, and the webcam list.
+
+The running service loaded `/usr/share/moonraker/moonraker.conf`.
+Its Python components live directly under
+`/usr/share/moonraker/components`. The Plus Fluidd installer expects
+`printer_data/config/moonraker.conf` and the maintained Moonraker package
+layout. The stock service lacks the `moonraker.common.RequestType` module
+used by our bridge. The bridge status endpoint returned HTTP 404.
+
+A read-only query to Creality's local WebSocket on port 9999 returned all
+three fan percentages, printer and feed state, external-spool and four-slot
+CFS data, humidity, and auto-refill status. Remote fan commands, filament
+motion, service restarts, and the maintained Fluidd build need separate tests.
+
+The next RC3 test uses the Plus installer’s maintained `Rcpilot33/moonraker`
+`k2` branch. Verify the running service and Klippy connection on port 7125 and
+check for failed components. Then install the maintained Fluidd build with the
+K2-improvements `k2_device` component. Verify that the fan and CFS cards
+display the native printer readings through `/server/k2_device/status` using
+only the components installed by K2-improvements on the factory system.
+
 ## Cartographer plugin main rollout (September 2026)
 
 The `main` installer now tracks the released Cartographer plugin `main` branch.
