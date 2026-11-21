@@ -20,8 +20,7 @@ and the component status list. Entware and better-root both showed as installed.
 The saved stepper limits matched the loaded settings. `PRINTER_PARAM` reported
 a Y maximum of 302 mm. Moonraker reported `standby`, `motor_ready=true`, and
 an empty `homed_axes` string. This run validates bootstrap and diagnostic
-routing. Pro feature installation, motion, and restart recovery still need
-their own hardware tests.
+routing. Motion and recovery from a failed restart still need hardware tests.
 
 ### RC3 web interface and Moonraker baseline
 
@@ -39,24 +38,51 @@ used by our bridge. The bridge status endpoint returned HTTP 404.
 
 A read-only query to Creality's local WebSocket on port 9999 returned all
 three fan percentages, printer and feed state, external-spool and four-slot
-CFS data, humidity, and auto-refill status. Remote fan commands, filament
-motion, service restarts, and the maintained Fluidd build need separate tests.
+CFS data, humidity, and auto-refill status.
 
-Test Better Init first. The Plus 1.1.8.0 firmware image and RC3’s stock
+### Better Init hardware test
+
+The Plus 1.1.8.0 firmware image and RC3’s stock
 1.1.8.3 Klipper init script both register `/var/run/klippy.pid` and launch
 Creality’s one-shot watcher, which sets Klippy’s `oom_score_adj` to `-500`.
 Before Better Init was installed, `cat "/proc/$(cat /var/run/klippy.pid)/oom_score_adj"`
 returned `-500` on RC3, confirming the adjustment on the running stock Klippy process.
-RC3 is still at the bootstrap stage. The separate `SAVE_CONFIG` restart
-protection is a later test. The standalone Better Init installer restarts the
-Klippy host and requests `FIRMWARE_RESTART` through Moonraker. After it completes,
-verify Klippy is ready, `motor_ready` is true, and the new Klippy process also
-reports `-500`. Then test the Plus installer’s maintained `Rcpilot33/moonraker`
-`k2` branch. Verify the running service and Klippy connection on port 7125 and
-check for failed components. Then install the maintained Fluidd build with the
-K2-improvements `k2_device` component. Verify that the fan and CFS cards
-display the native printer readings through `/server/k2_device/status` using
-only the components installed by K2-improvements on the factory system.
+On RC3 at commit `6fff16c`, the standalone Better Init installer restarted the
+Klippy host, waited for motor readiness, and requested one `FIRMWARE_RESTART`
+through stock Moonraker. Klippy and the motor controller both reported ready
+afterward. The menu showed Better Init installed, and the same command returned
+`-500` for the running Klippy process. The separate `save-config-restart`
+component still awaited installation and testing.
+
+On RC1, the K2 Plus, the same command returned `0` for its running Klippy process.
+
+### RC3 maintained Moonraker hardware test
+
+Option 5 completed on RC3. The running service used the dedicated
+`moonraker-env` and loaded `/mnt/UDISK/printer_data/config/moonraker.conf`.
+The checkout was `Rcpilot33/moonraker` branch `k2` at `ae1b034`, matching
+the version reported by the running API. On port 7125, `/server/info` reported
+API `1.5.0`, Klippy connected and ready, and empty lists for failed components,
+warnings, and missing Klippy requirements. The printer reported `standby`
+and `motor_ready=true`.
+
+### RC3 Fluidd fan and CFS hardware test
+
+Option 6 installed Fluidd `v1.37.5` on RC3. The operator confirmed that the
+fan controls and both CFS actions, Feed and Retract, worked on the printer.
+A read-only query to `/server/k2_device/status` reported a connected bridge
+and matched the cards on port 4408. All three fans read 0%. Slot 1A showed
+white Hyper-PLA at 20% remaining, the other slots and spool holder were empty,
+CFS humidity was 28%, and auto-refill was on. Filament Deck was present on
+this printer, so testing on a printer without it remains open.
+
+### RC3 bed screw positions
+
+With the stock probe, the operator jogged the nozzle to the four screw centers.
+Fluidd showed front left (9, 59), front right (290, 59), rear right (290, 239),
+and rear left (9, 239), in mm. RC3 exposes one Z stepper and has no
+`Z_TILT_ADJUST` command. An option 7 install, a full probing pass, and
+verification of knob turn direction and amount are pending on RC3.
 
 ## Cartographer plugin main rollout (September 2026)
 

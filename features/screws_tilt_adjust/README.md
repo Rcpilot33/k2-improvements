@@ -1,8 +1,12 @@
 # Screws Tilt Adjust
 
-Adds K2 Plus support for Klipper's `SCREWS_TILT_CALCULATE` command. The command
+Adds K2 Plus and K2 Pro support for Klipper's `SCREWS_TILT_CALCULATE` command. The command
 probes above each bed screw and reports how far and in which direction to turn
 each adjustment knob.
+
+The installer selects the screw positions for the detected model. The Plus
+runs `Z_TILT_ADJUST` before probing. On the single-Z Pro, home the printer
+before running `SCREWS_TILT_CALCULATE` directly.
 
 The bundled screw coordinates describe physical locations on the bed. At run
 time, the command reads the active probe's X/Y offsets and converts each point
