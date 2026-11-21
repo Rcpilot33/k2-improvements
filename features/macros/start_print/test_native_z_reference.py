@@ -185,7 +185,18 @@ class ProStockProfileTests(unittest.TestCase):
                         self.assertLess(commands.index("G28"), commands.index("NOZZLE_CLEAR"))
                     self.assertEqual(commands.count("_K2_PRO_FINAL_Z_HOME"), int(not (saved and skip)))
                     self.assertEqual(commands.count("BED_MESH_CALIBRATE PROFILE=70.0c_30.0c"), int(not saved))
-                    self.assertIn("BED_MESH_PROFILE LOAD=70.0c_30.0c", commands)
+                    profile = "70.0c_30.0c"
+                    lookup = commands.index(f'RESPOND MSG="Looking for {profile} ..."')
+                    result = "exists ..." if saved else "does not exist, creating ..."
+                    self.assertEqual(commands[lookup + 1], f'RESPOND MSG="{profile} {result}"')
+                    load = commands.index("BED_MESH_PROFILE LOAD=" + profile)
+                    self.assertLess(lookup + 1, load)
+                    self.assertEqual(commands[load - 1],
+                                     f'STATUS_MSG PREFIX="[START_PRINT]:" MSG="Loading bed mesh: {profile}..."')
+                    self.assertEqual(commands[commands.index("M104 S240.0") - 1],
+                                     'STATUS_MSG PREFIX="[START_PRINT]:" MSG="Setting extruder to 240.0°C..."')
+                    self.assertEqual(commands[-1],
+                                     'STATUS_MSG PREFIX="[START_PRINT]:" MSG="Start_Print macro has finished"')
                     self.assertNotIn("Z_TILT_ADJUST", commands)
                     self.assertFalse(any(re.match(r"G[01]\s+.*[XY]", cmd) for cmd in commands))
                     park = commands.index("BOX_GO_TO_EXTRUDE_POS")
@@ -193,7 +204,10 @@ class ProStockProfileTests(unittest.TestCase):
                     self.assertIn("BOX_NOZZLE_CLEAN", commands[park:])
                     self.assertIn("SET_PIN PIN=board_dissipation_fan VALUE=1", commands[park:])
         self.assertEqual(render(macro_body(pro, "_K2_PRO_FINAL_Z_HOME"), ctx), [
-            "BOX_NOZZLE_CLEAN", "M109 S140", "NEXT_HOMEZ_NACCU", "G28 Z", "BED_MESH_CLEAR",
+            'STATUS_MSG PREFIX="[START_PRINT]:" MSG="Cleaning nozzle for final native Z home..."',
+            "BOX_NOZZLE_CLEAN", "M109 S140",
+            'STATUS_MSG PREFIX="[START_PRINT]:" MSG="Setting final native Z..."',
+            "NEXT_HOMEZ_NACCU", "G28 Z", "BED_MESH_CLEAR",
         ])
 
     def test_m191_respects_each_models_chamber_and_z_limits(self):

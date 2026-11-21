@@ -162,7 +162,29 @@ in standby, all axes unhomed and no configuration warnings. The stock
 PR Touch probe was configured with a 9×9 grid. Only the `default` mesh was
 present and active. The mesh soak was five minutes. Fast Stop reported
 both its command handler and stock mesh cancellation hook active.
-The first physical print with this profile is pending.
+
+RC3 applied the one-time macros update from `ce0f7a0`. After the protected
+restart, Moonraker reported a configured probe count of 19×19, Klipper ready
+and the motor controller ready. The active and saved `default` profile still
+had 9×9 points. The operator then selected 5×5 for faster trials, matching the
+Plus test grid. Moonraker confirmed a loaded probe count of 5×5 and an active,
+saved 5×5 `default` profile with no configuration change pending. Klipper
+and the motor controller were ready.
+
+The first `Cube_Hyper-PLA_5m59s.gcode` run completed at 07:06:37. It took
+the missing-mesh path at a bed target of 50 °C with chamber heating off.
+The five-minute soak was followed by a 25-point probe pass lasting 65.585 s
+with a 0.266 mm range. Moonraker confirmed `50.0c_0.0c` was active during
+the print. Fluidd reported 7m 55s actual, 15m 19s total, and 1.36 m of
+filament. After saving, the loaded configuration contained identical 5×5
+points for `default` and `50.0c_0.0c` with no pending changes.
+
+RC3 reused the saved mesh on the repeat cube print. The stock homing
+sequence loaded `default` before the file opened at 07:13:17. Print
+preparation then advanced to the 220 °C nozzle target at 07:13:22,
+skipping the five-minute mesh soak and the 25-point calibration. At 36%
+file progress, Moonraker reported `50.0c_0.0c` active and no pending
+configuration changes.
 
 The resume fan patch applied in memory to RC3's factory macro file, and the
 installed Klippy command loop exposes the Fast Stop cancellation interface.
