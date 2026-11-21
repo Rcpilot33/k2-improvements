@@ -6,7 +6,12 @@ set -e
 # then runs the internal Jacob-style bootstrap script.
 
 REPO="Rcpilot33/k2-improvements"
-BRANCH="${K2_BRANCH:-main}"
+MODEL=$(get_sn_mac.sh model 2>/dev/null) || MODEL=
+case "$MODEL" in
+    F008) BRANCH="${K2_BRANCH:-main}" ;;
+    F012) BRANCH="${K2_BRANCH:-k2-pro-support}" ;;
+    *) echo "Unsupported printer model: ${MODEL:-unknown}" >&2; exit 1 ;;
+esac
 
 EXPECT_BRANCH="no"
 for ARG in "$@"; do
@@ -40,15 +45,11 @@ esac
 
 BASE_URL="https://raw.githubusercontent.com/$REPO/$BRANCH"
 
-# This entry point can run from /tmp before a repository checkout exists.
-MODEL=$(get_sn_mac.sh model 2>/dev/null) || MODEL=
-case "$MODEL" in
-    F008) ;;
-    F012)
-        echo "K2 Pro (F012), board $(get_sn_mac.sh board). Bootstrap is available for the K2 Plus only."
-        exit 1 ;;
-    *) echo "Unsupported printer model: ${MODEL:-unknown}" >&2; exit 1 ;;
-esac
+# Other branches can still expose the Plus setup menu on a Pro.
+if [ "$MODEL" = F012 ] && [ "$BRANCH" != k2-pro-support ]; then
+    echo 'K2 Pro bootstrap requires --branch k2-pro-support for the diagnostics menu.' >&2
+    exit 1
+fi
 
 BOOTSTRAP_DIR="/tmp/bootstrap"
 

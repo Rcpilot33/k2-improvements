@@ -2,10 +2,9 @@
 
 ## Can I install this on a Creality K2 Pro or another K2 model?
 
-No. This project supports and has been validated on the **Creality K2 Plus
-only**. Its scripts and patches depend on K2 Plus-specific Klipper components,
-service paths, homing behavior, motor controllers, and printer configuration.
-Do not run the installer on a K2 Pro or any other K2-series printer.
+The `k2-pro-support` development branch provides bootstrap and read-only
+diagnostics on the K2 Pro. Printer features and setup workflows are currently
+supported on the K2 Plus. See the [K2 Pro bootstrap instructions](./INSTALL.md#k2-pro-development-bootstrap).
 
 ## Can I still use the automatic calibration features?
 

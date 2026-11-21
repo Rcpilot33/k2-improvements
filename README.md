@@ -7,11 +7,9 @@
 > - ▶️ [Watch Rcpilot33 K2 Improvements on YouTube](https://www.youtube.com/@Rcpilot33)
 
 > [!IMPORTANT]
-> **This project supports the Creality K2 Plus only.** Do not install it on a
-> K2 Pro or any other K2-series printer. The scripts, Klipper patches, service
-> paths, homing behavior, motor-controller handling, and printer configuration
-> are specific to the K2 Plus. Other models are not supported or validated and
-> may be damaged by these changes.
+> **Printer features are supported on the Creality K2 Plus.** On the
+> `k2-pro-support` development branch, K2 Pro testing starts with bootstrap
+> and a read-only diagnostic report. Use the [K2 Pro bootstrap instructions](./INSTALL.md#k2-pro-development-bootstrap).
 
 This fork is built on the primary technical work maintained by
 [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements).

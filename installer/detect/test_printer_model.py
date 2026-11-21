@@ -13,7 +13,7 @@ ENTRIES = ("bootstrap.sh", "bootstrap/bootstrap.sh", "menu.sh", "no-carto.sh", "
 
 @unittest.skipUnless(Path(BASH).is_file(), "bash required")
 class ModelRoutingTests(unittest.TestCase):
-    def run_entry(self, entry, model, tools):
+    def run_entry(self, entry, model, tools, *args, branch=""):
         # Stop at the first install operation. Exercise the real entry script,
         # including its relative paths, without running an install on this host.
         harness = """
@@ -22,7 +22,7 @@ class ModelRoutingTests(unittest.TestCase):
             if [ "$1" = model ]; then printf '%s\\n' "$MODEL"; else echo test-board; fi
         }
         exec 3>&2
-        stop_install() { echo reached-install >&3; exit 73; }
+        stop_install() { echo "reached-install ${BRANCH:-}" >&3; exit 73; }
         mkdir() { stop_install; }
         rm() { stop_install; }
         mktemp() { stop_install; }
@@ -30,8 +30,8 @@ class ModelRoutingTests(unittest.TestCase):
         . "$0"
         """
         return subprocess.run(
-            [BASH, "-c", harness, (ROOT / entry).as_posix()],
-            env=dict(os.environ, MODEL=model, TOOLS=tools.as_posix()),
+            [BASH, "-c", harness, (ROOT / entry).as_posix(), *args],
+            env=dict(os.environ, MODEL=model, TOOLS=tools.as_posix(), K2_BRANCH=branch),
             capture_output=True, text=True, timeout=10, cwd=ROOT,
         )
 
@@ -49,6 +49,9 @@ class ModelRoutingTests(unittest.TestCase):
                         if model == "F008":
                             self.assertIn("reached-install", result.stderr)
                             self.assertEqual(result.returncode, 73)
+                        elif model == "F012" and entry in ("bootstrap.sh", "bootstrap/bootstrap.sh"):
+                            self.assertIn("reached-install k2-pro-support", result.stderr)
+                            self.assertEqual(result.returncode, 73)
                         elif model == "F012" and entry == "menu.sh":
                             self.assertEqual(result.returncode, 0, result.stderr)
                             self.assertIn("baseline-report", result.stdout)
@@ -56,3 +59,16 @@ class ModelRoutingTests(unittest.TestCase):
                             self.assertEqual(result.returncode, 1, result.stderr)
                             self.assertNotIn("reached-install", result.stderr)
                             self.assertIn(model or "unknown", result.stdout + result.stderr)
+
+    def test_pro_bootstrap_branch_selection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for entry in ("bootstrap.sh", "bootstrap/bootstrap.sh"):
+                for requested in ("main", "integration-testing", "k2-pro-support"):
+                    for args, env_branch in ((("--branch", requested), ""), ((), requested)):
+                        with self.subTest(entry=entry, args=args, env_branch=env_branch):
+                            result = self.run_entry(entry, "F012", Path(tmp), *args, branch=env_branch)
+                            if requested == "k2-pro-support":
+                                self.assertEqual(result.returncode, 73)
+                            else:
+                                self.assertEqual(result.returncode, 1)
+                                self.assertNotIn("reached-install", result.stderr)

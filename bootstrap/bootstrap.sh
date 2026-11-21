@@ -4,7 +4,12 @@ set -e
 cd $(dirname $0)
 CURDIR=$(pwd)
 REPO_URL="https://github.com/Rcpilot33/k2-improvements.git"
-BRANCH="${K2_BRANCH:-main}"
+MODEL=$(get_sn_mac.sh model 2>/dev/null) || MODEL=
+case "$MODEL" in
+    F008) BRANCH="${K2_BRANCH:-main}" ;;
+    F012) BRANCH="${K2_BRANCH:-k2-pro-support}" ;;
+    *) echo "Unsupported printer model: ${MODEL:-unknown}" >&2; exit 1 ;;
+esac
 
 EXPECT_BRANCH="no"
 for ARG in "$@"; do
@@ -36,13 +41,11 @@ case "$BRANCH" in
         ;;
 esac
 
-# This script can also be launched directly from a downloaded bootstrap bundle.
-MODEL=$(get_sn_mac.sh model 2>/dev/null) || MODEL=
-case "$MODEL" in
-    F008) ;;
-    F012) echo "K2 Pro (F012). Bootstrap is available for the K2 Plus only."; exit 1 ;;
-    *) echo "Unsupported printer model: ${MODEL:-unknown}" >&2; exit 1 ;;
-esac
+# Other branches can still expose the Plus setup menu on a Pro.
+if [ "$MODEL" = F012 ] && [ "$BRANCH" != k2-pro-support ]; then
+    echo 'K2 Pro bootstrap requires --branch k2-pro-support for the diagnostics menu.' >&2
+    exit 1
+fi
 
 # Run install script from Entware if needed
 if [ -x /opt/bin/opkg ] && [ -x /opt/bin/git ]; then

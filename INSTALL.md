@@ -6,10 +6,9 @@ project overview and shortest supported path, begin with the
 [main README](./README.md).
 
 > [!IMPORTANT]
-> **Supported printer: Creality K2 Plus only.** Do not run these installers on
-> a K2 Pro or any other K2-series printer. This project modifies K2 Plus-specific
-> Klipper components, services, homing logic, motor-controller behavior, and
-> configuration files. Other models are not supported or validated.
+> **Printer feature installation is supported on the Creality K2 Plus.**
+> For a K2 Pro on the development branch, use the
+> [K2 Pro bootstrap instructions](#k2-pro-development-bootstrap).
 
 ## Safety and compatibility
 
@@ -111,6 +110,19 @@ python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githu
 The `--menu` path asks whether to open the installer after bootstrap. Enter
 `y` to continue. A blank answer, `n`, or input failure finishes bootstrap
 without opening the menu.
+
+### K2 Pro development bootstrap
+
+From the Pro's SSH session, fetch the bootstrap script from the development branch:
+
+```sh
+python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githubusercontent.com/Rcpilot33/k2-improvements/k2-pro-support/bootstrap.sh", "/tmp/bootstrap.sh")' && sh /tmp/bootstrap.sh --branch k2-pro-support --menu
+```
+
+Bootstrap installs Entware when needed, prepares the installer checkout, and
+configures root's persistent home. Answer `y` at the menu prompt to display the
+read-only Pro diagnostic report. To repeat the report later, run
+`sh /mnt/UDISK/root/k2-improvements/menu.sh`.
 
 ### Bootstrap without the menu prompt
 
