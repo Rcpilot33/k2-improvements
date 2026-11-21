@@ -140,8 +140,9 @@ Both paths emitted `G0 Y350` after the native chute command. RC3 reports
 a normal Y maximum of 302 mm and a configured stepper maximum of 332 mm.
 
 The F012 profile uses the factory chute command, single-Z preparation,
-Z-driver mode, cleaning and fan handoff. Its fresh overrides inherit RC3's
-9×9 mesh. Both M191 and the editor cap bed positions at the reported Z
+Z-driver mode, cleaning and fan handoff. The first trial build inherited
+RC3's 9×9 mesh. The next stock-probe trial starts with an editable 19×19
+grid in `custom/overrides.cfg`. Both M191 and the editor cap bed positions at the reported Z
 maximum (303 mm on RC3). M191 follows the factory integer-temperature test
 for active chamber heating. The stock-probe final home pairs
 `NEXT_HOMEZ_NACCU` with `G28 Z` for both existing and newly generated meshes.
@@ -151,8 +152,17 @@ the repeated home. Released axes force preparation again.
 Offline tests cover those Pro paths. Across 384 comparisons, the Plus
 rendered command lists matched the `integration-testing` reference for
 START_PRINT, mesh lookup, mesh creation and M191, including Cartographer
-Touch and Scan modes. RC3 installation, restart and the first physical print
-with the new profile still need operator validation.
+Touch and Scan modes.
+
+RC3 completed option 13 and the protected restart. A read-only Moonraker
+check confirmed that the loaded `START_PRINT`, `_K2_PRO_FINAL_Z_HOME`,
+`_CREATE_MESH` and `M191` macro bodies matched the tested files from
+`e8c8f5f`. Klipper reported ready, the motor controller ready, the printer
+in standby, all axes unhomed and no configuration warnings. The stock
+PR Touch probe was configured with a 9×9 grid. Only the `default` mesh was
+present and active. The mesh soak was five minutes. Fast Stop reported
+both its command handler and stock mesh cancellation hook active.
+The first physical print with this profile is pending.
 
 The resume fan patch applied in memory to RC3's factory macro file, and the
 installed Klippy command loop exposes the Fast Stop cancellation interface.

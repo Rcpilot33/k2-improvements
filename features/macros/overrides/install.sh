@@ -9,14 +9,12 @@ test -f ~/printer_data/config/custom/main.cfg || touch ~/printer_data/config/cus
 # This file is intended to be user modified. Seed it only on first install;
 # rerunning the macro installer must not erase mount selections or user edits.
 if [ ! -f ~/printer_data/config/custom/overrides.cfg ]; then
-    if [ "$macro_model" = F012 ]; then
-        # Keep the F012 probe grid from the printer's own config.
-        sed '/^\[bed_mesh\]$/,/^$/d' "$SCRIPT_DIR/overrides.cfg" > ~/printer_data/config/custom/overrides.cfg
-    else
-        cp ${SCRIPT_DIR}/overrides.cfg ~/printer_data/config/custom/overrides.cfg
-    fi
+    cp "$SCRIPT_DIR/overrides.cfg" ~/printer_data/config/custom/overrides.cfg
 else
     echo "I: preserving existing custom/overrides.cfg"
+    if [ "$macro_model" = F012 ]; then
+        python3 "$SCRIPT_DIR/ensure_stock_probe_count.py" ~/printer_data/config/custom/overrides.cfg
+    fi
 fi
 
 python3 "${SCRIPT_DIR}/cleanup_managed_overrides.py" \

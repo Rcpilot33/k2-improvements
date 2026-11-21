@@ -1,7 +1,9 @@
 # K2 Macro Bundle
 
 On a K2 Pro (F012) with the stock PR Touch probe, option 13 selects the
-Pro print-start sequence. A fresh install inherits the printer's mesh grid.
+Pro print-start sequence. The initial stock-probe grid for testing is 19×19.
+To try another grid, edit `[bed_mesh] probe_count` in `custom/overrides.cfg`,
+apply the configuration restart, then recalibrate and save the default mesh.
 The Pro uses the factory nozzle cleaning, final Z reference and purge-chute
 positioning. Its single Z motor needs no tilt adjustment. The Pro uses
 Creality's integer chamber threshold (41 °C and above for active heating).
