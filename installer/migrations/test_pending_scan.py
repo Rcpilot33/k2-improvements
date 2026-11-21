@@ -93,6 +93,25 @@ migration_is_complete() {
                 self.assertEqual(output, ["a|macros|first", "b|macros|second|detail"])
                 self.assertEqual(calls, ["installed:macros"])
 
+    def test_pro_screws_tilt_update_is_offered_once_to_existing_installs(self):
+        component = "screws_tilt_adjust"
+        script = '''
+. "${UPDATE_SCRIPT%/menus/update.sh}/migrations/catalog.sh"
+migration_catalog | awk -F '|' '$1 != "screws-tilt-pro-home-before-probing-v1" { print $1 }' > "$MIGRATION_COMPLETED"
+migration_pending_components
+'''
+        for model, installed, expected in (
+            ("F012", (component,), [component]),
+            ("F008", (component,), []),
+            ("F012", (), []),
+        ):
+            with self.subTest(model=model, installed=installed):
+                check = f"K2_PRINTER_MODEL={model}\n" + script
+                if installed:
+                    check += "migration_mark_component_current screws_tilt_adjust\nmigration_pending_components"
+                output, _ = self.run_scan([], installed=installed, script=check)
+                self.assertEqual(output, expected)
+
     def test_partial_install_and_pre_update_snapshot_still_offer_repairs(self):
         output, calls = self.run_scan(
             ["partial|macros|check|repair", "snapshot|cartographer|check|repair"],

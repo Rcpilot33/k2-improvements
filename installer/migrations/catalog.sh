@@ -186,4 +186,9 @@ nozzle-camera-jimmyv-removal-v1|nozzle-camera-mount-compatibility|is_nozzle_came
 nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer|is_nozzle_usb_cartographer|Refresh opted-in nozzle-camera AI and USB power protection without changing the selected wiring mode
 nozzle-usb-cartographer-boot-dependencies-v2|nozzle-usb-cartographer|is_nozzle_usb_cartographer|Order nozzle USB power after factory GPIO initialization and block Klipper startup until Cartographer USB is detected
 EOF
+    if [ "${K2_PRINTER_MODEL:-}" = F012 ]; then
+        cat <<'EOF'
+screws-tilt-pro-home-before-probing-v1|screws_tilt_adjust|is_screws_tilt|Load the K2 Pro screw positions and home before probing when any axis is unhomed
+EOF
+    fi
 }
