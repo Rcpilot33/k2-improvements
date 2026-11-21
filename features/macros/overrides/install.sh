@@ -2,13 +2,19 @@
 set -e
 
 SCRIPT_DIR=$(readlink -f $(dirname ${0}))
+. "$SCRIPT_DIR/../model.sh"
 
 test -f ~/printer_data/config/custom/main.cfg || touch ~/printer_data/config/custom/main.cfg
 
 # This file is intended to be user modified. Seed it only on first install;
 # rerunning the macro installer must not erase mount selections or user edits.
 if [ ! -f ~/printer_data/config/custom/overrides.cfg ]; then
-    cp ${SCRIPT_DIR}/overrides.cfg ~/printer_data/config/custom/overrides.cfg
+    if [ "$macro_model" = F012 ]; then
+        # Keep the F012 probe grid from the printer's own config.
+        sed '/^\[bed_mesh\]$/,/^$/d' "$SCRIPT_DIR/overrides.cfg" > ~/printer_data/config/custom/overrides.cfg
+    else
+        cp ${SCRIPT_DIR}/overrides.cfg ~/printer_data/config/custom/overrides.cfg
+    fi
 else
     echo "I: preserving existing custom/overrides.cfg"
 fi

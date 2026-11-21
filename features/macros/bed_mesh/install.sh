@@ -3,6 +3,8 @@
 set -e
 
 SCRIPT_DIR="$(readlink -f $(dirname $0))"
+. "$SCRIPT_DIR/../model.sh"
+require_macro_profile
 
 test -d ~/printer_data/config/custom || mkdir -p ~/printer_data/config/custom
 

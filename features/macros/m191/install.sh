@@ -3,6 +3,8 @@
 set -e
 
 SCRIPT_DIR="$(readlink -f $(dirname $0))"
+. "$SCRIPT_DIR/../model.sh"
+require_macro_profile
 INSTALLER_BASE="${INSTALLER_DIR:-/mnt/UDISK/root/k2-improvements}"
 CFG_DIR="${PRINTER_CFG_DIR:-${HOME}/printer_data/config}"
 CUSTOM="$CFG_DIR/custom"

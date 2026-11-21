@@ -189,6 +189,7 @@ EOF
     if [ "${K2_PRINTER_MODEL:-}" = F012 ]; then
         cat <<'EOF'
 screws-tilt-pro-home-before-probing-v1|screws_tilt_adjust|is_screws_tilt|Load the K2 Pro screw positions and home before probing when any axis is unhomed
+k2-pro-native-print-macros-v1|macros|is_macros|Use the F012 stock-probe print preparation, chamber limits and single-Z mesh routine
 EOF
     fi
 }

@@ -49,6 +49,10 @@ is_fluidd()        { grep -ilq 'crealityk2' /usr/share/fluidd/assets/*.js 2>/dev
 is_macros() {
     local custom="$PRINTER_CFG_DIR/custom"
     local main="$custom/main.cfg"
+    if [ "${K2_PRINTER_MODEL:-}" = F012 ]; then
+        [ -e "$custom/start_print_pro.cfg" ] &&
+            grep -q '^\[include start_print_pro\.cfg\]$' "$main" 2>/dev/null || return 1
+    fi
     [ -e "$custom/start_print.cfg" ] &&
     [ -e "$custom/m191.cfg" ] &&
     [ -e "$custom/bed_mesh.cfg" ] &&

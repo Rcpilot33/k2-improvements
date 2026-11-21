@@ -81,8 +81,90 @@ this printer, so testing on a printer without it remains open.
 With the stock probe, the operator jogged the nozzle to the four screw centers.
 Fluidd showed front left (9, 59), front right (290, 59), rear right (290, 239),
 and rear left (9, 239), in mm. RC3 exposes one Z stepper and has no
-`Z_TILT_ADJUST` command. An option 7 install, a full probing pass, and
-verification of knob turn direction and amount are pending on RC3.
+`Z_TILT_ADJUST` command. Option 7 installed successfully. RC3 offered the
+one-time Screws Tilt Adjust update from `dfadef5`, and the operator applied it.
+On November 21, the operator confirmed that running `SCREWS_TILT_CALCULATE`
+from the Fluidd console with the axes unhomed homed the printer and probed all
+four screws. Verification of knob turn direction and amount is still pending.
+
+Fluidd showed a 0.0251 mm spread across the four screw positions on RC3.
+
+| Screw | Probed Z (mm) | Difference from front left (mm) | Displayed adjustment |
+| --- | ---: | ---: | --- |
+| Front left | −0.1349 | 0.0000 | Base |
+| Front right | −0.1290 | +0.0059 | 00:01 |
+| Rear right | −0.1098 | +0.0251 | 00:02 |
+| Rear left | −0.1320 | +0.0029 | 00:00 |
+
+### RC3 Abort Homing
+
+Option 9 applied the webhooks patch and completed the protected Klippy restart.
+Afterward, Moonraker reported `webhooks.state=ready`,
+`can_force_stop_homing=true`, and `print_stats.state=standby` with all axes
+unhomed. Stopping an active homing move remains untested on RC3.
+
+### RC3 SAVE_CONFIG restart protection
+
+Option 10 completed the Klippy host reload and one protected firmware restart
+on RC3. After installation, Moonraker reported Klipper ready, the printer in
+standby, `motor_ready=true`, and `save_config_pending=false`. The config
+directory contained five timestamped primary printer backups.
+
+On November 21, the operator saved a 9×9 `default` bed mesh through Fluidd.
+At 00:37:09 Klipper reported the config written and the protected restart
+armed. It disconnected at 00:37:11, and Moonraker recorded one
+`FIRMWARE_RESTART` at 00:37:43. Afterward, RC3 reported Klipper ready,
+`motor_ready=true`, standby, and `save_config_pending=false`. The reloaded
+config contained the saved mesh. Its first and last rows matched the Fluidd
+save dialog. No mesh profile was active at the time of the read-only check.
+The operator then ran `G28` and confirmed that RC3 homed correctly after
+the protected restart.
+
+### RC3 virtual SD-card upload guard
+
+Option 11 installed both the trailing upload-boundary guard and the CFS
+pause/refill file-position fix. The installed module's SHA-256 matched the
+patch tested against RC3's original module. Both installer backups matched
+the pre-install copy. After the protected restart, Moonraker reported Klipper
+ready, `motor_ready=true`, standby, and an idle virtual SD reader. Handling a
+trailing upload boundary and resuming after a CFS refill still need print tests
+on RC3.
+
+### RC3 core macro bundle review
+
+Option 12 (memory diagnostics) is deferred. Before the F012 macro profile,
+an offline render using the cube's `EXTRUDER_TEMP=220 BED_TEMP=50`
+produced one `Z_TILT_ADJUST` with a matching temperature mesh and two when
+the mesh had to be created. RC3 has one Z stepper and no Z tilt command.
+Both paths emitted `G0 Y350` after the native chute command. RC3 reports
+a normal Y maximum of 302 mm and a configured stepper maximum of 332 mm.
+
+The F012 profile uses the factory chute command, single-Z preparation,
+Z-driver mode, cleaning and fan handoff. Its fresh overrides inherit RC3's
+9×9 mesh. Both M191 and the editor cap bed positions at the reported Z
+maximum (303 mm on RC3). M191 follows the factory integer-temperature test
+for active chamber heating. The stock-probe final home pairs
+`NEXT_HOMEZ_NACCU` with `G28 Z` for both existing and newly generated meshes.
+A prepared print with all axes homed and a saved matching mesh skips
+the repeated home. Released axes force preparation again.
+
+Offline tests cover those Pro paths. Across 384 comparisons, the Plus
+rendered command lists matched the `integration-testing` reference for
+START_PRINT, mesh lookup, mesh creation and M191, including Cartographer
+Touch and Scan modes. RC3 installation, restart and the first physical print
+with the new profile still need operator validation.
+
+The resume fan patch applied in memory to RC3's factory macro file, and the
+installed Klippy command loop exposes the Fast Stop cancellation interface.
+PR Touch cancellation and clearance behavior still need hardware validation.
+
+### Fluidd follow-up
+
+- [ ] Enable **Tool → Tools → SCREWS_TILT_CALCULATE** with unhomed axes when
+  the K2 Pro auto-homing macro is installed. Fluidd `v1.37.5` disables the
+  menu item before it can send the command. Keep the active manual-probe
+  guard and the homing requirement for configurations that need it. Verify
+  on RC3 that one selection homes and probes just as the console command does.
 
 ## Cartographer plugin main rollout (September 2026)
 

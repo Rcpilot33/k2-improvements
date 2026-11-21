@@ -218,7 +218,7 @@ class StartPrintConfigTests(unittest.TestCase):
     def test_macro_repair_preserves_plate_surface_wrapper(self):
         installer = MACROS_INSTALLER.read_text(encoding="utf-8")
         capture = installer.index("HAD_SURFACE_WRAPPER=1")
-        refresh = installer.index("for sub in start_print m191 bed_mesh overrides")
+        refresh = installer.index("for sub in resume start_print m191 bed_mesh overrides")
         restore = installer.index("surface-selection-wrapper/install.sh")
         self.assertLess(capture, refresh)
         self.assertLess(refresh, restore)

@@ -1,4 +1,12 @@
-# K2 Plus Macro Bundle
+# K2 Macro Bundle
+
+On a K2 Pro (F012) with the stock PR Touch probe, option 13 selects the
+Pro print-start sequence. A fresh install inherits the printer's mesh grid.
+The Pro uses the factory nozzle cleaning, final Z reference and purge-chute
+positioning. Its single Z motor needs no tilt adjustment. The Pro uses
+Creality's integer chamber threshold (41 °C and above for active heating).
+Bed Assist limits its two Z positions to the smaller of 330 mm and the
+Pro's reported Z maximum.
 
 Installs the four macro components used by both guided setup paths:
 

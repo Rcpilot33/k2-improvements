@@ -212,6 +212,16 @@ class K2M191SettingsEditor:
         state = str(print_stats.get_status(0.0).get("state", "")).lower()
         return state in ("printing", "paused")
 
+    def _maximum(self, key):
+        maximum = SETTING_BY_KEY[key][3]
+        if key not in ("bed_assist_z_height", "bed_restore_z_height"):
+            return maximum
+        if self.printer.lookup_object("gcode_macro _K2_PRO_FINAL_Z_HOME", None) is None:
+            return maximum
+        toolhead = self.printer.lookup_object("toolhead")
+        eventtime = self.printer.get_reactor().monotonic()
+        return min(maximum, toolhead.get_status(eventtime)["axis_maximum"][2])
+
     def _action(self, message):
         self.gcode.respond_raw("// action:%s" % message)
 
@@ -244,12 +254,12 @@ class K2M191SettingsEditor:
         ]
         self._action("m191_settings_begin")
         for index, setting in enumerate(self.settings):
-            _, label, minimum, maximum, unit, kind, exclusive = SETTING_BY_KEY[setting["key"]]
+            _, label, minimum, _, unit, kind, exclusive = SETTING_BY_KEY[setting["key"]]
             self._action(
                 "m191_settings_setting %s|%s|%s|%s|%s|%s|%d|%s|%d"
                 % (
                     setting["key"], label, format_value(setting["key"], setting["current"]),
-                    minimum, maximum, unit, index, kind, 1 if exclusive else 0,
+                    minimum, self._maximum(setting["key"]), unit, index, kind, 1 if exclusive else 0,
                 )
             )
         self._action("m191_settings_show")
@@ -261,6 +271,8 @@ class K2M191SettingsEditor:
         key = self.settings[index]["key"]
         try:
             value = validate_value(key, value)
+            if value > self._maximum(key):
+                raise ValueError("%s exceeds the printer Z limit" % key)
         except ValueError as exc:
             raise gcmd.error(str(exc))
         self.settings[index]["current"] = value
@@ -289,6 +301,9 @@ class K2M191SettingsEditor:
             return
         values = {item["key"]: item["current"] for item in self.settings}
         try:
+            for key, value in values.items():
+                if value > self._maximum(key):
+                    raise ValueError("%s exceeds the printer limit" % key)
             updated = rewrite_settings(text, values)
         except (TypeError, ValueError) as exc:
             raise gcmd.error("Could not update M191 settings: %s" % exc)

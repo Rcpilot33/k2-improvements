@@ -44,14 +44,14 @@ class M191WorkflowTests(unittest.TestCase):
         self.assertEqual(macro_defaults(OVERRIDES), DEFAULTS)
 
     def test_active_heating_boundary_remains_fixed(self):
-        self.assertIn("{% set WAIT_FOR_CHAMBER = S > 35.0 %}", MACRO)
+        self.assertIn("{% set ACTIVE_THRESHOLD = 40 if PRO else 35 %}", MACRO)
 
     def test_m141_is_not_redefined_as_a_second_macro(self):
         self.assertNotIn("[gcode_macro M141]", MACRO)
         self.assertNotIn("rename_existing", MACRO)
 
     def test_nonzero_target_restores_configured_chamber_fan_margin(self):
-        wait = MACRO.index("{% set WAIT_FOR_CHAMBER = S > 35.0 %}")
+        wait = MACRO.index("{% set WAIT_FOR_CHAMBER = (S|int if PRO else S) > ACTIVE_THRESHOLD %}")
         target = MACRO.index(
             "{% set FAN_TARGET = S + CHAMBER_FAN_MARGIN %}",
             wait,
@@ -125,7 +125,7 @@ class M191WorkflowTests(unittest.TestCase):
 
     def test_z_height_range_is_30_through_330(self):
         self.assertIn(
-            "BED_ASSIST_Z_HEIGHT < 30.0 or BED_ASSIST_Z_HEIGHT > 330.0",
+            "30.0 <= BED_ASSIST_Z_HEIGHT <= Z_MAX",
             MACRO,
         )
 

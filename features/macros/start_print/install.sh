@@ -3,6 +3,7 @@
 set -e
 
 SCRIPT_DIR="$(readlink -f $(dirname $0))"
+. "$SCRIPT_DIR/../model.sh"
 
 test -d ~/printer_data/config/custom || mkdir -p ~/printer_data/config/custom
 
@@ -14,6 +15,13 @@ ln -sf ${SCRIPT_DIR}/start_print.cfg \
     ~/printer_data/config/custom/start_print.cfg
 python ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg start_print.cfg
+
+if [ "$macro_model" = F012 ]; then
+    echo "I: selecting K2 Pro (F012) stock-probe START_PRINT"
+    ln -sf "$SCRIPT_DIR/start_print_pro.cfg" ~/printer_data/config/custom/start_print_pro.cfg
+    python "$SCRIPT_DIR/../../../scripts/ensure_included.py" \
+        ~/printer_data/config/custom/main.cfg start_print_pro.cfg
+fi
 
 # Stock PR Touch may stop Creality's artificial-Z approach at the nozzle and
 # then enter _HOME_Z at an artificial coordinate near Z=20. Install a

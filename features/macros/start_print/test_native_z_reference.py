@@ -161,5 +161,66 @@ class NativeZReferenceTests(unittest.TestCase):
         self.assertIn("recheck plate Z offsets", entries[0])
 
 
+class ProStockProfileTests(unittest.TestCase):
+    def pro_context(self, saved, prepared, axes):
+        ctx = context(existing_mesh=saved, plate_aware=False)
+        ctx["printer"].update({
+            "prtouch_v3": {}, "gcode_macro _K2_PRO_FINAL_Z_HOME": {},
+            "gcode_macro START_PRINT": {"prepare": prepared},
+            "toolhead": {"homed_axes": axes, "axis_maximum": [302, 302, 303, 0]},
+        })
+        return ctx
+
+    def test_stock_preparation_and_chute_handoff(self):
+        pro = HERE / "start_print_pro.cfg"
+        for saved in (True, False):
+            for prepared, axes in ((0, ""), (0, "xyz"), (1, "xyz"), (1, "")):
+                with self.subTest(saved=saved, prepared=prepared, axes=axes):
+                    ctx = self.pro_context(saved, prepared, axes)
+                    commands = expand_mesh(render(macro_body(pro, "START_PRINT"), ctx), ctx)
+                    skip = bool(prepared and axes == "xyz")
+                    self.assertEqual("NOZZLE_CLEAR" in commands, not skip)
+                    self.assertEqual("PRINT_PREPARE_CLEAR" in commands, bool(prepared))
+                    if not skip:
+                        self.assertLess(commands.index("G28"), commands.index("NOZZLE_CLEAR"))
+                    self.assertEqual(commands.count("_K2_PRO_FINAL_Z_HOME"), int(not (saved and skip)))
+                    self.assertEqual(commands.count("BED_MESH_CALIBRATE PROFILE=70.0c_30.0c"), int(not saved))
+                    self.assertIn("BED_MESH_PROFILE LOAD=70.0c_30.0c", commands)
+                    self.assertNotIn("Z_TILT_ADJUST", commands)
+                    self.assertFalse(any(re.match(r"G[01]\s+.*[XY]", cmd) for cmd in commands))
+                    park = commands.index("BOX_GO_TO_EXTRUDE_POS")
+                    self.assertLess(park, commands.index("M109 S240.0"))
+                    self.assertIn("BOX_NOZZLE_CLEAN", commands[park:])
+                    self.assertIn("SET_PIN PIN=board_dissipation_fan VALUE=1", commands[park:])
+        self.assertEqual(render(macro_body(pro, "_K2_PRO_FINAL_Z_HOME"), ctx), [
+            "BOX_NOZZLE_CLEAN", "M109 S140", "NEXT_HOMEZ_NACCU", "G28 Z", "BED_MESH_CLEAR",
+        ])
+
+    def test_m191_respects_each_models_chamber_and_z_limits(self):
+        path = HERE.parent / "m191" / "m191.cfg"
+        defaults = dict(re.findall(r"^variable_(\w+): ([\d.]+)$",
+                                   path.read_text(), re.MULTILINE))
+        for pro, threshold, maximum in ((True, 40, 303), (False, 35, 330)):
+            ctx = self.pro_context(True, 0, "xyz") if pro else context()
+            ctx["printer"].update({
+                "gcode_macro _M191_VARS": defaults.copy(),
+                "temperature_sensor chamber_temp": {"temperature": 25},
+                "heater_bed": {"temperature": 60, "target": 60},
+            })
+            for target in (35, 35.5, 36, 40, 40.5, 41):
+                ctx["params"] = {"S": target}
+                commands = render(macro_body(path, "M191"), ctx)
+                waits = any(c.startswith("K2_M191_CIRCULATION_WAIT") for c in commands)
+                self.assertEqual(waits, (int(target) if pro else target) > threshold, (pro, target))
+            for key in ("bed_assist_z_height", "bed_restore_z_height"):
+                values = ctx["printer"]["gcode_macro _M191_VARS"]
+                values[key] = maximum
+                render(macro_body(path, "M191"), ctx)
+                values[key] = maximum + 1
+                with self.assertRaisesRegex(AssertionError, key):
+                    render(macro_body(path, "M191"), ctx)
+                values[key] = defaults[key]
+
+
 if __name__ == "__main__":
     unittest.main()
