@@ -5,8 +5,9 @@ probes above each bed screw and reports how far and in which direction to turn
 each adjustment knob.
 
 The installer selects the screw positions for the detected model. The Plus
-runs `Z_TILT_ADJUST` before probing. On the single-Z Pro, home the printer
-before running `SCREWS_TILT_CALCULATE` directly.
+runs `Z_TILT_ADJUST` before probing. On the single-Z Pro, clear the finished
+part from the plate before running `SCREWS_TILT_CALCULATE`. The command homes
+all axes if any axis has lost its home, then probes the four screws.
 
 The bundled screw coordinates describe physical locations on the bed. At run
 time, the command reads the active probe's X/Y offsets and converts each point
