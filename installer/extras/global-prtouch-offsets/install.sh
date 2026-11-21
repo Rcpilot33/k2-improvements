@@ -10,6 +10,11 @@ configure_feature() {
         --config-dir "$CFG_DIR" --klipper-dir "$KLIPPER_BASE" \
         --moonraker-url "${MOONRAKER_URL:-http://127.0.0.1:7125}"
 }
+for arg do
+    case "$arg" in
+        --check-only|--help|-h) configure_feature "$@"; exit 0 ;;
+    esac
+done
 if [ "${1:-}" != "--remove" ]; then
     configure_feature --check-only "$@"
     sh "$SCRIPT_DIR/../fluidd-ui-overlay/install.sh"
@@ -18,4 +23,7 @@ configure_feature "$@"
 if [ "${1:-}" != "--remove" ]; then
     "$PYTHON" "$SCRIPT_DIR/configure_fluidd_layout.py" || \
         echo 'W: feature installed; refresh Fluidd or run Global_Z_Offsets_No_Carto from its console'
+fi
+if [ "${K2_SKIP_KLIPPY_RESTART:-0}" != "1" ]; then
+    sh "$SCRIPT_DIR/../../../scripts/klippy_code_restart.sh"
 fi
