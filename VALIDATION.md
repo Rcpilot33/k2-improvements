@@ -7,6 +7,10 @@ installation and cloned `k2-pro-support`. Accepting the bootstrap menu prompt
 opened the read-only diagnostic, which identified model `F012` and board
 `CR0CN200400C10` and returned to the SSH prompt.
 
+After updating to `e5fc5fa`, RC3 opened the interactive K2 Pro Development
+Installer. Selecting **1. Status and diagnostics** displayed the F012 report
+and the component status list. Entware and better-root both showed as installed.
+
 | Axis | Loaded stepper limits (mm) | Reported toolhead limits (mm) |
 | --- | --- | --- |
 | X | −13 to 302 | −9.3 to 302 |
@@ -38,7 +42,16 @@ three fan percentages, printer and feed state, external-spool and four-slot
 CFS data, humidity, and auto-refill status. Remote fan commands, filament
 motion, service restarts, and the maintained Fluidd build need separate tests.
 
-The next RC3 test uses the Plus installer’s maintained `Rcpilot33/moonraker`
+Test Better Init first. The Plus 1.1.8.0 firmware image and RC3’s stock
+1.1.8.3 Klipper init script both register `/var/run/klippy.pid` and launch
+Creality’s one-shot watcher, which sets Klippy’s `oom_score_adj` to `-500`.
+Before Better Init was installed, `cat "/proc/$(cat /var/run/klippy.pid)/oom_score_adj"`
+returned `-500` on RC3, confirming the adjustment on the running stock Klippy process.
+RC3 is still at the bootstrap stage. The separate `SAVE_CONFIG` restart
+protection is a later test. The standalone Better Init installer restarts the
+Klippy host and requests `FIRMWARE_RESTART` through Moonraker. After it completes,
+verify Klippy is ready, `motor_ready` is true, and the new Klippy process also
+reports `-500`. Then test the Plus installer’s maintained `Rcpilot33/moonraker`
 `k2` branch. Verify the running service and Klippy connection on port 7125 and
 check for failed components. Then install the maintained Fluidd build with the
 K2-improvements `k2_device` component. Verify that the fan and CFS cards
