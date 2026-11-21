@@ -20,6 +20,8 @@ ln -sf "$SCRIPT_DIR/$screw_config" \
 python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg \
     screws_tilt_adjust.cfg
+python "${SCRIPT_DIR}/../../scripts/ensure_included.py" \
+    ~/printer_data/config/printer.cfg custom/main.cfg
 
 sh ${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh
 
