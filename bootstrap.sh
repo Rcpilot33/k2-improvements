@@ -40,6 +40,16 @@ esac
 
 BASE_URL="https://raw.githubusercontent.com/$REPO/$BRANCH"
 
+# This entry point can run from /tmp before a repository checkout exists.
+MODEL=$(get_sn_mac.sh model 2>/dev/null) || MODEL=
+case "$MODEL" in
+    F008) ;;
+    F012)
+        echo "K2 Pro (F012), board $(get_sn_mac.sh board). Bootstrap is available for the K2 Plus only."
+        exit 1 ;;
+    *) echo "Unsupported printer model: ${MODEL:-unknown}" >&2; exit 1 ;;
+esac
+
 BOOTSTRAP_DIR="/tmp/bootstrap"
 
 rm -rf "$BOOTSTRAP_DIR"

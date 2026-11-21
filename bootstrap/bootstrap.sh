@@ -36,6 +36,14 @@ case "$BRANCH" in
         ;;
 esac
 
+# This script can also be launched directly from a downloaded bootstrap bundle.
+MODEL=$(get_sn_mac.sh model 2>/dev/null) || MODEL=
+case "$MODEL" in
+    F008) ;;
+    F012) echo "K2 Pro (F012). Bootstrap is available for the K2 Plus only."; exit 1 ;;
+    *) echo "Unsupported printer model: ${MODEL:-unknown}" >&2; exit 1 ;;
+esac
+
 # Run install script from Entware if needed
 if [ -x /opt/bin/opkg ] && [ -x /opt/bin/git ]; then
     echo "I: Entware already installed; skipping Entware install."

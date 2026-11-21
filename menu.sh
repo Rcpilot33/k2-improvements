@@ -7,6 +7,9 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 INSTALLER_DIR="$SCRIPT_DIR"
 export INSTALLER_DIR
 
+. "$SCRIPT_DIR/installer/detect/printer_model.sh"
+check_installer_model menu || exit 1
+
 INSTALLER_LOCK=/tmp/k2-improvements-installer.lock
 acquire_installer_lock() {
     if mkdir "$INSTALLER_LOCK" 2>/dev/null; then
