@@ -84,9 +84,9 @@ class ModelRoutingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         output = result.stdout.decode()
         self.assertLess(output.index("K2 PRO DEVELOPMENT INSTALLER"), output.index("INSTALL OR CHANGE SETUP"))
-        self.assertLess(output.index("SYSTEM STATUS AND DIAGNOSTICS"), output.index("baseline-report"))
-        self.assertEqual(output.count("baseline-report"), 1)
-        self.assertIn("K2 PRO DEVELOPMENT INSTALLER", output.split("baseline-report")[1])
+        status = output.split("SYSTEM STATUS AND DIAGNOSTICS", 1)[1]
+        self.assertNotIn("baseline-report", status)
+        self.assertLess(status.index("Setup profile"), status.index("K2 PRO DEVELOPMENT INSTALLER"))
 
     def test_pro_bootstrap_branch_selection(self):
         with tempfile.TemporaryDirectory() as tmp:

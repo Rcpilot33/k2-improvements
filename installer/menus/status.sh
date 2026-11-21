@@ -19,9 +19,6 @@ show_status() {
     esac
 
     ui_heading 'SYSTEM STATUS AND DIAGNOSTICS'
-    if [ "${K2_PRINTER_MODEL:-}" = F012 ]; then
-        python3 -B "$INSTALLER_DIR/scripts/printer_baseline.py"
-    fi
     printf '\n Installation\n'
     printf '  %-27s %s\n' 'Setup profile' "$profile_display"
     printf '  %-27s %s\n' 'Printer firmware' "$(c_cyan "$fw")"
