@@ -147,6 +147,12 @@ python3 -m unittest discover -s features/macros/start_print -p 'test*.py'
 
 ## Slicer setup
 
+The core macros register a new material in `custom/overrides.cfg` with an
+offset of `0.000`. The first print uses `variable_offset_DEFAULT`. The next
+print with that material uses its own entry. For example, `Hyper-PLA` is
+stored as `variable_offset_HYPER_PLA`. The optional Material Z Offsets
+editor lets you adjust the saved value in Fluidd without restarting.
+
 Pass nozzle, bed, chamber, and material values from the slicer:
 
 ```gcode

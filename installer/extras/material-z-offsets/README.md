@@ -18,9 +18,11 @@ Cartographer models/G-code offsets are not changed by this cleanup.
 Cancel and Save with no material changes do not discard pending config.
 If cleanup fails, material offsets remain saved/active and the error is reported.
 
-When `START_PRINT` receives a new material name, the current print uses
-`DEFAULT`. The helper saves the new material at `0.000` before `DEFAULT` so it
-can be adjusted immediately. The current print still uses `DEFAULT`.
+The core Macros install handles material registration on the K2 Plus and Pro.
+When `START_PRINT` first receives `Hyper-PLA`, for example, it applies
+`DEFAULT` to that print and writes `variable_offset_HYPER_PLA: 0.000` to
+`custom/overrides.cfg`. The next print with that material uses its own entry.
+Install the optional Fluidd editor to adjust those values live.
 
 The installer also refreshes the managed `start_print.cfg` link so the apply
 and automatic-registration handoff is active immediately after the installer's

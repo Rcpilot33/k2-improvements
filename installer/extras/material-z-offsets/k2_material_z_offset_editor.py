@@ -161,13 +161,14 @@ class K2MaterialZOffsetEditor:
         self.materials = None
         self.session_digest = None
 
-        self.gcode.register_command(
-            "K2_MATERIAL_Z_OFFSETS", self.cmd_open,
-            desc="Edit material Z offsets",
-        )
-        self.gcode.register_command("K2_MATERIAL_Z_STAGE", self.cmd_stage)
-        self.gcode.register_command("K2_MATERIAL_Z_CANCEL", self.cmd_cancel)
-        self.gcode.register_command("K2_MATERIAL_Z_SAVE", self.cmd_save)
+        if config.getboolean("enable_editor", True):
+            self.gcode.register_command(
+                "K2_MATERIAL_Z_OFFSETS", self.cmd_open,
+                desc="Edit material Z offsets",
+            )
+            self.gcode.register_command("K2_MATERIAL_Z_STAGE", self.cmd_stage)
+            self.gcode.register_command("K2_MATERIAL_Z_CANCEL", self.cmd_cancel)
+            self.gcode.register_command("K2_MATERIAL_Z_SAVE", self.cmd_save)
         self.gcode.register_command(
             "K2_MATERIAL_Z_APPLY", self.cmd_apply,
             desc="Apply the selected material Z offset",

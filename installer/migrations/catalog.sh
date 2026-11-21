@@ -135,7 +135,8 @@ global-touch-offsets-fluidd-namespace-bootstrap-v1|global-touch-offsets|is_globa
 global-touch-offsets-fluidd-post-restart-layout-v2|global-touch-offsets|is_global_touch_offsets|Reapply and verify persistent Global Carto Touch Fluidd grouping after the upgraded macros are active
 global-touch-offsets-live-save-v5|global-touch-offsets|is_global_touch_offsets|Saving Global Carto Touch Z offsets now updates live Cartographer models without restarting
 global-carto-scan-offsets-v1|global-touch-offsets|is_global_touch_offsets|Let the global Cartographer Z-offset editor select Scan or Touch models from the active final-Z mode
-material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor and automatic material registration are available
+material-z-registration-core-v1|macros|is_macros|Register new slicer materials in overrides.cfg and use DEFAULT for their first print on the K2 Plus and Pro
+material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor is available
 material-z-offsets-start-print-bridge-v2|material-z-offsets|is_material_z_offsets|Material Z Offsets now refreshes and verifies its START_PRINT handoff
 material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets|Newly discovered materials now start with a zero Z offset instead of inheriting the former 0.050 mm seed
 material-z-offsets-fluidd-namespace-bootstrap-v1|material-z-offsets|is_material_z_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Material Z Offset layout setup

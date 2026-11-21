@@ -16,6 +16,9 @@ ln -sf ${SCRIPT_DIR}/start_print.cfg \
 python ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg start_print.cfg
 
+sh "$SCRIPT_DIR/install_material_registration.sh" "$HOME/printer_data/config/custom" \
+    "${KLIPPER_DIR:-/usr/share/klipper}/klippy/extras"
+
 if [ "$macro_model" = F012 ]; then
     echo "I: selecting K2 Pro (F012) stock-probe START_PRINT"
     ln -sf "$SCRIPT_DIR/start_print_pro.cfg" ~/printer_data/config/custom/start_print_pro.cfg
