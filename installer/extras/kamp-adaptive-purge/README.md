@@ -140,19 +140,19 @@ patch.
 
 ## Slicer setup
 
-For a K2 Pro, choose from the [four Pro Creality Print templates](./slicer-templates/README.md#k2-pro-creality-print).
+For a K2 Pro, choose a [Creality Print](./slicer-templates/README.md#k2-pro-creality-print) or [OrcaSlicer](./slicer-templates/README.md#k2-pro-orcaslicer) template.
 The table below lists the K2 Plus templates. Choose the file that matches the features enabled in your printer profile.
 
 | Template | Material | Plate selection | KAMP purge |
 |---|---|---|---|
-| [`creality-start-material-only.gcode`](./slicer-templates/creality-start-material-only.gcode) | Yes | No; uses `default` | No |
-| [`creality-start-material-surface-profiles.gcode`](./slicer-templates/creality-start-material-surface-profiles.gcode) | Yes | Yes | No |
-| [`creality-start-material-kamp.gcode`](./slicer-templates/creality-start-material-kamp.gcode) | Yes | No; uses `default` | Yes |
-| [`creality-start-material-surface-profiles-kamp.gcode`](./slicer-templates/creality-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
-| [`orca-start-material-only.gcode`](./slicer-templates/orca-start-material-only.gcode) | Yes | No | No |
-| [`orca-start-material-kamp.gcode`](./slicer-templates/orca-start-material-kamp.gcode) | Yes | No | Yes |
-| [`orca-start-material-surface-profiles.gcode`](./slicer-templates/orca-start-material-surface-profiles.gcode) | Yes | Yes | No |
-| [`orca-start-material-surface-profiles-kamp.gcode`](./slicer-templates/orca-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
+| [`creality-start-material-only.gcode`](./slicer-templates/k2-plus/creality-start-material-only.gcode) | Yes | No; uses `default` | No |
+| [`creality-start-material-surface-profiles.gcode`](./slicer-templates/k2-plus/creality-start-material-surface-profiles.gcode) | Yes | Yes | No |
+| [`creality-start-material-kamp.gcode`](./slicer-templates/k2-plus/creality-start-material-kamp.gcode) | Yes | No; uses `default` | Yes |
+| [`creality-start-material-surface-profiles-kamp.gcode`](./slicer-templates/k2-plus/creality-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
+| [`orca-start-material-only.gcode`](./slicer-templates/k2-plus/orca-start-material-only.gcode) | Yes | No | No |
+| [`orca-start-material-kamp.gcode`](./slicer-templates/k2-plus/orca-start-material-kamp.gcode) | Yes | No | Yes |
+| [`orca-start-material-surface-profiles.gcode`](./slicer-templates/k2-plus/orca-start-material-surface-profiles.gcode) | Yes | Yes | No |
+| [`orca-start-material-surface-profiles-kamp.gcode`](./slicer-templates/k2-plus/orca-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
 
 All four Creality Print variants passed printer testing on firmware `1.1.5.5`.
 The six Orca 2.4.2 plate names were verified from exported files. Standard,

@@ -23,20 +23,20 @@ The selected G-code is scanned for actual prime-tower extrusion paths before
 START_PRINT preparation. Large files can show a visible preflight delay; the
 size-scaled, cancelable scan reports its final details in klippy.log.
 
-K2 Pro Creality Print templates are under slicer-templates/k2-pro/.
-Choose the same Creality Print filename as the corresponding Plus variant below.
+Choose slicer-templates/k2-pro/ or slicer-templates/k2-plus/ for your printer.
+Use one of the following filenames inside that folder.
 
-K2 Plus Creality Print templates:
-  slicer-templates/creality-start-material-only.gcode
-  slicer-templates/creality-start-material-kamp.gcode
-  slicer-templates/creality-start-material-surface-profiles.gcode
-  slicer-templates/creality-start-material-surface-profiles-kamp.gcode
+Creality Print filenames:
+  creality-start-material-only.gcode
+  creality-start-material-kamp.gcode
+  creality-start-material-surface-profiles.gcode
+  creality-start-material-surface-profiles-kamp.gcode
 
 Orca templates:
-  slicer-templates/orca-start-material-only.gcode
-  slicer-templates/orca-start-material-kamp.gcode
-  slicer-templates/orca-start-material-surface-profiles.gcode
-  slicer-templates/orca-start-material-surface-profiles-kamp.gcode
+  orca-start-material-only.gcode
+  orca-start-material-kamp.gcode
+  orca-start-material-surface-profiles.gcode
+  orca-start-material-surface-profiles-kamp.gcode
 
 After showing its instructions, the standalone installer waits for Enter and
 then performs the required protected Klippy code reload and firmware restart.

@@ -15,23 +15,38 @@ Creality Print evaluates `multicolor_method` when slicing. With **Calculation of
 
 Creality Print 7.3 exported all four variants with the flush setting both enabled and disabled. A native 7.1 export and physical Pro runs with these templates still need confirmation.
 
+## K2 Pro OrcaSlicer
+
+Choose one file for the K2 Pro printer preset's **Machine start G-code**. All four use the supplied single-tool sequence, wait for the initial nozzle temperature with `M109`, and lift to Z3 before purging.
+
+| Template | Plate selection | Purge |
+|---|---|---|
+| [Material only](./k2-pro/orca-start-material-only.gcode) | Default | Stock front-left lines |
+| [Material + surface profiles](./k2-pro/orca-start-material-surface-profiles.gcode) | Selected Orca plate | Stock front-left lines |
+| [Material + KAMP](./k2-pro/orca-start-material-kamp.gcode) | Default | `LINE_PURGE` |
+| [Material + surface profiles + KAMP](./k2-pro/orca-start-material-surface-profiles-kamp.gcode) | Selected Orca plate | `LINE_PURGE` |
+
+The stock purge extrudes 15 mm on each leg at F6000. For KAMP, enable object labels in Orca and install the printer's KAMP adaptive purge extra.
+
+All four Pro Orca templates were sliced with OrcaSlicer 2.5.0 using a K2 Pro profile and a PLA test cube. The exports confirmed the purge commands and Textured PEI selection. Physical print testing of these Orca templates is pending.
+
 ## K2 Plus
 
-The files in this directory replace the complete machine-start G-code block in a K2 Plus
+The files in [k2-plus](./k2-plus/) replace the complete machine-start G-code block in a K2 Plus
 slicer profile. Each slicer has four variants so material-based Z offsets,
 plate selection, and KAMP can be enabled independently or together. Keep
 Creality's system preset unchanged as a fallback.
 
 | File | Material | Plate selection | KAMP purge | Status |
 |---|---|---|---|---|
-| `creality-start-material-only.gcode` | Yes | No; loads `default` | No | PASS — Creality Print 7.1.1 |
-| `creality-start-material-surface-profiles.gcode` | Yes | Yes | No | PASS — Creality Print 7.1.1 |
-| `creality-start-material-kamp.gcode` | Yes | No; loads `default` | Yes | PASS — Creality Print 7.1.1 |
-| `creality-start-material-surface-profiles-kamp.gcode` | Yes | Yes | Yes | PASS — Creality Print 7.1.1 |
-| `orca-start-material-only.gcode` | Yes | No | No | Orca 2.4.2 standard workflow tested |
-| `orca-start-material-kamp.gcode` | Yes | No | Yes | KAMP and enabled stock fallback tested |
-| `orca-start-material-surface-profiles.gcode` | Yes | Yes | No | Exported plate names verified; full matrix pending |
-| `orca-start-material-surface-profiles-kamp.gcode` | Yes | Yes | Yes | `high_temp` workflow tested; full matrix pending |
+| [creality-start-material-only.gcode](./k2-plus/creality-start-material-only.gcode) | Yes | No; loads `default` | No | PASS — Creality Print 7.1.1 |
+| [creality-start-material-surface-profiles.gcode](./k2-plus/creality-start-material-surface-profiles.gcode) | Yes | Yes | No | PASS — Creality Print 7.1.1 |
+| [creality-start-material-kamp.gcode](./k2-plus/creality-start-material-kamp.gcode) | Yes | No; loads `default` | Yes | PASS — Creality Print 7.1.1 |
+| [creality-start-material-surface-profiles-kamp.gcode](./k2-plus/creality-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes | PASS — Creality Print 7.1.1 |
+| [orca-start-material-only.gcode](./k2-plus/orca-start-material-only.gcode) | Yes | No | No | Orca 2.4.2 standard workflow tested |
+| [orca-start-material-kamp.gcode](./k2-plus/orca-start-material-kamp.gcode) | Yes | No | Yes | KAMP and enabled stock fallback tested |
+| [orca-start-material-surface-profiles.gcode](./k2-plus/orca-start-material-surface-profiles.gcode) | Yes | Yes | No | Exported plate names verified; full matrix pending |
+| [orca-start-material-surface-profiles-kamp.gcode](./k2-plus/orca-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes | `high_temp` workflow tested; full matrix pending |
 
 The plate-selection variants pass `SURFACE=` to either the Cartographer plate
 workflow or the optional stock-PR-Touch plate-aware mesh feature. On a

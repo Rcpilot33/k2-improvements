@@ -39,13 +39,13 @@ wrapper falls back to `default` when `SURFACE` is omitted; the supplied
 Creality Print template explicitly falls back to `textured_pei` for an
 unrecognized bed type.
 
-K2 Pro users can select a [Pro Creality Print template](../kamp-adaptive-purge/slicer-templates/README.md#k2-pro-creality-print).
+K2 Pro users can select a [Creality Print](../kamp-adaptive-purge/slicer-templates/README.md#k2-pro-creality-print) or [OrcaSlicer](../kamp-adaptive-purge/slicer-templates/README.md#k2-pro-orcaslicer) template.
 K2 Plus users can copy one of these complete machine-start G-code templates:
 
-- [material pass only](../kamp-adaptive-purge/slicer-templates/creality-start-material-only.gcode), which loads `default`;
-- [surface profiles](../kamp-adaptive-purge/slicer-templates/creality-start-material-surface-profiles.gcode);
-- [KAMP only](../kamp-adaptive-purge/slicer-templates/creality-start-material-kamp.gcode), which omits `SURFACE` and loads `default`; or
-- [surface profiles and KAMP](../kamp-adaptive-purge/slicer-templates/creality-start-material-surface-profiles-kamp.gcode).
+- [material pass only](../kamp-adaptive-purge/slicer-templates/k2-plus/creality-start-material-only.gcode), which loads `default`;
+- [surface profiles](../kamp-adaptive-purge/slicer-templates/k2-plus/creality-start-material-surface-profiles.gcode);
+- [KAMP only](../kamp-adaptive-purge/slicer-templates/k2-plus/creality-start-material-kamp.gcode), which omits `SURFACE` and loads `default`; or
+- [surface profiles and KAMP](../kamp-adaptive-purge/slicer-templates/k2-plus/creality-start-material-surface-profiles-kamp.gcode).
 
 Keep Creality's stock profile unchanged as a fallback. The KAMP templates
 require the optional KAMP adaptive-purge feature; the plate-selection-only
