@@ -1,5 +1,19 @@
 # Validation Status
 
+## K2 Pro stock-probe conversion (November 21, 2026)
+
+**PASS.** After a Creality factory reset, RC3 (K2 Pro F012, firmware
+`1.1.8.3`) completed the no-Cartographer install from `k2-pro-support` at
+`12d50bd`. Klipper and the motor controller reported ready after the
+protected restart. The operator confirmed the printer started printing on
+the fresh installation.
+
+With KAMP, plate-aware saved meshes and both Z-offset extras installed, the
+first Hyper PLA cube created the `high_temp_50.0c_30.0c` mesh and the
+`HYPER_PLA` material offset entry. The repeat print loaded the saved mesh,
+used the material offset of 0.000 mm and the global offset of −0.050 mm,
+ran the KAMP purge and finished at 21:26:40.
+
 ## K2 Pro bootstrap and diagnostics (November 20, 2026)
 
 RC3, a stock-probe K2 Pro on firmware `1.1.8.3`, completed a fresh Entware
@@ -185,6 +199,24 @@ preparation then advanced to the 220 °C nozzle target at 07:13:22,
 skipping the five-minute mesh soak and the 25-point calibration. At 36%
 file progress, Moonraker reported `50.0c_0.0c` active and no pending
 configuration changes.
+
+RC3 verified the saved-mesh console messages from `2c84de4` on the same
+Hyper-PLA cube. The file opened at 08:03:05 after factory preparation.
+At 08:03:10, `START_PRINT` acknowledged the homed axes, found and loaded
+`50.0c_0.0c`, and reported the 220 °C extruder target. At 08:03:44 it
+reported a 0.0 mm Z offset because no material was supplied, then reported
+startup complete. The file finished at 08:11:53, 8m 48s after opening
+compared with 8m 47s before the update. The new missing-profile console
+message still needs a hardware run with a missing profile.
+
+On November 21, RC1 (K2 Plus) updated to `2c84de4`. The installer reported
+all installed components current and skipped the Pro-only Macros update.
+RC1 repeated the same PLA+ 2.0 cube used for its pre-update baseline. Bed
+tilt passed with zero retries on both runs (0.0075 mm before, 0.0120 mm
+after, tolerance 0.1000 mm). Both runs performed the final native Z home,
+loaded the saved `50.0c_35.0c` mesh, applied the −0.080 mm global Z offset,
+and ran the same 25 mm KAMP purge. File open to completion took 9m 27s
+before the update and 9m 22s after it.
 
 The resume fan patch applied in memory to RC3's factory macro file, and the
 installed Klippy command loop exposes the Fast Stop cancellation interface.

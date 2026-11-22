@@ -61,7 +61,8 @@ class K2StartPrintFastStop:
         # M191 must unwind all of them, not resume with soak/tilt/mesh commands.
         # Leave the Cartographer path and native probe routines unchanged.
         if stock_probe:
-            for name in ("MESH_IF_NEEDED", "_CREATE_MESH", "_K2_PRO_FINAL_Z_HOME"):
+            for name in ("MESH_IF_NEEDED", "_CREATE_MESH", "_K2_PRO_FINAL_Z_HOME",
+                         "_K2_PRO_STOCK_START_PRINT"):
                 macro = self.printer.lookup_object("gcode_macro " + name, None)
                 if macro is not None and hasattr(macro, "template"):
                     self._make_template_cancelable(macro.template, stock_soaks=True)

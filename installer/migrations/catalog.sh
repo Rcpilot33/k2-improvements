@@ -193,6 +193,7 @@ screws-tilt-pro-home-before-probing-v1|screws_tilt_adjust|is_screws_tilt|Load th
 k2-pro-native-print-macros-v1|macros|is_macros|Use the F012 stock-probe print preparation, chamber limits and single-Z mesh routine
 k2-pro-stock-probe-count-v1|macros|is_macros|Add editable 19x19 stock probe count to Pro overrides if missing. Recalibrate and save the default mesh after a grid change.
 k2-pro-stock-start-messages-v1|macros|is_macros|Show K2 Pro stock-probe print preparation, mesh lookup and loading, and startup completion
+k2-pro-shared-start-print-v1|macros|is_macros|Refresh K2 Pro startup and Fast Stop for the installed probe
 EOF
     fi
 }

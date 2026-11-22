@@ -100,3 +100,25 @@ class ModelRoutingTests(unittest.TestCase):
                             else:
                                 self.assertEqual(result.returncode, 1)
                                 self.assertNotIn("reached-install", result.stderr)
+
+    def test_pro_conversion_reselects_installed_macros(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            custom = Path(tmp) / "custom"
+            custom.mkdir()
+            configs = ("start_print", "start_print_pro", "m191", "bed_mesh", "overrides")
+            for name in configs:
+                (custom / (name + ".cfg")).touch()
+            includes = "".join("[include %s.cfg]\n" % name for name in configs)
+            main = custom / "main.cfg"
+            main.write_text(includes + "[include k2_prtouch_safe_xy.cfg]\n", newline="\n")
+            def check():
+                return subprocess.run(
+                    [BASH, "-c", '. "$1/installer/detect/features.sh"; is_macros',
+                     "test", ROOT.as_posix()], env=dict(os.environ, K2_PRINTER_MODEL="F012",
+                                                       PRINTER_CFG_DIR=Path(tmp).as_posix()),
+                    timeout=10).returncode
+            self.assertEqual(check(), 0)
+            (custom / "cartographer.cfg").touch()
+            self.assertEqual(check(), 1)
+            main.write_text(includes + "#[include k2_prtouch_safe_xy.cfg]\n", newline="\n")
+            self.assertEqual(check(), 0)

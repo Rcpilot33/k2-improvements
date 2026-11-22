@@ -2,14 +2,7 @@
 macro_model=$(get_sn_mac.sh model) || exit 1
 case "$macro_model" in
     F008) ;;
-    F012)
-        macro_config_dir="${PRINTER_CFG_DIR:-$HOME/printer_data/config}"
-        if [ -e "$macro_config_dir/custom/cartographer.cfg" ] ||
-           grep -qi '^\[cartographer\]' "$macro_config_dir/printer.cfg" 2>/dev/null; then
-            echo "E: the F012 macro profile requires the stock PR Touch probe" >&2
-            exit 1
-        fi
-        ;;
+    F012) macro_config_dir="${PRINTER_CFG_DIR:-$HOME/printer_data/config}" ;;
     *) echo "E: unsupported macro profile: $macro_model" >&2; exit 1 ;;
 esac
 

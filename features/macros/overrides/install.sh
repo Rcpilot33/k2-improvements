@@ -12,7 +12,7 @@ if [ ! -f ~/printer_data/config/custom/overrides.cfg ]; then
     cp "$SCRIPT_DIR/overrides.cfg" ~/printer_data/config/custom/overrides.cfg
 else
     echo "I: preserving existing custom/overrides.cfg"
-    if [ "$macro_model" = F012 ]; then
+    if [ "$macro_model" = F012 ] && [ ! -f ~/printer_data/config/custom/cartographer.cfg ]; then
         python3 "$SCRIPT_DIR/ensure_stock_probe_count.py" ~/printer_data/config/custom/overrides.cfg
     fi
 fi

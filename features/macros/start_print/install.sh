@@ -20,7 +20,7 @@ sh "$SCRIPT_DIR/install_material_registration.sh" "$HOME/printer_data/config/cus
     "${KLIPPER_DIR:-/usr/share/klipper}/klippy/extras"
 
 if [ "$macro_model" = F012 ]; then
-    echo "I: selecting K2 Pro (F012) stock-probe START_PRINT"
+    echo "I: installing K2 Pro (F012) startup settings"
     ln -sf "$SCRIPT_DIR/start_print_pro.cfg" ~/printer_data/config/custom/start_print_pro.cfg
     python "$SCRIPT_DIR/../../../scripts/ensure_included.py" \
         ~/printer_data/config/custom/main.cfg start_print_pro.cfg

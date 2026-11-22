@@ -139,6 +139,8 @@ class NativeZReferenceTests(unittest.TestCase):
                 final_home = "_CARTOGRAPHER_%s_HOME_WITH_TEMPS" % mode.upper()
                 clean = commands.index("BOX_NOZZLE_CLEAN")
                 self.assertEqual(commands[clean+1], final_home)
+                self.assertIn("Z_TILT_ADJUST", commands[:clean])
+                self.assertEqual(commands[commands.index("M109 S240.0")+1], "G0 Y350")
                 self.assertFalse(any(cmd.startswith("K2_PRTOUCH_GLOBAL_Z_APPLY")
                                      for cmd in commands))
 
@@ -162,10 +164,27 @@ class NativeZReferenceTests(unittest.TestCase):
 
 
 class ProStockProfileTests(unittest.TestCase):
+    def test_carto_home_uses_the_reference_in_machine_coordinates(self):
+        path = HERE.parents[1] / "cartographer" / "home_z_pro.cfg"
+        ctx = context(cartographer=True)
+        ctx["printer"].update({
+            "gcode_macro xyz_ready": {"x_ready": 1, "y_ready": 1},
+            "print_stats": {"z_pos": 265},
+            "toolhead": {"position": {"x": 124.25, "y": 329.5}},
+        })
+        ctx["printer"]["configfile"]["settings"]["bed_mesh"]["zero_reference_position"] = [150, 150]
+        commands = render(macro_body(path, "_HOME_Z"), ctx)
+        self.assertEqual(commands, [
+            "_IF_HOME_Z", "FORCE_MOVE STEPPER=stepper_z DISTANCE=-8 VELOCITY=10",
+            "G91", "M204 S2000", "G1 X25.75 Y-179.5 F12000", "G90", "M204 S500",
+            "G28 Z", "SET_GCODE_VARIABLE MACRO=xyz_ready VARIABLE=z_ready VALUE=1", "G1 Z5 F600",
+        ])
+
     def pro_context(self, saved, prepared, axes):
         ctx = context(existing_mesh=saved, plate_aware=False)
         ctx["printer"].update({
             "prtouch_v3": {}, "gcode_macro _K2_PRO_FINAL_Z_HOME": {},
+            "gcode_macro _K2_PRO_STOCK_START_PRINT": {},
             "gcode_macro START_PRINT": {"prepare": prepared},
             "toolhead": {"homed_axes": axes, "axis_maximum": [302, 302, 303, 0]},
         })
@@ -177,7 +196,10 @@ class ProStockProfileTests(unittest.TestCase):
             for prepared, axes in ((0, ""), (0, "xyz"), (1, "xyz"), (1, "")):
                 with self.subTest(saved=saved, prepared=prepared, axes=axes):
                     ctx = self.pro_context(saved, prepared, axes)
-                    commands = expand_mesh(render(macro_body(pro, "START_PRINT"), ctx), ctx)
+                    ctx["rawparams"] = 'MATERIAL="Hyper-PLA" BED_TEMP=70'
+                    public = macro_body(HERE / "start_print.cfg", "START_PRINT")
+                    self.assertEqual(render(public, ctx), ["_K2_PRO_STOCK_START_PRINT " + ctx["rawparams"]])
+                    commands = expand_mesh(render(macro_body(pro, "_K2_PRO_STOCK_START_PRINT"), ctx), ctx)
                     skip = bool(prepared and axes == "xyz")
                     self.assertEqual("NOZZLE_CLEAR" in commands, not skip)
                     self.assertEqual("PRINT_PREPARE_CLEAR" in commands, bool(prepared))
@@ -209,6 +231,28 @@ class ProStockProfileTests(unittest.TestCase):
             'STATUS_MSG PREFIX="[START_PRINT]:" MSG="Setting final native Z..."',
             "NEXT_HOMEZ_NACCU", "G28 Z", "BED_MESH_CLEAR",
         ])
+
+    def test_pro_cartographer_preparation_and_purge_return(self):
+        for mode in ("touch", "scan"):
+            for chamber in (40.5, 41):
+                ctx = self.pro_context(False, 1, "xyz")
+                del ctx["printer"]["prtouch_v3"]
+                ctx["printer"]["cartographer"] = {}
+                ctx["printer"]["gcode_macro _START_PRINT_VARS"]["carto_final_z_mode"] = mode
+                ctx["params"]["CHAMBER_TEMP"] = chamber
+                commands = render(macro_body(HERE / "start_print.cfg", "START_PRINT"), ctx)
+                self.assertIn("PRINT_PREPARE_CLEAR", commands)
+                self.assertNotIn("Z_TILT_ADJUST", commands)
+                self.assertNotIn("_K2_PRO_FINAL_Z_HOME", commands)
+                self.assertEqual("M191 S41.0" in commands, chamber == 41)
+                mesh = next(i for i, cmd in enumerate(commands) if cmd.startswith("BED_MESH_CALIBRATE"))
+                final_z = commands.index("_CARTOGRAPHER_%s_HOME_WITH_TEMPS" % mode.upper())
+                self.assertEqual(final_z > mesh, mode == "touch")
+                self.assertEqual(commands[final_z-1], "BOX_NOZZLE_CLEAN")
+                self.assertEqual(commands[commands.index("M109 S240.0")+1], "G0 Y300")
+                standalone = render(macro_body(HERE.parent / "bed_mesh" / "bed_mesh.cfg", "_CREATE_MESH"), ctx)
+                self.assertNotIn("Z_TILT_ADJUST", standalone)
+                self.assertIn("G28 Z", standalone)
 
     def test_m191_respects_each_models_chamber_and_z_limits(self):
         path = HERE.parent / "m191" / "m191.cfg"

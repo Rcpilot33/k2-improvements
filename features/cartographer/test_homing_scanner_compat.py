@@ -93,6 +93,9 @@ class HomingScannerCompatibilityTests(unittest.TestCase):
                 Scanner(CurrentMcu(False), scan_ready=False)
             )._check_scanner_model_ready()
 
+    def test_single_z_recovery_has_no_tilt_adjustment(self):
+        self.make_homing(None).resume_adjustment()
+
     def test_loaded_scan_model_allows_homing(self):
         self.make_homing(
             Scanner(CurrentMcu(False), scan_ready=True)

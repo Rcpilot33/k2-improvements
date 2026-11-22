@@ -2,14 +2,38 @@
 """Static safety checks for the Klipper core files replaced by Cartographer."""
 
 import ast
+import importlib.util
 import pathlib
+import sys
+import types
 import unittest
+from unittest.mock import Mock, patch
 
 
 PATCHES = pathlib.Path(__file__).with_name("patches")
 
 
 class CorePatchSafetyTests(unittest.TestCase):
+    def test_factory_home_default_mesh_load_is_scoped_to_the_single_z_conversion(self):
+        package = types.ModuleType("bed_mesh_test")
+        package.probe = types.ModuleType("probe")
+        spec = importlib.util.spec_from_file_location("bed_mesh_test.bed_mesh", PATCHES / "bed_mesh.py")
+        module = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {"bed_mesh_test": package}):
+            spec.loader.exec_module(module)
+        for single_z, homing, profile, expected_load in (
+            (True, True, "default", False), (True, False, "default", True),
+            (True, True, "textured", True), (False, True, "default", True),
+        ):
+            with self.subTest(single_z=single_z, homing=homing, profile=profile):
+                manager = object.__new__(module.ProfileManager)
+                manager.printer = Mock()
+                manager.printer.lookup_object.return_value.in_script = homing
+                manager.skip_stock_home_profile = single_z
+                manager.load_profile = Mock()
+                manager.cmd_BED_MESH_PROFILE({"LOAD": profile})
+                self.assertEqual(manager.load_profile.called, expected_load)
+
     def test_homing_constructor_tolerates_missing_cartographer(self):
         source = (PATCHES / "homing.py").read_text(encoding="utf-8")
         self.assertIn("lookup_object('cartographer', None)", source)

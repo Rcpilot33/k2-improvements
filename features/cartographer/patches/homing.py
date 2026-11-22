@@ -600,10 +600,14 @@ class PrinterHoming:
                         return MOTOR_PROTECT_ERROR
         except Exception as err:
             logging.exception(err)
+            if not self.config.has_section('stepper_z1'):
+                raise self.printer.command_error("Optical Z preparation failed: %s" % err)
         return 0
 
     def resume_adjustment(self):
-        z_tilt = self.printer.lookup_object('z_tilt')
+        z_tilt = self.printer.lookup_object('z_tilt', None)
+        if z_tilt is None:
+            return
         if os.path.exists(z_tilt.stepper_adjustment_path):
             result = {}
             with open(z_tilt.stepper_adjustment_path, "r") as f:

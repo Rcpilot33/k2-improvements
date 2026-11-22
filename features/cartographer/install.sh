@@ -2,6 +2,7 @@
 set -e
 
 SCRIPT_DIR=$(readlink -f $(dirname ${0}))
+. "$SCRIPT_DIR/mesh_limits.sh"
 
 # Preserve tuned Cartographer offsets on a reinstall. If Cartographer was not
 # configured when this run began, any material offsets belong to the stock
@@ -18,6 +19,16 @@ sh "${SCRIPT_DIR}/install_plugin.sh" "${HOME}/cartographer3d-plugin"
 
 echo "I: installing python dependencies"
 ~/klippy-env/bin/pip install --disable-pip-version-check typing_extensions
+
+# A partial conversion may already have cartographer.cfg and the core links.
+# Retain the original probe state so a retry completes the same conversion.
+mkdir -p ~/printer_data/config/custom
+pending=~/printer_data/config/custom/.cartographer-install-pending
+if [ -f "$pending" ]; then
+    read -r CARTOGRAPHER_WAS_CONFIGURED < "$pending"
+else
+    printf '%s\n' "$CARTOGRAPHER_WAS_CONFIGURED" > "$pending"
+fi
 
 # create shim to import cartographer into klipper
 cat > ~/klipper/klippy/extras/cartographer.py << 'EOF'
@@ -62,16 +73,18 @@ python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg prtouch_v3.cfg True
 python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/printer.cfg custom/main.cfg
-if [ -f ~/printer_data/config/custom/cartographer.cfg ] && \
-    ! cmp -s "${SCRIPT_DIR}/cartographer.cfg" \
-        ~/printer_data/config/custom/cartographer.cfg; then
+CARTO_CFG=~/printer_data/config/custom/cartographer.cfg
+CARTO_NEW=$(mktemp "${CARTO_CFG}.new.XXXXXX")
+trap 'rm -f "$CARTO_NEW"' EXIT
+render_cartographer_config "${SCRIPT_DIR}/cartographer.cfg" "$CARTO_SERIAL" > "$CARTO_NEW"
+if [ -f "$CARTO_CFG" ] && ! cmp -s "$CARTO_NEW" "$CARTO_CFG"; then
     CARTO_CFG_BACKUP=~/printer_data/config/custom/cartographer.cfg.before-managed-update.$(date +%Y%m%d-%H%M%S)
     cp -p ~/printer_data/config/custom/cartographer.cfg "$CARTO_CFG_BACKUP"
     echo "I: preserved previous Cartographer config at $CARTO_CFG_BACKUP"
 fi
-cp ${SCRIPT_DIR}/cartographer.cfg ~/printer_data/config/custom
-# update serial port based on kernel ACM support
-sed -i "s|serial: /dev/cartographer|serial: ${CARTO_SERIAL}|g" ~/printer_data/config/custom/cartographer.cfg
+chmod 644 "$CARTO_NEW"
+mv "$CARTO_NEW" "$CARTO_CFG"
+trap - EXIT
 python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg cartographer.cfg
 
@@ -158,3 +171,4 @@ fi
 sh "${SCRIPT_DIR}/../../installer/extras/cartographer-macros/install.sh"
 
 sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"
+rm -f "$pending"

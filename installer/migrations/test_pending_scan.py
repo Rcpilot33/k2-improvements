@@ -104,6 +104,7 @@ migration_pending_components
             ("k2-pro-native-print-macros-v1", "macros"),
             ("k2-pro-stock-probe-count-v1", "macros"),
             ("k2-pro-stock-start-messages-v1", "macros"),
+            ("k2-pro-shared-start-print-v1", "macros"),
         ):
             for model, installed, expected in (
                 ("F012", (component,), [component]),
