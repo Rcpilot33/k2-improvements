@@ -106,7 +106,7 @@ class CorePatchSafetyTests(unittest.TestCase):
     def test_disconnected_scanner_blocks_fast_z_rehome_preposition(self):
         source = (PATCHES / "homing.py").read_text(encoding="utf-8")
         branch_start = source.index(
-            "# Photoelectric leveling is already complete"
+            "# Direct scanner homing:"
         )
         branch_end = source.index("kin.home(homing_state)", branch_start)
         branch = source[branch_start:branch_end]

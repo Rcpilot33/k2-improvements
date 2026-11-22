@@ -194,6 +194,7 @@ k2-pro-native-print-macros-v1|macros|is_macros|Use the F012 stock-probe print pr
 k2-pro-stock-probe-count-v1|macros|is_macros|Add editable 19x19 stock probe count to Pro overrides if missing. Recalibrate and save the default mesh after a grid change.
 k2-pro-stock-start-messages-v1|macros|is_macros|Show K2 Pro stock-probe print preparation, mesh lookup and loading, and startup completion
 k2-pro-shared-start-print-v1|macros|is_macros|Refresh K2 Pro startup and Fast Stop for the installed probe
+k2-pro-carto-optical-home-v1|cartographer|is_cartographer|Home Z directly with Cartographer during ordinary K2 Pro homing and honor factory optical calibration requests
 EOF
     fi
 }

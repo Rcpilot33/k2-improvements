@@ -360,7 +360,7 @@ class PrinterHoming:
         if self._scanner_mcu_is_disconnected(scanner):
             raise self.printer.command_error(
                 "Scanner MCU is disconnected - cannot complete Z homing. "
-                "Photoelectric leveling is preserved. Reconnect scanner and retry G28 Z.")
+                "Reconnect scanner and retry G28 Z.")
 
     def _check_scanner_model_ready(self):
         """Reject Cartographer Z homing before motion when no scan model is loaded."""
@@ -471,8 +471,16 @@ class PrinterHoming:
                             z_align = self.printer.lookup_object('z_align')
                             z_align.force_stop_flag = False
                             gcode.respond_info("is_already_zodwn:%s zdown_switch_enable:%s" % (z_align.is_already_zodwn, z_align.zdown_switch_enable))
-                            # 检测到没有做过下光电归位时,强制做一次下光电归位
-                            if z_align.is_already_zodwn==False:
+                            first_optical_home = not z_align.is_already_zodwn
+                            if (self.config.has_section('cartographer')
+                                    and not self.config.has_section('stepper_z1')):
+                                # On the single-Z Pro, a restart or motor-off alone
+                                # does not request optical alignment. Factory
+                                # calibration sets G29_flag. An explicit ZDOWN
+                                # request is consumed by the one-shot branch below.
+                                first_optical_home = (first_optical_home and toolhead.G29_flag
+                                                      and not z_align.zdown_switch_enable)
+                            if first_optical_home:
                                 gcode.run_script_from_command("SET_VELOCITY_LIMIT ACCEL=300")
                                 ret = self.run_G28_two_Z()
                                 if ret == MOTOR_PROTECT_ERROR:
@@ -517,8 +525,7 @@ class PrinterHoming:
                                     self.write_real_zmax(self.z_move+homing_state.out_z_all)
                                 gcode.run_script_from_command("SET_Z_LIMIT")
                                 continue
-                            # Photoelectric leveling is already complete, so
-                            # fail closed before the stock fast Z10
+                            # Direct scanner homing: fail closed before the stock fast Z10
                             # pre-positioning move as well as before
                             # scanner-controlled homing.  Otherwise a second
                             # G28 Z can move the bed at 30mm/s after the
