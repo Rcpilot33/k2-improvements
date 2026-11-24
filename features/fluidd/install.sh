@@ -34,15 +34,24 @@ if ! command -v unzip > /dev/null; then
     opkg install unzip
 fi
 
-rm -fr fluidd
-
-mkdir -p fluidd
-cd fluidd
-python3 ${SCRIPT_DIR}/get_latest_release.py Rcpilot33/fluidd
+STAGING=$(mktemp -d "$HOME/fluidd-baseline.XXXXXX")
+trap 'rm -rf "$STAGING"' EXIT
+mkdir "$STAGING/ui"
+cd "$STAGING/ui"
+echo "I: installing the October 13 baseline Fluidd v1.37.4"
+python3 -c 'import urllib.request; urllib.request.urlretrieve("https://github.com/Rcpilot33/fluidd/releases/download/v1.37.4/fluidd.zip", "fluidd.zip")'
+echo "5f2d716ceb5d7a62a784436608728e5aacfe87cb7b1a30ab386f6089206ca6fa  fluidd.zip" | sha256sum -c -
 unzip fluidd.zip
 rm -f fluidd.zip
 python3 ${SCRIPT_DIR}/set_release_source.py release_info.json Rcpilot33 fluidd
-cd ..
+cd "$HOME"
+if [ -e fluidd ]; then
+    mv fluidd "$STAGING/previous"
+fi
+if ! mv "$STAGING/ui" fluidd; then
+    [ ! -e "$STAGING/previous" ] || mv "$STAGING/previous" fluidd
+    exit 1
+fi
 
 # replace the existing Fluidd
 rm -fr /usr/share/fluidd
