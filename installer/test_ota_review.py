@@ -255,11 +255,26 @@ migration_require_idle() { return 0; }
 sh() { return 0; }
 """
         env = dict(PRINTER_CFG_DIR=cfg.as_posix(), TEST_PYTHON=Path(sys.executable).as_posix())
-        saved = self.shell(harness + "ota_save_before_update", FW="1.1.5.5", **env)
+        historical = """
+ota_component_ready() { case "$1" in moonraker-source|cartographer) return 1 ;; *) return 0 ;; esac; }
+"""
+        saved = self.shell(harness + historical + "ota_save_before_update", FW="1.1.6.4", **env)
         self.assertEqual(saved.returncode, 0, saved.stderr)
+        baseline = self.snapshot.read_bytes()
+        self.assertIn(b"state=captured", baseline)
+        with zipfile.ZipFile(self.state / "settings-cartographer.zip") as backup:
+            self.assertEqual(backup.read("verified-setup"), baseline)
+            self.assertIn(b"option=cartographer-plate-workflow", baseline)
+        check = self.shell(harness + historical + 'ota_setup_installed cartographer', FW="1.1.6.4", **env)
+        self.assertNotEqual(check.returncode, 0)
+        self.assertIn("moonraker-source\ncartographer", check.stdout + check.stderr)
+        self.assertEqual(self.snapshot.read_bytes(), baseline)
+        self.assertNotEqual(self.shell(harness + "ota_save_before_update", **env).returncode, 0)
+        self.assertEqual(self.snapshot.read_bytes(), baseline)
         shutil.rmtree(custom)
         restored = self.shell(harness + "ota_review", "y\n" * len(files), **env)
         self.assertEqual(restored.returncode, 0, restored.stderr)
+        self.assertIn("state=verified", self.snapshot.read_text())
         self.assertEqual({p.name: p.read_text() for p in custom.iterdir()}, files)
 
 

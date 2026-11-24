@@ -26,6 +26,8 @@ def save(custom, archive, baseline):
                 if path.is_file():
                     backup.write(path, filename)
                     print("Saving custom/" + filename)
+        if review(custom, name, apply=False) != 0:
+            raise ValueError("Settings changed while saving. Run the backup again.")
         # Retain the last explicit backup as well. An interrupted copy must
         # leave the current archive available until its replacement is ready.
         if archive.exists():

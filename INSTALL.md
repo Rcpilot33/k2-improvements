@@ -57,6 +57,8 @@ to repair missing prerequisites. If the checkout itself cannot launch, rerun
 the bootstrap for your installed branch.
 
 Before a no-wipe OTA, choose **6 → 5, Save current setup before a firmware OTA**.
+This captures the installed options and checks the archived settings against the
+live files, even when component updates are pending on the current firmware.
 The first successful setup verification also creates a settings backup. Use
 **6 → 5** again after tuning to capture the latest values. The archive lives
 in `/mnt/UDISK/root/.k2-improvements/installer-state/updater/` and contains
@@ -72,7 +74,7 @@ new backup retains the preceding one as `.previous.zip`. The printer's active
 `printer.cfg` continues to supply its native calibration and `SAVE_CONFIG` values.
 
 Open **6 → 1** when the installer flags a firmware change. It compares the
-local installation with the last verified setup and lists repairs for the
+local installation with the saved setup and lists repairs for the
 stock probe or Cartographer and the previously installed extras. The local
 review works offline. Repairs that download missing packages require network
 access. When **6 → 1** updates an older installer, the reloaded menu opens

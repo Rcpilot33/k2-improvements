@@ -1,5 +1,5 @@
 #!/bin/sh
-# Verified state is independent of the pre-git-pull migration snapshot.
+# The OTA baseline is independent of the pre-git-pull migration snapshot.
 OTA_SNAPSHOT="$MIGRATION_STATE_DIR/verified-setup"
 OTA_OPTIONS='r3men-bed kamp-adaptive-purge cartographer-plate-workflow global-touch-offsets global-prtouch-offsets material-z-offsets plate-aware-mesh nozzle-camera nozzle-usb-cartographer memory-diagnostics secure-auth'
 
@@ -13,7 +13,7 @@ ota_settings() {
 }
 
 ota_save_before_update() {
-    local setup fw old
+    local setup fw old options
     fw=$(detect_installed_firmware)
     old=$(ota_baseline_firmware) || old=
     if [ -f "$MIGRATION_STATE_DIR/settings-restart-pending" ]; then
@@ -28,7 +28,9 @@ ota_save_before_update() {
     if [ -f "$MIGRATION_STATE_DIR/settings-$setup.zip" ]; then
         confirm 'Save the current settings for the next OTA and retain the previous copy?' || return 1
     fi
-    OTA_SAVE_SETTINGS=1 ota_setup_installed "$setup"
+    options=$(ota_setup_options "$setup") || return 1
+    ota_write_snapshot "$fw" "$setup" "$options" captured || return 1
+    printf 'Saved %s setup on firmware %s. Optional components:\n%s\n' "$setup" "$fw" "${options:-none}"
 }
 
 ota_review_notice() {
@@ -140,15 +142,15 @@ ota_detect_options() {
     done
 }
 
-ota_save_verified() {
-    local fw="$1" setup="$2" options="$3" option tmp="$OTA_SNAPSHOT.new.$$"
+ota_write_snapshot() {
+    local fw="$1" setup="$2" options="$3" state="$4" option tmp="$OTA_SNAPSHOT.new.$$"
     [ -n "$fw" ] || { warn 'Installed firmware version is unknown; keeping previous snapshot'; return 1; }
     mkdir -p "$MIGRATION_STATE_DIR" || return 1
     {
-        printf 'firmware=%s\nmodel=K2 Plus\nsetup=%s\n' "$fw" "$setup"
+        printf 'firmware=%s\nmodel=K2 Plus\nsetup=%s\nstate=%s\n' "$fw" "$setup" "$state"
         for option in $options; do printf 'option=%s\n' "$option"; done
     } > "$tmp" || return 1
-    if [ "${OTA_SAVE_SETTINGS:-0}" = 1 ] || [ ! -f "$MIGRATION_STATE_DIR/settings-$setup.zip" ]; then
+    if [ "$state" = captured ] || [ ! -f "$MIGRATION_STATE_DIR/settings-$setup.zip" ]; then
         ota_settings save "$setup" "$tmp" || { rm -f "$tmp"; return 1; }
     fi
     mv "$tmp" "$OTA_SNAPSHOT"
@@ -176,10 +178,10 @@ ota_verify_setup() {
                 migration_reconcile_fluidd_layout "$component" || return 1
         fi
     done
-    ota_save_verified "$fw" "$setup" "$options"
+    ota_write_snapshot "$fw" "$setup" "$options" verified
 }
 
-ota_setup_installed() {
+ota_setup_options() {
     local setup="$1" options old
     options=$(ota_detect_options)
     if [ -f "$OTA_SNAPSHOT" ]; then
@@ -190,6 +192,12 @@ ota_setup_installed() {
             options=$(printf '%s\n' "$options" | awk '$0 != "global-prtouch-offsets" && $0 != "plate-aware-mesh"')
         fi
     fi
+    printf '%s\n' "$options"
+}
+
+ota_setup_installed() {
+    local setup="$1" options
+    options=$(ota_setup_options "$setup") || return 1
     ota_verify_setup "$setup" "$options"
 }
 
@@ -225,7 +233,7 @@ ota_review() (
     local setup options fw name missing manual extra tmp choice requirement
     OTA_REVIEW_ACTIVE=1
     fw=$(detect_installed_firmware)
-    printf 'Reviewing local setup. Installed firmware: %s, last verified: %s\n' \
+    printf 'Reviewing local setup. Installed firmware: %s, saved baseline: %s\n' \
         "${fw:-unknown}" "$(ota_baseline_firmware || echo 'none')"
     if ! ota_bootstrap_check; then
         confirm 'Repair bootstrap prerequisites first?' && migration_require_idle && ota_repair_bootstrap || return 1
@@ -236,7 +244,7 @@ ota_review() (
         case "$setup" in cartographer|stock-probe) ;; *) warn 'Invalid setup in saved snapshot'; return 1 ;; esac
     else
         if has_cartographer_configuration; then setup=cartographer; else setup=stock-probe; fi
-        printf 'No verified snapshot. Detected %s. Select the previously installed setup:\n' "$setup"
+        printf 'No saved setup snapshot. Detected %s. Select the previously installed setup:\n' "$setup"
         printf '  1. Stock probe\n  2. Cartographer\n  0. Back\n'
         read_prompt choice
         case "$choice" in 1) setup=stock-probe ;; 2) setup=cartographer ;; *) return 0 ;; esac
