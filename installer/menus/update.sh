@@ -1030,7 +1030,7 @@ menu_update_installer() {
         fi
         ui_menu_item 2 'Review pending update actions'
         ui_menu_item 3 'Update installer files only'
-        ui_menu_item 4 'Review installed setup locally'
+        ui_menu_item 4 'Review and restore saved settings'
         ui_menu_item 5 'Save current setup before a firmware OTA'
         printf '\n  0. Back\n\nSelect [0-5]: '
         read_prompt choice

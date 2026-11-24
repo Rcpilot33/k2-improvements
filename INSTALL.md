@@ -78,7 +78,7 @@ review works offline. Repairs that download missing packages require network
 access. When **6 → 1** updates an older installer, the reloaded menu opens
 the first setup review automatically. Confirm the probe setup
 and add any previously installed extras that the scan could no longer find.
-Use **6 → 4** to run the same review after a same-version firmware reinstall.
+Use **6 → 4, Review and restore saved settings**, to run the same review after a same-version firmware reinstall.
 The installer records the new firmware only after the checks pass, including
 Klipper Ready, macro registration, Fluidd macro grouping and the Moonraker updaters.
 

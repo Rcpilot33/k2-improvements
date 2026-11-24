@@ -78,7 +78,11 @@ run_logged_install() (
     ) 2>&1 | tee -a "$log" || warn "Installer output could not be fully saved to $log"
     result=$(cat "$status")
     [ -n "$result" ] || result=1
-    printf '%s finished with exit code %s\n' "$label" "$result" | tee -a "$log"
+    if [ "$result" = 0 ]; then
+        printf 'Successful.\n'
+    else
+        printf '%s did not complete (exit code %s).\n' "$label" "$result"
+    fi | tee -a "$log"
     return "$result"
 )
 
