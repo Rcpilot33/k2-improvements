@@ -767,6 +767,10 @@ migration_apply_components() {
         restart_kind=code
     fi
 
+    if [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ] && [ -f "$MIGRATION_STATE_DIR/settings-restart-pending" ] && [ "$restart_kind" != code ]; then
+        restart_kind=config
+    fi
+
     if [ "$moonraker_restart_required" -eq 1 ] && \
        [ "$restart_kind" != moonraker ]; then
         printf '\n--- Restarting Moonraker before the protected restart ---\n'
@@ -791,6 +795,9 @@ migration_apply_components() {
 
     if { [ "$restart_kind" = moonraker ] && migration_restart_moonraker; } || \
        { [ "$restart_kind" != moonraker ] && K2_DEFER_FIRMWARE_RESTART=0 sh "$restart_script"; }; then
+        if [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ]; then
+            rm -f "$MIGRATION_STATE_DIR/settings-restart-pending" || return 1
+        fi
         printf '\n--- Verifying post-restart component state ---\n'
         while IFS= read -r component; do
             if migration_reconcile_fluidd_layout "$component"; then
@@ -1024,7 +1031,8 @@ menu_update_installer() {
         ui_menu_item 2 'Review pending update actions'
         ui_menu_item 3 'Update installer files only'
         ui_menu_item 4 'Review installed setup locally'
-        printf '\n  0. Back\n\nSelect [0-4]: '
+        ui_menu_item 5 'Save current setup before a firmware OTA'
+        printf '\n  0. Back\n\nSelect [0-5]: '
         read_prompt choice
         case "$choice" in
             1|4)
@@ -1034,6 +1042,7 @@ menu_update_installer() {
                     migration_pull_installer yes
                 fi ;;
             2) menu_update_results ;;
+            5) run_logged_install ota-backup ota_save_before_update; press_enter ;;
             3)
                 printf '\nUpdating files without repairs can leave installed generated files behind.\n'
                 printf 'Pending actions will remain available from this menu.\n\n'
@@ -1056,11 +1065,12 @@ menu_review_setup() {
 }
 
 migration_offer_on_startup() {
-    local old new branch temporary
+    local old new branch temporary setup
     if [ -f "$MIGRATION_STATE_DIR/review-after-reload" ]; then
         rm -f "$MIGRATION_STATE_DIR/review-after-reload"
         [ "${bootstrap_needs_review:-0}" = 0 ] || return 0
-        if [ -z "$(ota_baseline_firmware)" ] || [ -n "$(ota_review_notice)" ]; then
+        setup=$(sed -n 's/^setup=//p' "$OTA_SNAPSHOT" 2>/dev/null) || setup=
+        if [ -z "$(ota_baseline_firmware)" ] || [ ! -f "$MIGRATION_STATE_DIR/settings-$setup.zip" ] || [ -n "$(ota_review_notice)" ]; then
             menu_review_setup || return 0
             # Back on the first review leaves the setup unverified.
             [ -n "$(ota_baseline_firmware)" ] && [ -z "$(ota_review_notice)" ] || return 0

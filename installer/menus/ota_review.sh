@@ -5,6 +5,32 @@ OTA_OPTIONS='r3men-bed kamp-adaptive-purge cartographer-plate-workflow global-to
 
 ota_baseline_firmware() { sed -n 's/^firmware=//p' "$OTA_SNAPSHOT" 2>/dev/null; }
 
+ota_settings() {
+    local action="$1" setup="$2"
+    shift 2
+    python3 "$INSTALLER_DIR/installer/migrations/ota_settings.py" "$action" \
+        "$PRINTER_CFG_DIR/custom" "$MIGRATION_STATE_DIR/settings-$setup.zip" "$@"
+}
+
+ota_save_before_update() {
+    local setup fw old
+    fw=$(detect_installed_firmware)
+    old=$(ota_baseline_firmware) || old=
+    if [ -f "$MIGRATION_STATE_DIR/settings-restart-pending" ]; then
+        warn 'Finish the pending settings restore with option 6 -> 1 before saving a new backup.'
+        return 1
+    fi
+    if [ -z "$fw" ] || { [ -n "$old" ] && [ "$fw" != "$old" ]; }; then
+        warn 'Review this firmware with option 6 -> 1 before saving a new settings backup.'
+        return 1
+    fi
+    if has_cartographer_configuration; then setup=cartographer; else setup=stock-probe; fi
+    if [ -f "$MIGRATION_STATE_DIR/settings-$setup.zip" ]; then
+        confirm 'Save the current settings for the next OTA and retain the previous copy?' || return 1
+    fi
+    OTA_SAVE_SETTINGS=1 ota_setup_installed "$setup"
+}
+
 ota_review_notice() {
     local old current
     old=$(ota_baseline_firmware) || old=
@@ -15,6 +41,8 @@ ota_review_notice() {
         echo 'INSTALLED FIRMWARE UNKNOWN | REVIEW SETUP'
     elif [ "${bootstrap_needs_review:-0}" = 1 ]; then
         echo 'BOOTSTRAP REPAIR NEEDED'
+    elif [ -f "$MIGRATION_STATE_DIR/settings-restart-pending" ]; then
+        echo 'SETTINGS RESTORE PENDING'
     elif [ -z "$old" ] && { is_macros || has_cartographer_configuration; }; then
         echo 'SETUP BASELINE NEEDED'
     fi
@@ -119,7 +147,11 @@ ota_save_verified() {
     {
         printf 'firmware=%s\nmodel=K2 Plus\nsetup=%s\n' "$fw" "$setup"
         for option in $options; do printf 'option=%s\n' "$option"; done
-    } > "$tmp" && mv "$tmp" "$OTA_SNAPSHOT"
+    } > "$tmp" || return 1
+    if [ "${OTA_SAVE_SETTINGS:-0}" = 1 ] || [ ! -f "$MIGRATION_STATE_DIR/settings-$setup.zip" ]; then
+        ota_settings save "$setup" "$tmp" || { rm -f "$tmp"; return 1; }
+    fi
+    mv "$tmp" "$OTA_SNAPSHOT"
 }
 
 ota_verify_setup() {
@@ -222,6 +254,14 @@ ota_review() (
         return 1
     fi
     printf 'Expected %s setup. Optional components:\n%s\n' "$setup" "${options:-none}"
+    if [ -f "$MIGRATION_STATE_DIR/settings-$setup.zip" ]; then
+        ota_settings check "$setup"
+        case "$?" in
+            0) info 'Saved settings match the current files.' ;;
+            3) migration_require_idle && ota_settings restore "$setup" || return 1 ;;
+            *) return 1 ;;
+        esac
+    fi
     missing=$(ota_scan "$setup" "$options")
     if [ "$setup" = cartographer ] && ! has_cartographer_configuration; then
         warn "Restore the saved Cartographer configuration from backup before repairing these components: $missing"
@@ -265,6 +305,11 @@ ota_review() (
             migration_apply_components "$tmp" || return 1
         fi
         [ "$manual" -eq 0 ] || return 1
+    fi
+    if [ -f "$MIGRATION_STATE_DIR/settings-restart-pending" ]; then
+        info 'Activating restored settings with a protected restart.'
+        migration_require_idle && K2_DEFER_FIRMWARE_RESTART=0 sh "$INSTALLER_DIR/scripts/firmware_restart.sh" || return 1
+        rm -f "$MIGRATION_STATE_DIR/settings-restart-pending" || return 1
     fi
     ota_verify_setup "$setup" "$options" || return 1
     info "Verified $setup on firmware $fw. Saved the installed options."

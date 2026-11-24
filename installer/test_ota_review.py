@@ -4,8 +4,10 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -131,6 +133,7 @@ bootstrap_home_ready() { return 1; }
 press_enter() { :; }
 run_logged_install() { shift; "$@"; }
 ota_detect_options() { :; }
+ota_settings() { if [ "$1" = save ]; then touch "$MIGRATION_STATE_DIR/settings-$2.zip"; fi; }
 menu_update_results() { echo UPDATE_RESULTS; }
 migration_offer_on_startup
 """
@@ -169,6 +172,95 @@ ota_review
         result = self.shell(script, CONSENT="yes")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Restored group macros", result.stdout)
+
+    def test_saved_settings_survive_review_and_retry_without_changing_printer_cfg(self):
+        cfg = self.state / "config"
+        custom = cfg / "custom"
+        custom.mkdir(parents=True)
+        native = cfg / "printer.cfg"
+        native.write_bytes(b"#*# SAVE_CONFIG\n#*# z_offset = 0.025\n")
+        overrides = custom / "overrides.cfg"
+        table = custom / "prtouch_global_z.json"
+        overrides.write_bytes(b"variable_offset_PETG: 0.012\n")
+        table.write_bytes(b'{"version":1,"offsets":{"default":0.0}}\n')
+        archive = self.state / "settings-stock-probe.zip"
+        harness = """
+INSTALLER_DIR=$PWD
+python3() {
+    case "$1" in */ota_settings.py) "$TEST_PYTHON" "$@" ;; *) return 0 ;; esac
+}
+ota_detect_options() { echo global-prtouch-offsets; }
+migration_require_idle() { [ "$ACTIVITY" = idle ]; }
+sh() { echo "protected restart" >> "$MIGRATION_STATE_DIR/restarts"; }
+"""
+        def run(command, answers="", fw="1.1.8.0", activity="idle"):
+            return self.shell(harness + command, answers, FW=fw, ACTIVITY=activity,
+                              PRINTER_CFG_DIR=cfg.as_posix(), TEST_PYTHON=Path(sys.executable).as_posix())
+
+        (self.state / "review-after-reload").touch()
+        saved = run("""
+press_enter() { :; }
+bootstrap_home_ready() { return 1; }
+run_logged_install() { shift; "$@"; }
+menu_update_results() { :; }
+migration_offer_on_startup
+""", fw="1.1.5.5")
+        self.assertEqual(saved.returncode, 0, saved.stderr)
+        self.assertTrue(archive.is_file())
+        self.assertEqual(run("ota_save_before_update", "y\n", fw="1.1.5.5").returncode, 0)
+        with zipfile.ZipFile(archive) as z:
+            self.assertIn(b"option=global-prtouch-offsets", z.read("verified-setup"))
+            self.assertNotIn("printer.cfg", z.namelist())
+        original = archive.read_bytes()
+        table.unlink()
+        overrides.write_bytes(b"variable_offset_PETG: 0.0\n")
+        self.assertNotEqual(run("ota_review", activity="printing").returncode, 0)
+        self.assertFalse(table.exists())
+        cancelled = run("ota_review", "k\n\n")
+        self.assertNotEqual(cancelled.returncode, 0)
+        self.assertIn("-variable_offset_PETG: 0.0", cancelled.stdout)
+        self.assertIn("+variable_offset_PETG: 0.012", cancelled.stdout)
+        self.assertEqual(overrides.read_bytes(), b"variable_offset_PETG: 0.0\n")
+        self.assertFalse(table.exists())
+        self.assertNotEqual(run("ota_review", "y\n\n").returncode, 0)
+        self.assertEqual(overrides.read_bytes(), b"variable_offset_PETG: 0.012\n")
+        completed = run("ota_review", "y\n")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(table.read_bytes(), b'{"version":1,"offsets":{"default":0.0}}\n')
+        self.assertEqual(native.read_bytes(), b"#*# SAVE_CONFIG\n#*# z_offset = 0.025\n")
+        self.assertEqual(archive.read_bytes(), original)
+        self.assertEqual((self.state / "restarts").read_text().splitlines(), ["protected restart"])
+        self.assertFalse((self.state / "settings-restart-pending").exists())
+        overrides.write_bytes(b"variable_offset_PETG: 0.017\n")
+        self.assertEqual(run("ota_save_before_update", "y\n").returncode, 0)
+        self.assertEqual(archive.with_suffix(".previous.zip").read_bytes(), original)
+        with zipfile.ZipFile(archive) as z:
+            self.assertEqual(z.read("overrides.cfg"), overrides.read_bytes())
+
+    def test_cartographer_settings_restore_before_scan_after_custom_directory_loss(self):
+        cfg = self.state / "config"
+        custom = cfg / "custom"
+        custom.mkdir(parents=True)
+        files = {"overrides.cfg": "y_offset: 12\n", "cartographer.cfg": "[cartographer]\nserial: /dev/cartographer\n",
+                 "plate-workflow-slicers.json": '{"slicers":["orca"]}\n', "kamp_settings.cfg": "variable_flow_rate: 12\n"}
+        for name, value in files.items():
+            (custom / name).write_text(value)
+        self.snapshot.unlink()
+        harness = """
+INSTALLER_DIR=$PWD
+python3() { case "$1" in */ota_settings.py) "$TEST_PYTHON" "$@" ;; *) return 0 ;; esac; }
+ota_detect_options() { echo cartographer-plate-workflow; }
+has_cartographer_configuration() { [ -s "$PRINTER_CFG_DIR/custom/cartographer.cfg" ]; }
+migration_require_idle() { return 0; }
+sh() { return 0; }
+"""
+        env = dict(PRINTER_CFG_DIR=cfg.as_posix(), TEST_PYTHON=Path(sys.executable).as_posix())
+        saved = self.shell(harness + "ota_save_before_update", FW="1.1.5.5", **env)
+        self.assertEqual(saved.returncode, 0, saved.stderr)
+        shutil.rmtree(custom)
+        restored = self.shell(harness + "ota_review", "y\n" * len(files), **env)
+        self.assertEqual(restored.returncode, 0, restored.stderr)
+        self.assertEqual({p.name: p.read_text() for p in custom.iterdir()}, files)
 
 
 if __name__ == "__main__":

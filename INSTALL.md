@@ -56,6 +56,21 @@ boot links, root home, printer directories and installer checkout. It offers
 to repair missing prerequisites. If the checkout itself cannot launch, rerun
 the bootstrap for your installed branch.
 
+Before a no-wipe OTA, choose **6 → 5, Save current setup before a firmware OTA**.
+The first successful setup verification also creates a settings backup. Use
+**6 → 5** again after tuning to capture the latest values. The archive lives
+in `/mnt/UDISK/root/.k2-improvements/installer-state/updater/` and contains
+the setup inventory and the following files from `config/custom/` when present:
+`overrides.cfg`, `cartographer.cfg`, `prtouch_global_z.json`,
+`plate-workflow-slicers.json`, and `kamp_settings.cfg`.
+
+During recovery, the review compares those files before component repairs.
+For each difference, choose **y** to restore the saved file, **k** to keep the
+current state, or **Enter** to return and review later. Accepted restores take
+effect with a protected restart. Recovery keeps the pre-OTA archive. An explicit
+new backup retains the preceding one as `.previous.zip`. The printer's active
+`printer.cfg` continues to supply its native calibration and `SAVE_CONFIG` values.
+
 Open **6 → 1** when the installer flags a firmware change. It compares the
 local installation with the last verified setup and lists repairs for the
 stock probe or Cartographer and the previously installed extras. The local
