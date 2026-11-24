@@ -379,24 +379,8 @@ migration_print_firmware_notice() {
 }
 
 printer_activity_state() {
-    local api query
-    api="${MOONRAKER_URL:-http://127.0.0.1:7125}"
-    if [ -x /opt/bin/curl ]; then
-        query=$(/opt/bin/curl -fsS --max-time 3 \
-            "$api/printer/objects/query?print_stats=state" 2>/dev/null || true)
-    elif command -v curl >/dev/null 2>&1; then
-        query=$(curl -fsS --max-time 3 \
-            "$api/printer/objects/query?print_stats=state" 2>/dev/null || true)
-    else
-        echo unknown
-        return
-    fi
-    case "$query" in
-        *'"state": "printing"'*|*'"state":"printing"'*) echo printing ;;
-        *'"state": "paused"'*|*'"state":"paused"'*) echo paused ;;
-        *'"state":'*) echo idle ;;
-        *) echo unknown ;;
-    esac
+    . "$INSTALLER_DIR/scripts/stock_nozzle_camera.sh"
+    k2_print_activity_state
 }
 
 migration_require_idle() {

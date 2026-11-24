@@ -1,5 +1,6 @@
 """Exercise the local OTA review without connecting to a printer."""
 import importlib.util
+import json
 import os
 from pathlib import Path
 import shutil
@@ -91,6 +92,40 @@ ota_review
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Missing or incomplete components:\nkamp-adaptive-purge", result.stdout)
         self.assertEqual(original, self.snapshot.read_bytes())
+
+    def test_nested_idle_check_during_ota_repair(self):
+        harness = """
+. scripts/stock_nozzle_camera.sh
+python3() { "$TEST_PYTHON" "$@"; }
+stock_nozzle_camera_curl() {
+    if [ -e "$MIGRATION_STATE_DIR/queried" ]; then echo "$SECOND"; else echo "$FIRST"; fi
+    touch "$MIGRATION_STATE_DIR/queried"
+}
+stock_nozzle_camera_require_idle "$ACTION"
+"""
+        def response(state):
+            return json.dumps({"result": {"status": {"print_stats": {"state": state}}}})
+
+        unknown = '{"error":{"message":"Klippy not ready"}}'
+        for first, second, ota, action, answer, success, prompted in (
+            (response("standby"), unknown, "1", "repair", "", True, False),
+            (response("printing"), unknown, "1", "repair", "y", False, False),
+            (response("paused"), unknown, "1", "repair", "y", False, False),
+            (unknown, unknown, "0", "repair", "y", False, False),
+            (unknown, unknown, "1", "", "y", False, False),
+            (unknown, unknown, "1", "repair", "", False, True),
+            (unknown, unknown, "1", "repair", "n", False, True),
+            (unknown, unknown, "1", "repair", "y", True, True),
+            (unknown, response("printing"), "1", "repair", "y", False, True),
+            (unknown, response("paused"), "1", "repair", "y", False, True),
+        ):
+            with self.subTest(first=first, second=second, ota=ota, action=action, answer=answer):
+                (self.state / "queried").unlink(missing_ok=True)
+                result = self.shell(harness, answer + "\n", FIRST=first, SECOND=second,
+                                    K2_OTA_ACTIVITY_CONFIRM=ota, ACTION=action,
+                                    TEST_PYTHON=Path(sys.executable).as_posix())
+                self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
+                self.assertEqual("Continue?" in result.stdout, prompted)
 
     def test_moonraker_recovery_owns_restart_when_both_repairs_are_queued(self):
         script = """

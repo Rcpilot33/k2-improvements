@@ -310,7 +310,7 @@ ota_review() (
                    fi ;;
             esac
             confirm 'Repair the listed automatic components and perform their required restart?' || return 1
-            migration_apply_components "$tmp" || return 1
+            K2_OTA_ACTIVITY_CONFIRM=1 migration_apply_components "$tmp" || return 1
         fi
         [ "$manual" -eq 0 ] || return 1
     fi
