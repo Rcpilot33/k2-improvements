@@ -1029,11 +1029,7 @@ menu_update_installer() {
         case "$choice" in
             1|4)
                 if [ "$choice" = 4 ] || [ -n "$notice" ]; then
-                    run_logged_install ota-review ota_review
-                    bootstrap_needs_review=0
-                    ota_bootstrap_check || bootstrap_needs_review=1
-                    if bootstrap_home_ready; then export HOME=/mnt/UDISK/root; fi
-                    press_enter
+                    menu_review_setup
                 else
                     migration_pull_installer yes
                 fi ;;
@@ -1049,13 +1045,30 @@ menu_update_installer() {
     done
 }
 
+menu_review_setup() {
+    local status=0
+    run_logged_install ota-review ota_review || status=$?
+    bootstrap_needs_review=0
+    ota_bootstrap_check || bootstrap_needs_review=1
+    if bootstrap_home_ready; then export HOME=/mnt/UDISK/root; fi
+    press_enter
+    return "$status"
+}
+
 migration_offer_on_startup() {
     local old new branch temporary
     if [ -f "$MIGRATION_STATE_DIR/review-after-reload" ]; then
         rm -f "$MIGRATION_STATE_DIR/review-after-reload"
+        [ "${bootstrap_needs_review:-0}" = 0 ] || return 0
+        if [ -z "$(ota_baseline_firmware)" ] || [ -n "$(ota_review_notice)" ]; then
+            menu_review_setup || return 0
+            # Back on the first review leaves the setup unverified.
+            [ -n "$(ota_baseline_firmware)" ] && [ -z "$(ota_review_notice)" ] || return 0
+        fi
         menu_update_results
         return
     fi
+    [ "${bootstrap_needs_review:-0}" = 0 ] && [ -z "$(ota_review_notice)" ] || return 0
     # The pre-tracker updater could not write a handoff record before pulling
     # this code. A fast-forward pull normally leaves ORIG_HEAD available, so
     # recover it for the first report when possible. The catalog remains

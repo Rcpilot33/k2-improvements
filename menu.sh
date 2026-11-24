@@ -68,7 +68,5 @@ done
 require_root
 ensure_path
 ota_bootstrap_preflight
-if [ "$bootstrap_needs_review" = 0 ] && [ -z "$(ota_review_notice)" ]; then
-    migration_offer_on_startup
-fi
+migration_offer_on_startup
 main_menu

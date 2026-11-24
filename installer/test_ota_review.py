@@ -121,6 +121,35 @@ echo "pending=$bootstrap_needs_review"
         self.assertIn("pending=0", self.shell(script, ACTIVITY="idle").stdout)
         self.assertTrue((self.state / "repaired").exists())
 
+    def test_first_update_opens_setup_review_on_reload(self):
+        self.snapshot.unlink()
+        marker = self.state / "review-after-reload"
+        dispatch = """
+is_macros() { return 0; }
+has_cartographer_configuration() { return 0; }
+bootstrap_home_ready() { return 1; }
+press_enter() { :; }
+run_logged_install() { shift; "$@"; }
+ota_detect_options() { :; }
+menu_update_results() { echo UPDATE_RESULTS; }
+migration_offer_on_startup
+"""
+        self.assertEqual(self.shell(dispatch).stdout, "")
+        marker.touch()
+        cancelled = self.shell(dispatch, "0\n")
+        self.assertIn("Select the previously installed setup", cancelled.stdout)
+        self.assertNotIn("UPDATE_RESULTS", cancelled.stdout)
+        self.assertFalse(marker.exists())
+        self.assertFalse(self.snapshot.exists())
+        marker.touch()
+        reviewed = self.shell(dispatch, "2\n\n")
+        self.assertEqual(reviewed.returncode, 0, reviewed.stderr)
+        self.assertIn("Verified cartographer", reviewed.stdout + reviewed.stderr)
+        self.assertIn("UPDATE_RESULTS", reviewed.stdout)
+        self.assertIn("setup=cartographer", self.snapshot.read_text())
+        marker.touch()
+        self.assertEqual(self.shell(dispatch).stdout.strip(), "UPDATE_RESULTS")
+
     def test_first_review_adopts_previously_installed_extras(self):
         self.snapshot.unlink()
         result = self.shell("ota_detect_options() { :; }; ota_review", "1\nmaterial-z-offsets\n")
