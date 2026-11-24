@@ -7,7 +7,7 @@ SCRIPT_DIR=$(readlink -f $(dirname ${0}))
 # configured when this run began, any material offsets belong to the stock
 # probe and must not carry into the new probe setup.
 CARTOGRAPHER_WAS_CONFIGURED=0
-if [ -f ~/printer_data/config/custom/cartographer.cfg ]; then
+if [ -f ~/printer_data/config/custom/cartographer.cfg ] || [ "${K2_KEEP_CARTOGRAPHER_CONFIG:-0}" = 1 ]; then
     CARTOGRAPHER_WAS_CONFIGURED=1
 fi
 
@@ -62,18 +62,26 @@ python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg prtouch_v3.cfg True
 python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/printer.cfg custom/main.cfg
-if [ -f ~/printer_data/config/custom/cartographer.cfg ] && \
-    ! cmp -s "${SCRIPT_DIR}/cartographer.cfg" \
-        ~/printer_data/config/custom/cartographer.cfg; then
-    CARTO_CFG_BACKUP=~/printer_data/config/custom/cartographer.cfg.before-managed-update.$(date +%Y%m%d-%H%M%S)
-    cp -p ~/printer_data/config/custom/cartographer.cfg "$CARTO_CFG_BACKUP"
-    echo "I: preserved previous Cartographer config at $CARTO_CFG_BACKUP"
+if [ "${K2_KEEP_CARTOGRAPHER_CONFIG:-0}" = 1 ]; then
+    if ! grep -Eq '^[[:space:]]*\[cartographer\][[:space:]]*$' ~/printer_data/config/printer.cfg; then
+        [ -s ~/printer_data/config/custom/cartographer.cfg ] || { echo 'E: restore the saved Cartographer configuration first' >&2; exit 1; }
+        python "${SCRIPT_DIR}/../../scripts/ensure_included.py" ~/printer_data/config/custom/main.cfg cartographer.cfg
+    fi
+    echo 'I: retained existing Cartographer configuration during firmware repair'
+else
+    if [ -f ~/printer_data/config/custom/cartographer.cfg ] && \
+        ! cmp -s "${SCRIPT_DIR}/cartographer.cfg" \
+            ~/printer_data/config/custom/cartographer.cfg; then
+        CARTO_CFG_BACKUP=~/printer_data/config/custom/cartographer.cfg.before-managed-update.$(date +%Y%m%d-%H%M%S)
+        cp -p ~/printer_data/config/custom/cartographer.cfg "$CARTO_CFG_BACKUP"
+        echo "I: preserved previous Cartographer config at $CARTO_CFG_BACKUP"
+    fi
+    cp ${SCRIPT_DIR}/cartographer.cfg ~/printer_data/config/custom
+    # update serial port based on kernel ACM support
+    sed -i "s|serial: /dev/cartographer|serial: ${CARTO_SERIAL}|g" ~/printer_data/config/custom/cartographer.cfg
+    python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+        ~/printer_data/config/custom/main.cfg cartographer.cfg
 fi
-cp ${SCRIPT_DIR}/cartographer.cfg ~/printer_data/config/custom
-# update serial port based on kernel ACM support
-sed -i "s|serial: /dev/cartographer|serial: ${CARTO_SERIAL}|g" ~/printer_data/config/custom/cartographer.cfg
-python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
-    ~/printer_data/config/custom/main.cfg cartographer.cfg
 
 # Keep Creality's complete pre-file preparation path available after the real
 # PR Touch driver is removed. This only changes reported configuration status.
@@ -136,25 +144,6 @@ python3 "${SCRIPT_DIR}/patch_probe_offsets.py" \
 mkdir -p /mnt/UDISK/bin
 ln -sf ${SCRIPT_DIR}/cartographer.sh /mnt/UDISK/bin/cartographer.sh
 
-# register for updates
-if [ -f ~/printer_data/config/moonraker.conf ]; then
-    echo "I: registering cartographer update manager"
-    mkdir -p ~/printer_data/config/updates
-    cp ${SCRIPT_DIR}/update-manager.cfg ~/printer_data/config/updates/cartographer.cfg
-    python3 "${SCRIPT_DIR}/../../scripts/moonraker_include.py" updates/cartographer.cfg
-
-    # Permit Moonraker's machine service API to manage Cartographer. A prior
-    # no-Cartographer install intentionally omits this service until now.
-    MOONRAKER_ASVC=/mnt/UDISK/printer_data/moonraker.asvc
-    touch "$MOONRAKER_ASVC"
-    grep -qxF cartographer "$MOONRAKER_ASVC" || echo cartographer >> "$MOONRAKER_ASVC"
-else
-    echo "W: moonraker not found, skipping update manager registration"
-fi
-
-# Install the complete calibration macro engine as part of Cartographer.
-# Fluidd shows the default selector and shared actions; named plate selectors
-# remain hidden until the optional plate workflow is enabled.
-sh "${SCRIPT_DIR}/../../installer/extras/cartographer-macros/install.sh"
+sh "${SCRIPT_DIR}/register.sh" --refresh-updater
 
 sh "${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh"

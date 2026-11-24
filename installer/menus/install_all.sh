@@ -23,11 +23,12 @@ skip-setup|is_skip_setup|features/skip-setup/install.sh
 moonraker|is_moonraker|features/moonraker/install.sh
 fluidd|is_fluidd|features/fluidd/install.sh
 screws_tilt_adjust|is_screws_tilt_firmware_restart|features/screws_tilt_adjust/install.sh
-cartographer|is_cartographer|features/cartographer/install.sh
+cartographer|cartographer_core_ready|features/cartographer/install.sh
 abort_homing|is_abort_homing_firmware_restart|features/abort_homing/install.sh
 save-config-restart|is_save_config_restart|features/save-config-restart/install.sh
 prtouch-cleanup|is_prtouch_clean|installer/extras/prtouch-cleanup/install.sh
-macros|is_macros|features/macros/install.sh'
+macros|is_macros|features/macros/install.sh
+cartographer-registration|is_cartographer_registered|features/cartographer/register.sh'
 
 menu_install_all() {
     clear
@@ -59,6 +60,9 @@ menu_install_all() {
     printf '         Make sure no print is active.\n\n'
 
     if ! confirm "Proceed with Cartographer setup installation?"; then return 0; fi
+    if [ "${bootstrap_needs_review:-0}" = 1 ]; then
+        migration_require_idle && ota_repair_bootstrap || return 1
+    fi
 
     local installed=0 skipped=0 failed=0
     local migration_installed_file="/tmp/k2-setup-installed.$$"
@@ -135,7 +139,7 @@ menu_install_all() {
             pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
             [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
-                sh "$INSTALLER_DIR/installer/extras/cartographer-offset-setup/install.sh" || true
+                sh "$INSTALLER_DIR/installer/extras/cartographer-offset-setup/install.sh" || failed=$((failed+1))
         else
             printf '\n%s\n\n' "$(c_yellow 'Skipped - run it later from Cartographer tools.')"
         fi
@@ -157,6 +161,7 @@ menu_install_all() {
         done < "$migration_installed_file"
     fi
     rm -f "$migration_installed_file"
+    if [ "$failed" -eq 0 ]; then ota_setup_installed cartographer || failed=$((failed+1)); fi
 
     printf '\n%s\n' '----------------------------------------------------------------'
     printf 'Auto-install summary: %s installed, %s skipped, %s failed\n' \
@@ -173,4 +178,5 @@ menu_install_all() {
     printf '     and setup checklist. Follow the steps shown for your installed\n'
     printf '     plate workflow, then test homing and probing.\n\n'
     press_enter
+    [ "$failed" -eq 0 ]
 }

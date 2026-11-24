@@ -292,6 +292,9 @@ migration_write_atomic() {
 migration_mark_component_current() {
     local component temporary
     component="$1"
+    case " ${OTA_OPTIONS:-} " in
+        *" $component "*) ota_option_ready "$component" && ota_record_option "$component" || return 1 ;;
+    esac
     # Components without catalog entries have nothing to acknowledge. Their
     # successful install must not produce a false incomplete-update warning.
     if ! migration_catalog | awk -F'|' -v component="$component" \
@@ -418,19 +421,39 @@ migration_repair_component() {
         warn 'ATC removal is optional; use Optional extras -> Remove legacy Axis Twist'
         return 1
     fi
-    local component pwd_home
+    local component pwd_home script
     component="$1"
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
     [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
     [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
 
     case "$component" in
+        skip-setup|prtouch-cleanup|cartographer-registration)
+            case "$component" in
+                skip-setup) script=features/skip-setup/install.sh ;;
+                prtouch-cleanup) script=installer/extras/prtouch-cleanup/install.sh ;;
+                cartographer-registration) script=features/cartographer/register.sh ;;
+            esac
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 sh "$INSTALLER_DIR/$script"
+            ;;
+        moonraker-service)
+            # A retained mainline installation only needs its boot hooks restored.
+            [ -s "$PRINTER_CFG_DIR/moonraker.conf" ] &&
+            [ -f "$pwd_home/moonraker/moonraker/moonraker.py" ] &&
+            [ -x "$pwd_home/moonraker-env/bin/python" ] || {
+                warn 'Moonraker config, source, or environment is missing; restore from backup or review the core installer.'
+                return 1
+            }
+            ln -sfn "$INSTALLER_DIR/features/moonraker/moonraker.init" /etc/init.d/moonraker &&
+            ln -sfn "$INSTALLER_DIR/features/moonraker/moonraker.init" /opt/etc/init.d/S56moonraker &&
+            restart_moonraker_and_wait
+            ;;
         moonraker-source)
             HOME="$pwd_home" python3 "$INSTALLER_DIR/features/moonraker/source.py" \
                 "$pwd_home/moonraker" --migrate
             ;;
         cartographer)
-            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 K2_KEEP_CARTOGRAPHER_CONFIG="${OTA_REVIEW_ACTIVE:-0}" \
                 sh "$INSTALLER_DIR/features/cartographer/install.sh"
             ;;
         macros)
@@ -561,16 +584,7 @@ migration_component_restart_kind() {
 }
 
 migration_restart_moonraker() {
-    /etc/init.d/moonraker restart || return 1
-    count=0
-    while ! nc -z 127.0.0.1 7125; do
-        if [ "$count" -ge 60 ]; then
-            warn 'Moonraker did not return after its restart'
-            return 1
-        fi
-        count=$((count + 1))
-        sleep 1
-    done
+    restart_moonraker_and_wait
 }
 
 # Moonraker persists each web updater's remote version and download URL. A
@@ -739,6 +753,7 @@ migration_apply_components() {
         else
             warn "$(migration_component_label "$component") refresh failed; it remains pending"
             failures=$((failures + 1))
+            if [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ]; then break; fi
         fi
     done 3< "$components_file"
 
@@ -999,13 +1014,29 @@ menu_update_installer() {
         clear
         ui_heading 'UPDATE INSTALLER'
         printf '\n'
-        ui_menu_item 1 'Update and review required actions'
+        local notice
+        notice=$(ota_review_notice)
+        if [ -n "$notice" ]; then
+            ui_menu_item 1 'Review installed setup and firmware change' "$notice"
+        else
+            ui_menu_item 1 'Update and review required actions'
+        fi
         ui_menu_item 2 'Review pending update actions'
         ui_menu_item 3 'Update installer files only'
-        printf '\n  0. Back\n\nSelect [0-3]: '
+        ui_menu_item 4 'Review installed setup locally'
+        printf '\n  0. Back\n\nSelect [0-4]: '
         read_prompt choice
         case "$choice" in
-            1) migration_pull_installer yes ;;
+            1|4)
+                if [ "$choice" = 4 ] || [ -n "$notice" ]; then
+                    run_logged_install ota-review ota_review
+                    bootstrap_needs_review=0
+                    ota_bootstrap_check || bootstrap_needs_review=1
+                    if bootstrap_home_ready; then export HOME=/mnt/UDISK/root; fi
+                    press_enter
+                else
+                    migration_pull_installer yes
+                fi ;;
             2) menu_update_results ;;
             3)
                 printf '\nUpdating files without repairs can leave installed generated files behind.\n'

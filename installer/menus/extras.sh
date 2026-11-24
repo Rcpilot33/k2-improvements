@@ -400,6 +400,9 @@ menu_extras() {
                     if sh "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/install.sh"; then
                         if is_nozzle_usb_cartographer; then
                             migration_mark_component_current nozzle-usb-cartographer
+                            if ! is_nozzle_camera; then ota_record_option nozzle-camera remove; fi
+                        else
+                            ota_record_option nozzle-usb-cartographer remove
                         fi
                     fi
                     press_enter

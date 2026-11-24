@@ -49,19 +49,15 @@ class InstallerFailureSafetyTests(unittest.TestCase):
                     text,
                 )
 
-    def test_entware_copies_stop_when_opkg_fails(self):
-        scripts = (
-            ROOT / "features/entware/install.sh",
-            ROOT / "bootstrap/entware/install.sh",
+    def test_entware_entries_propagate_opkg_failures(self):
+        wrapper = (ROOT / "features/entware/install.sh").read_text(encoding="utf-8")
+        self.assertIn('exec sh "$(dirname "$0")/../../bootstrap/entware/install.sh"', wrapper)
+        lines = (ROOT / "bootstrap/entware/install.sh").read_text(encoding="utf-8").splitlines()
+        self.assertIn("set -e", lines[:5])
+        self.assertIn(
+            "ln -sf /opt/libexec/sftp-server /usr/libexec/sftp-server",
+            lines,
         )
-        for script in scripts:
-            with self.subTest(script=script):
-                lines = script.read_text(encoding="utf-8").splitlines()
-                self.assertIn("set -e", lines[:5])
-                self.assertIn(
-                    "ln -sf /opt/libexec/sftp-server /usr/libexec/sftp-server",
-                    lines,
-                )
 
     def test_abort_homing_propagates_unexpected_patcher_failures(self):
         script = ROOT / "features/abort_homing/install.sh"

@@ -37,11 +37,13 @@ case "$BRANCH" in
 esac
 
 # Run install script from Entware if needed
-if [ -x /opt/bin/opkg ] && [ -x /opt/bin/git ]; then
+. "$CURDIR/prerequisites.sh"
+if bootstrap_entware_ready "$CURDIR"; then
     echo "I: Entware already installed; skipping Entware install."
 else
     echo "I: Installing Entware..."
     sh ./entware/install.sh
+    bootstrap_entware_ready "$CURDIR" || { echo 'E: Entware prerequisite verification failed'; exit 1; }
 fi
 
 mkdir -p /mnt/UDISK/root
@@ -51,6 +53,7 @@ sh "$CURDIR/repository-refresh.sh" \
     /mnt/UDISK/root/k2-improvements \
     /mnt/UDISK/root/.k2-improvements/bootstrap-recovery \
     /opt/bin/git
+bootstrap_checkout_ready /mnt/UDISK/root/k2-improvements || { echo 'E: installer checkout verification failed'; exit 1; }
 
 START_MENU="no"
 
@@ -95,7 +98,11 @@ fi
 cd "$CURDIR"
 
 # Run install script from better-root
-sh ./better-root/install.sh
+if ! bootstrap_home_ready; then
+    K2_SKIP_BETTER_ROOT_LOGOUT=1 sh ./better-root/install.sh
+    bootstrap_home_ready || { echo 'E: persistent root home verification failed'; exit 1; }
+    if [ "$START_MENU" != yes ]; then echo 'I: reconnect to use the persistent root home.'; fi
+fi
 
 if [ "$START_MENU" = "yes" ]; then
     export HOME=/mnt/UDISK/root

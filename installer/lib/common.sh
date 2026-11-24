@@ -51,6 +51,37 @@ die()  { echo "ERROR: $*" >&2; exit 1; }
 info() { echo "I: $*"; }
 warn() { echo "W: $*" >&2; }
 
+# Only capture setup and core component output. Optional authentication
+# prompts and unrelated menu activity stay outside the install transcript.
+run_logged_install() (
+    local label="$1" directory log status result
+    shift
+    directory="${PRINTER_CFG_DIR%/*}/logs"
+    log="$directory/k2-installer.log"
+    if ! mkdir -p "$directory" || ! touch "$log"; then
+        warn "Cannot create installer log at $log"
+        "$@"
+        exit $?
+    fi
+    status=$(mktemp) || return 1
+    trap 'rm -f "$status"' EXIT
+    # Keep the previous transcript when the accumulated log exceeds 1 MiB.
+    if [ "$(wc -c < "$log")" -ge 1048576 ]; then
+        mv -f "$log" "$log.1" || return 1
+    fi
+    printf 'Installer log: %s\n' "$log"
+    (
+        trap 'printf "%s\n" "$?" > "$status"' EXIT
+        printf '\n--- %s | %s | firmware %s | revision %s ---\n' \
+            "$(date)" "$label" "$(detect_printer_fw)" "$(detect_installer_commit)"
+        "$@"
+    ) 2>&1 | tee -a "$log" || warn "Installer output could not be fully saved to $log"
+    result=$(cat "$status")
+    [ -n "$result" ] || result=1
+    printf '%s finished with exit code %s\n' "$label" "$result" | tee -a "$log"
+    return "$result"
+)
+
 read_prompt() {
     # A closed SSH terminal makes read fail immediately.  Never return that
     # failure to a caller's menu loop: doing so creates an unbounded redraw and
@@ -79,4 +110,17 @@ ensure_path() {
         *:/opt/bin:*) ;;
         *) PATH="/opt/bin:/opt/sbin:$PATH"; export PATH ;;
     esac
+}
+
+restart_moonraker_and_wait() {
+    /etc/init.d/moonraker restart || return 1
+    local count=0
+    while ! nc -z 127.0.0.1 7125; do
+        if [ "$count" -ge 60 ]; then
+            warn 'Moonraker did not return after its restart'
+            return 1
+        fi
+        count=$((count + 1))
+        sleep 1
+    done
 }

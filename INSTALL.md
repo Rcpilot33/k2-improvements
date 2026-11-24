@@ -48,6 +48,30 @@ Back up the printer configuration, custom macros, saved meshes, calibration
 data, and any other files you want to keep. A factory reset and some recovery
 operations are destructive.
 
+### Recover after a firmware OTA
+
+After a firmware OTA on a configured K2 Plus, open the existing installer.
+Before the menus open, it checks the Entware packages and tools, SFTP, PATH,
+boot links, root home, printer directories and installer checkout. It offers
+to repair missing prerequisites. If the checkout itself cannot launch, rerun
+the bootstrap for your installed branch.
+
+Open **6 → 1** when the installer flags a firmware change. It compares the
+local installation with the last verified setup and lists repairs for the
+stock probe or Cartographer and the previously installed extras. The local
+review works offline. Repairs that download missing packages require network
+access. On the first review of an older installation, confirm the probe setup
+and add any previously installed extras that the scan could no longer find.
+Use **6 → 4** to run the same review after a same-version firmware reinstall.
+The installer records the new firmware only after the checks pass, including
+Klipper Ready, macro registration, Fluidd macro grouping and the Moonraker updaters.
+
+The stock-probe and Cartographer setup runs, OTA reviews, menu bootstrap
+repairs and individual core component installs write their terminal output to
+`/mnt/UDISK/printer_data/logs/k2-installer.log`. The next run rotates a log
+over 1 MiB to `k2-installer.log.1`. For an error in the separately
+downloaded bootstrap, capture the SSH output.
+
 ### Recommended clean starting point
 
 For the most predictable installation, start with freshly installed firmware

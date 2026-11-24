@@ -80,6 +80,11 @@ replace_checkout() {
 mkdir -p "$INSTALLER_PARENT"
 
 if [ ! -d "$INSTALLER_DIR/.git" ]; then
+    if [ -d "$INSTALLER_DIR" ] && [ -n "$(ls -A "$INSTALLER_DIR")" ]; then
+        echo "W: checkout metadata is missing; preserving the directory during recovery."
+        replace_checkout
+        exit 0
+    fi
     echo "I: cloning k2-improvements..."
     "$GIT_BIN" clone --single-branch --branch "$BRANCH" "$REPO_URL" "$INSTALLER_DIR"
     exit 0
@@ -87,7 +92,9 @@ fi
 
 echo "I: k2-improvements already exists; updating existing repo."
 if normal_update; then
-    exit 0
+    missing=$("$GIT_BIN" -C "$INSTALLER_DIR" ls-files --deleted -- menu.sh bootstrap installer)
+    if [ -z "$missing" ]; then exit 0; fi
+    echo "W: tracked installer files are missing after the update; recovering the checkout."
 fi
 
 echo "W: normal fast-forward update failed; starting bootstrap recovery."

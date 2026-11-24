@@ -22,8 +22,8 @@ menu_install_no_carto() {
     printf 'Installs the same stock PR Touch feature set while skipping components\n'
     printf 'that are already installed. It does NOT install or remove Cartographer.\n\n'
 
-    if is_cartographer; then
-        printf '%s\n\n' "$(c_yellow 'Cartographer is currently installed.')"
+    if has_cartographer_configuration; then
+        printf '%s\n\n' "$(c_yellow 'An existing Cartographer configuration was found.')"
         printf 'This installer does not remove Cartographer or restore PR Touch config.\n'
         printf 'Use the appropriate cleanup/conversion procedure before selecting the\n'
         printf 'stock-probe setup on a converted printer.\n\n'
@@ -49,6 +49,9 @@ menu_install_no_carto() {
     printf '\n%s\n' "$(c_yellow 'WARNING: this can take 5-15 minutes and will modify Klipper.')"
     printf '         Make sure no print is active.\n\n'
     if ! confirm "Proceed with stock probe / no-Cartographer setup?"; then return 0; fi
+    if [ "${bootstrap_needs_review:-0}" = 1 ]; then
+        migration_require_idle && ota_repair_bootstrap || return 1
+    fi
 
     local installed=0 skipped=0 failed=0
     local migration_installed_file="/tmp/k2-setup-installed.$$"
@@ -119,6 +122,7 @@ menu_install_no_carto() {
         done < "$migration_installed_file"
     fi
     rm -f "$migration_installed_file"
+    if [ "$failed" -eq 0 ]; then ota_setup_installed stock-probe || failed=$((failed+1)); fi
 
     printf '\n%s\n' '----------------------------------------------------------------'
     printf 'Stock-probe summary: %s installed, %s skipped, %s failed\n' \
@@ -133,4 +137,5 @@ menu_install_no_carto() {
         printf 'Review the output and power-cycle the printer before running G28.\n\n'
     fi
     press_enter
+    [ "$failed" -eq 0 ]
 }

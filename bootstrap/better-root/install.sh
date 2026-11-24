@@ -7,9 +7,9 @@ move_homedir() {
         if [ ! -d /mnt/UDISK/root ]; then
             mkdir /mnt/UDISK/root
         fi
-        rsync --remove-source-files -a /root/ /mnt/UDISK/root/
-        # just remove any overlays for the original root location
-        rm -fr /overlay/upper/root/*
+        # After an OTA both homes may contain settings. Preserve the UDISK
+        # copy on a collision and keep the original available for comparison.
+        rsync --ignore-existing -a /root/ /mnt/UDISK/root/
         # Back up the login database and change only root's home field.
         cp -p /etc/passwd "/etc/passwd.before-better-root.$(date +%s)"
         sed -i 's|^\(root:[^:]*:[^:]*:[^:]*:[^:]*\):/root:|\1:/mnt/UDISK/root:|' /etc/passwd

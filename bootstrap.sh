@@ -62,6 +62,7 @@ PY
 }
 
 download "$BASE_URL/bootstrap/bootstrap.sh" "$BOOTSTRAP_DIR/bootstrap.sh"
+download "$BASE_URL/bootstrap/prerequisites.sh" "$BOOTSTRAP_DIR/prerequisites.sh"
 download "$BASE_URL/bootstrap/repository-refresh.sh" "$BOOTSTRAP_DIR/repository-refresh.sh"
 download "$BASE_URL/bootstrap/entware/install.sh" "$BOOTSTRAP_DIR/entware/install.sh"
 download "$BASE_URL/bootstrap/entware/wget-ssl.py" "$BOOTSTRAP_DIR/entware/wget-ssl.py"

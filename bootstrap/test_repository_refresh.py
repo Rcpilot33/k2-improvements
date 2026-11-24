@@ -98,6 +98,32 @@ class RepositoryRefreshTests(unittest.TestCase):
             self.assertEqual((checkout / "tracked.txt").read_text(), "two\n")
             self.assertFalse(recovery.exists())
 
+    def test_missing_checkout_metadata_preserves_surviving_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            remote, _ = self.make_remote(root)
+            checkout, recovery = root / "checkout", root / "recovery"
+            checkout.mkdir()
+            (checkout / "settings").write_text("local")
+            self.run_refresh(remote, checkout, recovery)
+            self.assertEqual((recovery / "previous-checkout/settings").read_text(), "local")
+            self.assertTrue((checkout / ".git").is_dir())
+
+    def test_missing_menu_file_is_recovered_even_with_unchanged_head(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            remote, seed = self.make_remote(root)
+            self.git_run("mv", "tracked.txt", "menu.sh", cwd=seed)
+            self.commit_file(seed, "two", "add menu")
+            self.git_run("push", cwd=seed)
+            checkout, recovery = root / "checkout", root / "recovery"
+            self.git_run("clone", "--branch", "main", str(remote), str(checkout))
+            (checkout / "menu.sh").unlink()
+            (checkout / "settings").write_text("local")
+            self.run_refresh(remote, checkout, recovery)
+            self.assertTrue((checkout / "menu.sh").exists())
+            self.assertEqual((recovery / "previous-checkout/settings").read_text(), "local")
+
     def test_diverged_history_is_replaced_after_clean_clone(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
