@@ -9,13 +9,17 @@ case "$MODE" in
     --power) MODE=power ;;
     --refresh) MODE=refresh ;;
     --remove) MODE=remove ;;
-    '')
+    ''|--ota-repair)
         echo 'JimmyV nozzle-camera replacement:'
         echo '  1. Disable nozzle-camera AI only (Cartographer uses other USB)'
         echo '  2. Disable nozzle-camera AI AND protect nozzle USB rail power'
-        echo '  3. Remove protection (refit factory camera / rewire probe first)'
+        last_choice=2
+        if [ "$MODE" != --ota-repair ]; then
+            echo '  3. Remove protection (refit factory camera / rewire probe first)'
+            last_choice=3
+        fi
         echo '  0. Back'
-        printf 'Select [0-3]: '
+        printf 'Select [0-%s]: ' "$last_choice"
         read -r choice
         case "$choice" in
             1) MODE=ai-only ;;
@@ -24,7 +28,7 @@ case "$MODE" in
                 read -r answer
                 case "$answer" in y|Y|yes|YES) MODE=power ;; *) exit 2 ;; esac
                 ;;
-            3) MODE=remove ;;
+            3) [ "$MODE" != --ota-repair ] || exit 2; MODE=remove ;;
             *) exit 2 ;;
         esac
         ;;

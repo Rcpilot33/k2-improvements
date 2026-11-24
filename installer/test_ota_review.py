@@ -93,6 +93,45 @@ ota_review
         self.assertIn("Missing or incomplete components:\nkamp-adaptive-purge", result.stdout)
         self.assertEqual(original, self.snapshot.read_bytes())
 
+    def test_review_repairs_nozzle_protection_after_core_and_resumes_after_back(self):
+        original = b"firmware=1.1.6.4\nsetup=cartographer\noption=nozzle-usb-cartographer\n"
+        self.snapshot.write_bytes(original)
+        script = """
+has_cartographer_configuration() { return 0; }
+extra_line() { :; }
+ota_component_ready() {
+    case "$1" in
+        cartographer|nozzle-usb-cartographer) test -f "$MIGRATION_STATE_DIR/$1" ;;
+        *) return 0 ;;
+    esac
+}
+migration_apply_components() {
+    [ "$(cat "$1")" = cartographer ] && touch "$MIGRATION_STATE_DIR/cartographer"
+}
+sh() {
+    [ "$1" = "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/install.sh" ] &&
+    [ "$2" = --ota-repair ] && [ "$K2_DEFER_FIRMWARE_RESTART" = 0 ] &&
+    ota_component_ready cartographer || return 1
+    echo 'wiring prompt'
+    [ "$CHOICE" = back ] && return 2
+    [ "$CHOICE" = failed ] || touch "$MIGRATION_STATE_DIR/nozzle-usb-cartographer"
+}
+migration_mark_component_current() { echo "record $1"; }
+ota_review
+"""
+        for choice in ("back", "failed"):
+            result = self.shell(script, "y\n", CHOICE=choice)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("wiring prompt", result.stdout)
+            self.assertNotIn("record nozzle-usb-cartographer", result.stdout)
+            self.assertEqual(self.snapshot.read_bytes(), original)
+        result = self.shell(script, CHOICE="apply")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("record nozzle-usb-cartographer", result.stdout)
+        self.assertIn("Verified cartographer on firmware 1.1.8.0", result.stdout)
+        self.assertIn("option=nozzle-usb-cartographer", self.snapshot.read_text())
+        self.assertNotIn("wiring prompt", self.shell(script, CHOICE="back").stdout)
+
     def test_nested_idle_check_during_ota_repair(self):
         harness = """
 . scripts/stock_nozzle_camera.sh

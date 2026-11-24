@@ -77,7 +77,10 @@ Open **6 → 1** when the installer flags a firmware change. It compares the
 local installation with the saved setup and lists repairs for the
 stock probe or Cartographer and the previously installed extras. The local
 review works offline. Repairs that download missing packages require network
-access. When **6 → 1** updates an older installer, the reloaded menu opens
+access. If JimmyV nozzle-camera protection needs repair, the review asks which
+USB connector powers the probe. Select the matching wiring to restore protection
+and continue verification, or choose **Back** to leave the repair pending.
+When **6 → 1** updates an older installer, the reloaded menu opens
 the first setup review automatically. Confirm the probe setup
 and add any previously installed extras that the scan could no longer find.
 Use **6 → 4, Review and restore saved settings**, to run the same review after a same-version firmware reinstall.

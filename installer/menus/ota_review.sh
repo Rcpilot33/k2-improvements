@@ -110,6 +110,9 @@ ota_component_ready() {
                 bootstrap_link_ready /opt/etc/init.d/S50cartographer /etc/init.d/cartographer || return 1
             fi ;;
         cartographer-registration) is_cartographer_registered ;;
+        nozzle-usb-cartographer)
+            [ ! -f /tmp/k2-klippy-code-restart-required ] && is_nozzle_usb_cartographer &&
+            "${K2_PYTHON:-python3}" -B "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/verify_install.py" ;;
         fluidd)
             is_fluidd &&
             grep -Fxq '[include updates/fluidd.cfg]' "$PRINTER_CFG_DIR/moonraker.conf" &&
@@ -230,7 +233,7 @@ ota_bootstrap_preflight() {
 }
 
 ota_review() (
-    local setup options fw name missing manual extra tmp choice requirement
+    local setup options fw name missing manual extra tmp choice requirement repair_nozzle_usb=0
     OTA_REVIEW_ACTIVE=1
     fw=$(detect_installed_firmware)
     printf 'Reviewing local setup. Installed firmware: %s, saved baseline: %s\n' \
@@ -294,7 +297,10 @@ ota_review() (
                 fi
             fi
             case "$name" in
-                secure-auth|nozzle-usb-cartographer|nozzle-camera)
+                nozzle-usb-cartographer)
+                    info 'This review will ask how the Cartographer probe is wired before restoring nozzle-camera protection.'
+                    repair_nozzle_usb=1 ;;
+                secure-auth|nozzle-camera)
                     warn "Review $name in Optional extras to confirm the current hardware or SSH settings."
                     manual=1 ;;
                 *) printf '%s\n' "$name" >> "$tmp" ;;
@@ -311,6 +317,20 @@ ota_review() (
             esac
             confirm 'Repair the listed automatic components and perform their required restart?' || return 1
             K2_OTA_ACTIVITY_CONFIRM=1 migration_apply_components "$tmp" || return 1
+        fi
+        if [ "$repair_nozzle_usb" = 1 ] && ! ota_component_ready nozzle-usb-cartographer; then
+            # The hardware installer checks live print status. Recover Moonraker
+            # and Klipper first when they were part of the automatic repairs.
+            K2_DEFER_FIRMWARE_RESTART=0 sh "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/install.sh" --ota-repair || {
+                warn 'Nozzle-camera protection is still pending. Retry from this review.'
+                return 1
+            }
+            ota_component_ready nozzle-usb-cartographer && migration_mark_component_current nozzle-usb-cartographer || {
+                warn 'Could not verify or record nozzle-camera protection. Retry from this review.'
+                return 1
+            }
+            # The hardware installer completed a protected code restart.
+            rm -f "$MIGRATION_STATE_DIR/settings-restart-pending" || return 1
         fi
         [ "$manual" -eq 0 ] || return 1
     fi
