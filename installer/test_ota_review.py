@@ -92,6 +92,34 @@ ota_review
         self.assertIn("Missing or incomplete components:\nkamp-adaptive-purge", result.stdout)
         self.assertEqual(original, self.snapshot.read_bytes())
 
+    def test_moonraker_recovery_owns_restart_when_both_repairs_are_queued(self):
+        script = """
+INSTALLER_DIR=$PWD
+OTA_REVIEW_ACTIVE=1
+migration_require_idle() { return 0; }
+migration_reconcile_fluidd_layout() { return 0; }
+migration_mark_component_current() { echo "current $1"; }
+sh() {
+    echo "run ${1##*/features/} ${2:-}"
+    case "$1" in */moonraker/install.sh) return "$SERVICE_STATUS" ;; *) return 0 ;; esac
+}
+migration_apply_components "$MIGRATION_STATE_DIR/plan"
+"""
+        plan = self.state / "plan"
+        plan.write_bytes(b"better-init\n")
+        standalone = self.shell(script, SERVICE_STATUS="0")
+        self.assertEqual(standalone.returncode, 0, standalone.stderr)
+        self.assertNotIn("--defer-moonraker-service", standalone.stdout)
+        plan.write_bytes(b"better-init\nmoonraker-service\n")
+        for status in (0, 1):
+            with self.subTest(status=status):
+                result = self.shell(script, SERVICE_STATUS=str(status))
+                self.assertIn("run better-init/install.sh --defer-moonraker-service", result.stdout)
+                self.assertIn("run moonraker/install.sh --restore-service", result.stdout)
+                self.assertEqual(result.returncode, status, result.stderr)
+                self.assertEqual("current better-init" in result.stdout, status == 0)
+                self.assertEqual("Final protected restart" in result.stdout, status == 0)
+
     def test_changed_firmware_and_manual_review_do_not_pull(self):
         dispatch = """
 clear() { :; }

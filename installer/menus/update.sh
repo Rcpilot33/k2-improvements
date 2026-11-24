@@ -437,16 +437,7 @@ migration_repair_component() {
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 sh "$INSTALLER_DIR/$script"
             ;;
         moonraker-service)
-            # A retained mainline installation only needs its boot hooks restored.
-            [ -s "$PRINTER_CFG_DIR/moonraker.conf" ] &&
-            [ -f "$pwd_home/moonraker/moonraker/moonraker.py" ] &&
-            [ -x "$pwd_home/moonraker-env/bin/python" ] || {
-                warn 'Moonraker config, source, or environment is missing; restore from backup or review the core installer.'
-                return 1
-            }
-            ln -sfn "$INSTALLER_DIR/features/moonraker/moonraker.init" /etc/init.d/moonraker &&
-            ln -sfn "$INSTALLER_DIR/features/moonraker/moonraker.init" /opt/etc/init.d/S56moonraker &&
-            restart_moonraker_and_wait
+            HOME="$pwd_home" sh "$INSTALLER_DIR/features/moonraker/install.sh" --restore-service
             ;;
         moonraker-source)
             HOME="$pwd_home" python3 "$INSTALLER_DIR/features/moonraker/source.py" \
@@ -555,8 +546,9 @@ migration_repair_component() {
             fi
             ;;
         better-init)
+            shift
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
-                sh "$INSTALLER_DIR/features/better-init/install.sh"
+                sh "$INSTALLER_DIR/features/better-init/install.sh" "$@"
             ;;
         start-print-fast-stop)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
@@ -739,7 +731,12 @@ migration_apply_components() {
             continue
         fi
         printf '\n--- Refreshing %s ---\n' "$(migration_component_label "$component")"
-        if migration_repair_component "$component"; then
+        set -- "$component"
+        if [ "$component" = better-init ] && [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ] &&
+           grep -qxF moonraker-service "$components_file" && ! grep -qxF moonraker-service "$succeeded"; then
+            set -- "$component" --defer-moonraker-service
+        fi
+        if migration_repair_component "$@"; then
             migration_record_refreshed_component "$component" "$succeeded"
             component_restart_kind=$(migration_component_restart_kind "$component")
             if [ "$component_restart_kind" = moonraker ]; then
@@ -753,6 +750,11 @@ migration_apply_components() {
         else
             warn "$(migration_component_label "$component") refresh failed; it remains pending"
             failures=$((failures + 1))
+            if [ "$component" = moonraker-service ] && [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ]; then
+                rm -f "$succeeded" "$activated"
+                warn 'Moonraker service recovery failed; leaving the OTA review pending.'
+                return 1
+            fi
             if [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ]; then break; fi
         fi
     done 3< "$components_file"

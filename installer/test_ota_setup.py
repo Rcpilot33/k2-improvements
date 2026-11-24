@@ -1,6 +1,7 @@
 """Exercise installer recovery against a preserved printer configuration."""
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -68,6 +69,44 @@ ota_component_ready fluidd
         self.assertEqual(self.shell(script).returncode, 0)
         config.write_text("# updater include lost\n")
         self.assertNotEqual(self.shell(script).returncode, 0)
+
+    def test_restore_retained_moonraker_service_with_and_without_existing_config(self):
+        source = (ROOT / "features/moonraker/install.sh").read_text()
+        # Redirect printer system paths into a disposable filesystem.
+        source = re.sub(r"(?<![\w/}])/(etc|opt|usr|mnt|var|proc|lib)/", r"${FIXTURE}/\1/", source)
+        (self.base / "install.sh").write_text(source, newline="\n")
+        self.env["FIXTURE_PATH"] = self.base.as_posix()
+        script = r"""
+set -e
+export FIXTURE=$(cd "$FIXTURE_PATH" && pwd)
+cd "$FIXTURE"
+export HOME="$FIXTURE/mnt/UDISK/root"
+mkdir -p etc/init.d etc/rc.d opt/bin opt/etc/init.d var/run proc/83 lib libs \
+    mnt/UDISK/printer_data/config "$HOME/moonraker/moonraker" "$HOME/moonraker-env/bin"
+touch opt/bin/opkg "$HOME/moonraker/moonraker/moonraker.py" libs/test.so
+echo '#!/bin/sh' > "$HOME/moonraker-env/bin/python"
+chmod +x "$HOME/moonraker-env/bin/python"
+echo default-config > moonraker.conf
+echo 42 > var/run/moonraker.pid
+cat > moonraker.init <<'SH'
+#!/bin/sh
+if [ "$1" = start ]; then
+    echo 83 > "$FIXTURE/var/run/moonraker.pid"
+    printf '%s\0' python "$HOME/moonraker/moonraker/moonraker.py" > "$FIXTURE/proc/83/cmdline"
+fi
+SH
+chmod +x moonraker.init
+nc() { return 0; }
+export -f nc
+bash ./install.sh --restore-service
+"""
+        config = self.base / "mnt/UDISK/printer_data/config/moonraker.conf"
+        for expected in ("default-config\n", "# retained user settings\n"):
+            if config.exists():
+                config.write_bytes(expected.encode())
+            result = self.shell(script)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(config.read_bytes(), expected.encode())
 
     def test_repair_missing_includes_and_updater_and_retry_failed_layout(self):
         # Run the real installers with only the service and HTTP call replaced.
