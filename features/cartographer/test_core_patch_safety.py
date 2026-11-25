@@ -14,13 +14,37 @@ PATCHES = pathlib.Path(__file__).with_name("patches")
 
 
 class CorePatchSafetyTests(unittest.TestCase):
-    def test_factory_home_default_mesh_load_is_scoped_to_the_single_z_conversion(self):
+    def load_bed_mesh(self):
         package = types.ModuleType("bed_mesh_test")
         package.probe = types.ModuleType("probe")
         spec = importlib.util.spec_from_file_location("bed_mesh_test.bed_mesh", PATCHES / "bed_mesh.py")
         module = importlib.util.module_from_spec(spec)
         with patch.dict(sys.modules, {"bed_mesh_test": package}):
             spec.loader.exec_module(module)
+        return module
+
+    def test_touchscreen_get_mesh_tracks_active_probed_matrix(self):
+        module = self.load_bed_mesh()
+        config = Mock()
+        config.getfloat.side_effect = lambda name, default: default
+        hooks = {}
+        webhooks = config.get_printer.return_value.lookup_object.return_value
+        webhooks.register_endpoint.side_effect = hooks.__setitem__
+        with patch.object(module, "BedMeshCalibrate"), patch.object(module, "ProfileManager"), patch.object(module, "MoveSplitter"):
+            bed = module.BedMesh(config)
+        self.assertIn("bed_mesh/dump_mesh", hooks)
+        active = Mock()
+        active.get_mesh_params.return_value = dict(min_x=0, min_y=0, max_x=5, max_y=5)
+        points = [[0.1, 0.2], [0.3, 0.4]]
+        active.get_probed_matrix.return_value = points
+        for mesh, expected in ((None, [[]]), (active, points), (None, [[]])):
+            bed.set_mesh(mesh)
+            request = Mock()
+            hooks["get_mesh"](request)
+            request.send.assert_called_once_with({"probed_matrix": expected})
+
+    def test_factory_home_default_mesh_load_is_scoped_to_the_single_z_conversion(self):
+        module = self.load_bed_mesh()
         for single_z, homing, profile, expected_load in (
             (True, True, "default", False), (True, False, "default", True),
             (True, True, "textured", True), (False, True, "default", True),

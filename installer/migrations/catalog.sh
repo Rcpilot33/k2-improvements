@@ -4,6 +4,7 @@
 
 migration_catalog() {
     cat <<'EOF'
+cartographer-touchscreen-get-mesh-v1|cartographer|is_cartographer|Restore the Creality touchscreen mesh read used during self-check to prevent a missing get_mesh callback (2184)
 moonraker-maintained-fork-v1|moonraker-source|is_managed_moonraker|Switch existing managed Moonraker to Rcpilot33/moonraker k2, preserving printer configuration and virtualenv; restart Moonraker only
 virtual-sdcard-ignored-tool-position-v2|virtual-sdcard-guard|is_virtual_sdcard_guard|Count ignored tool-selection lines in the saved file offset so refill and pause resumes start at complete G-code lines
 resume-off-fan-defaults-v1|macros|is_macros|Restore zero-speed model and side fans without generating an empty M106 speed after refill or pause

@@ -121,8 +121,9 @@ class BedMesh:
         self.gcode.register_command(
             'BED_MESH_OFFSET', self.cmd_BED_MESH_OFFSET,
             desc=self.cmd_BED_MESH_OFFSET_help)
-        # Register dump webhooks
+        # The Creality touchscreen reads the active probed matrix during self-check.
         webhooks = self.printer.lookup_object('webhooks')
+        webhooks.register_endpoint("get_mesh", self._handle_get_mesh)
         webhooks.register_endpoint(
             "bed_mesh/dump_mesh", self._handle_dump_request
         )
@@ -131,6 +132,8 @@ class BedMesh:
         gcode_move.set_move_transform(self)
         # initialize status dict
         self.update_status()
+    def _handle_get_mesh(self, web_request):
+        web_request.send({'probed_matrix': self.status['probed_matrix']})
     def handle_connect(self):
         self.toolhead = self.printer.lookup_object('toolhead')
         self.bmc.print_generated_points(logging.info, truncate=True)
