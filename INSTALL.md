@@ -48,6 +48,51 @@ Back up the printer configuration, custom macros, saved meshes, calibration
 data, and any other files you want to keep. A factory reset and some recovery
 operations are destructive.
 
+### Recover after a firmware OTA
+
+After a firmware OTA on a configured K2 Plus, open the existing installer.
+Before the menus open, it checks the Entware packages and tools, SFTP, PATH,
+boot links, root home, printer directories and installer checkout. It offers
+to repair missing prerequisites. If the checkout itself cannot launch, rerun
+the bootstrap for your installed branch.
+
+Before a no-wipe OTA, choose **6 → 5, Save current setup before a firmware OTA**.
+This captures the installed options and checks the archived settings against the
+live files, even when component updates are pending on the current firmware.
+The first successful setup verification also creates a settings backup. Use
+**6 → 5** again after tuning to capture the latest values. The archive lives
+in `/mnt/UDISK/root/.k2-improvements/installer-state/updater/` and contains
+the setup inventory and the following files from `config/custom/` when present:
+`overrides.cfg`, `cartographer.cfg`, `prtouch_global_z.json`,
+`plate-workflow-slicers.json`, and `kamp_settings.cfg`.
+
+During recovery, the review compares those files before component repairs.
+For each difference, choose **y** to restore the saved file, **k** to keep the
+current state, or **Enter** to return and review later. Accepted restores take
+effect with a protected restart. Recovery keeps the pre-OTA archive. An explicit
+new backup retains the preceding one as `.previous.zip`. The printer's active
+`printer.cfg` continues to supply its native calibration and `SAVE_CONFIG` values.
+
+Open **6 → 1** when the installer flags a firmware change. It compares the
+local installation with the saved setup and lists repairs for the
+stock probe or Cartographer and the previously installed extras. The local
+review works offline. Repairs that download missing packages require network
+access. If JimmyV nozzle-camera protection needs repair, the review asks which
+USB connector powers the probe. Select the matching wiring to restore protection
+and continue verification, or choose **Back** to leave the repair pending.
+When **6 → 1** updates an older installer, the reloaded menu opens
+the first setup review automatically. Confirm the probe setup
+and add any previously installed extras that the scan could no longer find.
+Use **6 → 4, Review and restore saved settings**, to run the same review after a same-version firmware reinstall.
+The installer records the new firmware only after the checks pass, including
+Klipper Ready, macro registration, Fluidd macro grouping and the Moonraker updaters.
+
+The stock-probe and Cartographer setup runs, OTA reviews, menu bootstrap
+repairs and individual core component installs write their terminal output to
+`/mnt/UDISK/printer_data/logs/k2-installer.log`. The next run rotates a log
+over 1 MiB to `k2-installer.log.1`. For an error in the separately
+downloaded bootstrap, capture the SSH output.
+
 ### Recommended clean starting point
 
 For the most predictable installation, start with freshly installed firmware

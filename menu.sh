@@ -50,23 +50,23 @@ if [ "$ROOT_HOME" = "/mnt/UDISK/root" ] && [ "${HOME:-}" != "/mnt/UDISK/root" ];
     cd "$HOME" 2>/dev/null || true
 fi
 
-. "$SCRIPT_DIR/installer/lib/common.sh"
-. "$SCRIPT_DIR/installer/detect/printer_fw.sh"
-. "$SCRIPT_DIR/installer/detect/cartographer.sh"
-. "$SCRIPT_DIR/installer/detect/features.sh"
-. "$SCRIPT_DIR/installer/menus/status.sh"
-. "$SCRIPT_DIR/installer/menus/features.sh"
-. "$SCRIPT_DIR/installer/menus/extras.sh"
-. "$SCRIPT_DIR/installer/menus/install_no_carto.sh"
-. "$SCRIPT_DIR/installer/menus/install_all.sh"
-. "$SCRIPT_DIR/installer/menus/carto_fw.sh"
-. "$SCRIPT_DIR/installer/menus/factory_reset.sh"
-. "$SCRIPT_DIR/installer/menus/workflows.sh"
-. "$SCRIPT_DIR/installer/migrations/catalog.sh"
-. "$SCRIPT_DIR/installer/menus/update.sh"
-. "$SCRIPT_DIR/installer/menus/main.sh"
+for module in \
+    installer/lib/common.sh \
+    installer/detect/printer_fw.sh installer/detect/cartographer.sh installer/detect/features.sh \
+    installer/menus/status.sh installer/menus/features.sh installer/menus/extras.sh \
+    installer/menus/install_no_carto.sh installer/menus/install_all.sh installer/menus/carto_fw.sh \
+    installer/menus/factory_reset.sh installer/menus/workflows.sh installer/migrations/catalog.sh \
+    installer/menus/update.sh bootstrap/prerequisites.sh installer/menus/ota_review.sh installer/menus/main.sh
+do
+    if [ ! -s "$SCRIPT_DIR/$module" ]; then
+        echo "E: missing $module. Rerun bootstrap for the installed branch to recover the checkout." >&2
+        exit 1
+    fi
+    . "$SCRIPT_DIR/$module"
+done
 
 require_root
 ensure_path
+ota_bootstrap_preflight
 migration_offer_on_startup
 main_menu

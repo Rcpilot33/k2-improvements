@@ -30,21 +30,39 @@ is_nozzle_usb_cartographer() {
 
 is_entware()       { [ -x /opt/bin/opkg ]; }
 is_better_root()   { grep -q '^root:.*:/mnt/UDISK/root:' /etc/passwd 2>/dev/null; }
+has_cartographer_configuration() {
+    [ -f "$PRINTER_CFG_DIR/custom/cartographer.cfg" ] ||
+    grep -q '^\[cartographer\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null
+}
 is_cartographer() {
     local klipper_dir="${KLIPPER_DIR:-/usr/share/klipper}"
-    local config_present=1
-
-    if [ -f "$PRINTER_CFG_DIR/custom/cartographer.cfg" ] || \
-       grep -q '^\[cartographer\]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null; then
-        config_present=0
-    fi
-
-    [ "$config_present" -eq 0 ] &&
+    has_cartographer_configuration &&
     [ -e "$klipper_dir/klippy/extras/cartographer.py" ] &&
     grep -q '^class TriggerDispatch' "$klipper_dir/klippy/mcu.py" 2>/dev/null
 }
 is_moonraker()     { [ -d /mnt/UDISK/printer_data/moonraker ] || [ -f /mnt/UDISK/printer_data/config/moonraker.conf ]; }
+cartographer_core_ready() {
+    is_cartographer &&
+    [ -s "$PRINTER_CFG_DIR/printer.cfg" ] &&
+    ! grep -q '^[[:space:]]*\[prtouch_v3\][[:space:]]*$' "$PRINTER_CFG_DIR/printer.cfg"
+}
 is_managed_moonraker() { [ -d "${HOME:-/mnt/UDISK/root}/moonraker/.git" ]; }
+is_cartographer_registered() {
+    local custom="$PRINTER_CFG_DIR/custom"
+    [ ! -e "$custom/.cartographer-registration-pending" ] &&
+    [ -f "${KLIPPER_DIR:-/usr/share/klipper}/klippy/extras/k2_cartographer_touchscreen.py" ] &&
+    [ -f "$custom/k2_cartographer_touchscreen.cfg" ] &&
+    grep -Fxq '[include k2_cartographer_touchscreen.cfg]' "$custom/main.cfg" &&
+    is_carto_macros &&
+    grep -Fxq '[include custom/main.cfg]' "$PRINTER_CFG_DIR/printer.cfg" || return 1
+    if ! grep -q '^\[cartographer\]' "$PRINTER_CFG_DIR/printer.cfg"; then
+        [ -f "$custom/cartographer.cfg" ] &&
+        grep -Fxq '[include cartographer.cfg]' "$custom/main.cfg" || return 1
+    fi
+    grep -Fxq '[update_manager cartographer]' "$PRINTER_CFG_DIR/updates/cartographer.cfg" &&
+    grep -Fxq '[include updates/cartographer.cfg]' "$PRINTER_CFG_DIR/moonraker.conf" &&
+    grep -Fxq cartographer "${PRINTER_CFG_DIR%/*}/moonraker.asvc"
+}
 is_fluidd()        { grep -ilq 'crealityk2' /usr/share/fluidd/assets/*.js 2>/dev/null; }
 is_macros() {
     local custom="$PRINTER_CFG_DIR/custom"
@@ -54,6 +72,7 @@ is_macros() {
     [ -e "$custom/bed_mesh.cfg" ] &&
     [ -f "$custom/overrides.cfg" ] &&
     [ -f "$main" ] &&
+    grep -Fxq '[include custom/main.cfg]' "$PRINTER_CFG_DIR/printer.cfg" 2>/dev/null &&
     grep -q '^\[include start_print\.cfg\]$' "$main" 2>/dev/null &&
     grep -q '^\[include m191\.cfg\]$' "$main" 2>/dev/null &&
     grep -q '^\[include bed_mesh\.cfg\]$' "$main" 2>/dev/null &&
@@ -86,7 +105,12 @@ is_kamp() {
     grep -q '^\[include Line_Purge\.cfg\]$' "$main" 2>/dev/null &&
     grep -rEhq '^\[exclude_object\]' "$PRINTER_CFG_DIR" 2>/dev/null
 }
-is_screws_tilt()   { [ -L "$PRINTER_CFG_DIR/custom/screws_tilt_adjust.cfg" ]; }
+is_screws_tilt() {
+    [ -f "$PRINTER_CFG_DIR/custom/screws_tilt_adjust.cfg" ] &&
+    [ -L "$KLIPPER_DIR/klippy/extras/screws_tilt_adjust.py" ] &&
+    [ -f "$KLIPPER_DIR/klippy/extras/screws_tilt_adjust.py" ] &&
+    grep -Fxq '[include screws_tilt_adjust.cfg]' "$PRINTER_CFG_DIR/custom/main.cfg" 2>/dev/null
+}
 is_screws_tilt_firmware_restart() {
     is_screws_tilt &&
     [ -f /mnt/UDISK/root/.k2-improvements/installer-state/screws-tilt-firmware-restart-v1 ]
@@ -167,8 +191,10 @@ is_memory_diagnostics() {
 is_better_init()   { [ -f /etc/profile.d/better-init.sh ]; }
 
 is_surface_wrap()  { grep -q 'surface-selection wrapper' "$PRINTER_CFG_DIR/custom/start_print.cfg" 2>/dev/null; }
-is_carto_macros()  { [ -L "$PRINTER_CFG_DIR/custom/cartographer_macros.cfg" ] || \
-                     [ -f "$PRINTER_CFG_DIR/custom/cartographer_macros.cfg" ]; }
+is_carto_macros() {
+    [ -f "$PRINTER_CFG_DIR/custom/cartographer_macros.cfg" ] &&
+    grep -Fxq '[include cartographer_macros.cfg]' "$PRINTER_CFG_DIR/custom/main.cfg" 2>/dev/null
+}
 has_settings_ui_overlay() {
     local marker version
     marker="${FLUIDD_DIR:-/usr/share/fluidd}/k2-ui-overlay-support.txt"
@@ -256,8 +282,8 @@ is_essentials_core() {
 
 # Human-readable setup selected through the recommended installers.
 detect_install_profile() {
-    if is_cartographer; then
-        if is_essentials_core; then
+    if has_cartographer_configuration; then
+        if cartographer_core_ready && is_cartographer_registered && is_essentials_core; then
             echo "Cartographer"
         else
             echo "Cartographer (incomplete)"

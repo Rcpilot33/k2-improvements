@@ -58,8 +58,8 @@ upstream macro:
    inside the intersection of the configured machine envelope and the active
    bed mesh. The macro tries the front, left, rear, and right sides of the
    print in that order. It warns and skips the adaptive purge if object
-   geometry is missing, settings are invalid, axes are not homed, or no safe
-   corridor exists.
+   geometry is missing, settings are invalid, or axes are not homed. If no
+   corridor exists, it tries the front-center fallback described below.
 4. Actual first-layer extrusion is added to the occupied boundary before the
    purge location is selected. This covers brims, skirts, supports, models,
    and prime towers, even without exclude-object geometry.
@@ -96,6 +96,23 @@ when Cartographer is installed. No slicer variable or extra setup choice is
 required beyond the normal object polygons already required by KAMP. The
 managed `START_PRINT` also enlarges the adaptive margin to contain the chosen
 purge margin, the 0.5 mm boundary inset, and a small rounding-safe slack.
+
+## Automatic front-center fallback
+
+When a known print footprint leaves no adaptive purge corridor (for example,
+a 350 x 350 mm first-layer test), KAMP automatically tries the CP 7.3-style
+front-center purge at Y=-1, from X150 to X200, followed by its wipe to X205.
+It uses the stock 0.3 mm line height and Z0 wipe, KAMP `flow_rate` for the
+speed calculations, and `tip_distance` for any initial filament advance.
+It restores the incoming G-code modes and extrusion origin afterward.
+
+The complete path must fit configured X150..205, Y=-1, Z0..3 travel. If Y=-1
+is unavailable (including Cartographer configurations with Y minimum -0.4),
+it reports that the purge was skipped and lets the print continue. It does
+not widen travel limits. Invalid settings, a cold nozzle, insufficient
+extrusion allowance, or a footprint extending below Y0 also skip this purge.
+This line can be outside the active mesh; the console reports that explicitly.
+Normal adaptive purge placement remains the first choice.
 
 ## Optional stock-purge fallback
 
@@ -203,8 +220,8 @@ selections are stored in `custom/overrides.cfg` so they survive reinstalls.
 
 The boundary guard includes the complete purge and string-break path when
 choosing a location. A full-bed print, an excessively large purge amount, or a
-large margin can leave no valid corridor; in that case it warns and skips the
-adaptive purge instead of commanding an out-of-bounds move.
+large margin can leave no valid corridor; in that case it tries the automatic
+front-center fallback, skipping it if that path cannot be used safely.
 
 With Cartographer, `START_PRINT` automatically expands the adaptive mesh to at
 least `variable_purge_margin + 0.5mm`. The extra 0.5mm matches the purge

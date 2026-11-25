@@ -107,6 +107,11 @@ main_menu() {
         if [ "$pending_updates" -gt 0 ]; then
             update_state="$(c_yellow "$pending_updates ACTION(S) PENDING") | $update_state"
         fi
+        if command -v ota_review_notice >/dev/null 2>&1; then
+            local notice
+            notice=$(ota_review_notice)
+            [ -z "$notice" ] || update_state="$(c_yellow "$notice") | $update_state"
+        fi
 
         ui_rule
         printf ' %s\n' "$(c_cyan 'K2 PLUS COMPATIBILITY INSTALLER')"

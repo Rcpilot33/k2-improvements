@@ -237,7 +237,7 @@ class ProtectionTests(unittest.TestCase):
         self.assertNotIn(b"host-started", missing.stdout)
 
     @unittest.skipUnless(Path(BASH).exists(), "bash required")
-    def test_shell_refresh_energizes_existing_power_mode_before_restart(self):
+    def test_shell_refresh_and_ota_wiring_choices(self):
         repo = self.base / "repo"
         directory = repo / "installer/extras/nozzle-usb-cartographer"
         directory.mkdir(parents=True)
@@ -253,7 +253,10 @@ class ProtectionTests(unittest.TestCase):
         (helpers / "klippy_code_restart.sh").write_text(
             'printf "restart\\n" >> "$K2_TEST_EVENTS"\n', newline="\n")
         python = self.base / "python.sh"
-        python.write_text('#!/bin/sh\nprintf "configure:%s\\n" "$2" >> "$K2_TEST_EVENTS"\n', newline="\n")
+        python.write_text('#!/bin/sh\nprintf "configure:%s\\n" "$2" >> "$K2_TEST_EVENTS"\n'
+                          'case "$2" in ai-only) hold=0 ;; power) hold=1 ;; refresh) exit 0 ;; esac\n'
+                          'echo "# usb_power_hold: $hold" > "$PRINTER_CFG_DIR/custom/k2_nozzle_camera_guard.cfg"\n',
+                          newline="\n")
         hook = self.system / "etc/init.d/k2-nozzle-usb"
         hook.write_text('#!/bin/sh\nprintf "power:%s\\n" "$1" >> "$K2_TEST_EVENTS"\n', newline="\n")
         (self.custom / "k2_nozzle_camera_guard.cfg").write_text("# usb_power_hold: 1\n", newline="\n")
@@ -263,6 +266,20 @@ class ProtectionTests(unittest.TestCase):
         result = subprocess.run([BASH, script.as_posix(), "--refresh"], env=env, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(events.read_text().splitlines(), ["configure:refresh", "power:start", "restart"])
+
+        for answer, mode in ((b"1\n", "ai-only"), (b"2\ny\n", "power"),
+                             (b"0\n", None), (b"2\nn\n", None), (b"3\n", None)):
+            with self.subTest(answer=answer):
+                events.unlink(missing_ok=True)
+                result = subprocess.run([BASH, script.as_posix(), "--ota-repair"], input=answer,
+                                        env=env, capture_output=True)
+                self.assertNotIn(b"Remove protection", result.stdout)
+                self.assertEqual(result.returncode, 0 if mode else 2, result.stderr)
+                if mode:
+                    expected = ["configure:" + mode] + (["power:start"] if mode == "power" else []) + ["restart"]
+                    self.assertEqual(events.read_text().splitlines(), expected)
+                else:
+                    self.assertFalse(events.exists())
 
     @unittest.skipUnless(Path(BASH).exists(), "bash required")
     def test_completed_v1_still_offers_boot_fix_and_old_hook_is_not_current(self):

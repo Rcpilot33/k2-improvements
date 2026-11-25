@@ -26,7 +26,9 @@ echo 'export PATH=/mnt/UDISK/bin:$PATH' > /etc/profile.d/better-init.sh
 # supervisorctl so an older empty or stale command cannot survive a refresh.
 # During a fresh setup only Creality's legacy Moonraker exists at this point;
 # leave it alone because the mainline Moonraker installer runs later.
-if [ -f /mnt/UDISK/root/moonraker/moonraker/moonraker.py ] && \
+if [ "${1:-}" = --defer-moonraker-service ]; then
+    echo "I: the queued Moonraker service repair will start and check Moonraker"
+elif [ -f /mnt/UDISK/root/moonraker/moonraker/moonraker.py ] && \
    [ -x /etc/init.d/moonraker ]; then
     old_moonraker_pid=
     if [ -r /var/run/moonraker.pid ]; then

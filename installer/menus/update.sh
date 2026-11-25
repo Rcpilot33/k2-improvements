@@ -292,6 +292,9 @@ migration_write_atomic() {
 migration_mark_component_current() {
     local component temporary
     component="$1"
+    case " ${OTA_OPTIONS:-} " in
+        *" $component "*) ota_option_ready "$component" && ota_record_option "$component" || return 1 ;;
+    esac
     # Components without catalog entries have nothing to acknowledge. Their
     # successful install must not produce a false incomplete-update warning.
     if ! migration_catalog | awk -F'|' -v component="$component" \
@@ -376,24 +379,8 @@ migration_print_firmware_notice() {
 }
 
 printer_activity_state() {
-    local api query
-    api="${MOONRAKER_URL:-http://127.0.0.1:7125}"
-    if [ -x /opt/bin/curl ]; then
-        query=$(/opt/bin/curl -fsS --max-time 3 \
-            "$api/printer/objects/query?print_stats=state" 2>/dev/null || true)
-    elif command -v curl >/dev/null 2>&1; then
-        query=$(curl -fsS --max-time 3 \
-            "$api/printer/objects/query?print_stats=state" 2>/dev/null || true)
-    else
-        echo unknown
-        return
-    fi
-    case "$query" in
-        *'"state": "printing"'*|*'"state":"printing"'*) echo printing ;;
-        *'"state": "paused"'*|*'"state":"paused"'*) echo paused ;;
-        *'"state":'*) echo idle ;;
-        *) echo unknown ;;
-    esac
+    . "$INSTALLER_DIR/scripts/stock_nozzle_camera.sh"
+    k2_print_activity_state
 }
 
 migration_require_idle() {
@@ -418,19 +405,30 @@ migration_repair_component() {
         warn 'ATC removal is optional; use Optional extras -> Remove legacy Axis Twist'
         return 1
     fi
-    local component pwd_home
+    local component pwd_home script
     component="$1"
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
     [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
     [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
 
     case "$component" in
+        skip-setup|prtouch-cleanup|cartographer-registration)
+            case "$component" in
+                skip-setup) script=features/skip-setup/install.sh ;;
+                prtouch-cleanup) script=installer/extras/prtouch-cleanup/install.sh ;;
+                cartographer-registration) script=features/cartographer/register.sh ;;
+            esac
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 sh "$INSTALLER_DIR/$script"
+            ;;
+        moonraker-service)
+            HOME="$pwd_home" sh "$INSTALLER_DIR/features/moonraker/install.sh" --restore-service
+            ;;
         moonraker-source)
             HOME="$pwd_home" python3 "$INSTALLER_DIR/features/moonraker/source.py" \
                 "$pwd_home/moonraker" --migrate
             ;;
         cartographer)
-            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 K2_KEEP_CARTOGRAPHER_CONFIG="${OTA_REVIEW_ACTIVE:-0}" \
                 sh "$INSTALLER_DIR/features/cartographer/install.sh"
             ;;
         macros)
@@ -532,8 +530,9 @@ migration_repair_component() {
             fi
             ;;
         better-init)
+            shift
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
-                sh "$INSTALLER_DIR/features/better-init/install.sh"
+                sh "$INSTALLER_DIR/features/better-init/install.sh" "$@"
             ;;
         start-print-fast-stop)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
@@ -561,16 +560,7 @@ migration_component_restart_kind() {
 }
 
 migration_restart_moonraker() {
-    /etc/init.d/moonraker restart || return 1
-    count=0
-    while ! nc -z 127.0.0.1 7125; do
-        if [ "$count" -ge 60 ]; then
-            warn 'Moonraker did not return after its restart'
-            return 1
-        fi
-        count=$((count + 1))
-        sleep 1
-    done
+    restart_moonraker_and_wait
 }
 
 # Moonraker persists each web updater's remote version and download URL. A
@@ -725,7 +715,12 @@ migration_apply_components() {
             continue
         fi
         printf '\n--- Refreshing %s ---\n' "$(migration_component_label "$component")"
-        if migration_repair_component "$component"; then
+        set -- "$component"
+        if [ "$component" = better-init ] && [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ] &&
+           grep -qxF moonraker-service "$components_file" && ! grep -qxF moonraker-service "$succeeded"; then
+            set -- "$component" --defer-moonraker-service
+        fi
+        if migration_repair_component "$@"; then
             migration_record_refreshed_component "$component" "$succeeded"
             component_restart_kind=$(migration_component_restart_kind "$component")
             if [ "$component_restart_kind" = moonraker ]; then
@@ -739,6 +734,12 @@ migration_apply_components() {
         else
             warn "$(migration_component_label "$component") refresh failed; it remains pending"
             failures=$((failures + 1))
+            if [ "$component" = moonraker-service ] && [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ]; then
+                rm -f "$succeeded" "$activated"
+                warn 'Moonraker service recovery failed; leaving the OTA review pending.'
+                return 1
+            fi
+            if [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ]; then break; fi
         fi
     done 3< "$components_file"
 
@@ -750,6 +751,10 @@ migration_apply_components() {
 
     if [ -f /tmp/k2-klippy-code-restart-required ]; then
         restart_kind=code
+    fi
+
+    if [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ] && [ -f "$MIGRATION_STATE_DIR/settings-restart-pending" ] && [ "$restart_kind" != code ]; then
+        restart_kind=config
     fi
 
     if [ "$moonraker_restart_required" -eq 1 ] && \
@@ -776,6 +781,9 @@ migration_apply_components() {
 
     if { [ "$restart_kind" = moonraker ] && migration_restart_moonraker; } || \
        { [ "$restart_kind" != moonraker ] && K2_DEFER_FIRMWARE_RESTART=0 sh "$restart_script"; }; then
+        if [ "${OTA_REVIEW_ACTIVE:-0}" = 1 ]; then
+            rm -f "$MIGRATION_STATE_DIR/settings-restart-pending" || return 1
+        fi
         printf '\n--- Verifying post-restart component state ---\n'
         while IFS= read -r component; do
             if migration_reconcile_fluidd_layout "$component"; then
@@ -999,14 +1007,28 @@ menu_update_installer() {
         clear
         ui_heading 'UPDATE INSTALLER'
         printf '\n'
-        ui_menu_item 1 'Update and review required actions'
+        local notice
+        notice=$(ota_review_notice)
+        if [ -n "$notice" ]; then
+            ui_menu_item 1 'Review installed setup and firmware change' "$notice"
+        else
+            ui_menu_item 1 'Update and review required actions'
+        fi
         ui_menu_item 2 'Review pending update actions'
         ui_menu_item 3 'Update installer files only'
-        printf '\n  0. Back\n\nSelect [0-3]: '
+        ui_menu_item 4 'Review and restore saved settings'
+        ui_menu_item 5 'Save current setup before a firmware OTA'
+        printf '\n  0. Back\n\nSelect [0-5]: '
         read_prompt choice
         case "$choice" in
-            1) migration_pull_installer yes ;;
+            1|4)
+                if [ "$choice" = 4 ] || [ -n "$notice" ]; then
+                    menu_review_setup
+                else
+                    migration_pull_installer yes
+                fi ;;
             2) menu_update_results ;;
+            5) run_logged_install ota-backup ota_save_before_update; press_enter ;;
             3)
                 printf '\nUpdating files without repairs can leave installed generated files behind.\n'
                 printf 'Pending actions will remain available from this menu.\n\n'
@@ -1018,13 +1040,31 @@ menu_update_installer() {
     done
 }
 
+menu_review_setup() {
+    local status=0
+    run_logged_install ota-review ota_review || status=$?
+    bootstrap_needs_review=0
+    ota_bootstrap_check || bootstrap_needs_review=1
+    if bootstrap_home_ready; then export HOME=/mnt/UDISK/root; fi
+    press_enter
+    return "$status"
+}
+
 migration_offer_on_startup() {
-    local old new branch temporary
+    local old new branch temporary setup
     if [ -f "$MIGRATION_STATE_DIR/review-after-reload" ]; then
         rm -f "$MIGRATION_STATE_DIR/review-after-reload"
+        [ "${bootstrap_needs_review:-0}" = 0 ] || return 0
+        setup=$(sed -n 's/^setup=//p' "$OTA_SNAPSHOT" 2>/dev/null) || setup=
+        if [ -z "$(ota_baseline_firmware)" ] || [ ! -f "$MIGRATION_STATE_DIR/settings-$setup.zip" ] || [ -n "$(ota_review_notice)" ]; then
+            menu_review_setup || return 0
+            # Back on the first review leaves the setup unverified.
+            [ -n "$(ota_baseline_firmware)" ] && [ -z "$(ota_review_notice)" ] || return 0
+        fi
         menu_update_results
         return
     fi
+    [ "${bootstrap_needs_review:-0}" = 0 ] && [ -z "$(ota_review_notice)" ] || return 0
     # The pre-tracker updater could not write a handoff record before pulling
     # this code. A fast-forward pull normally leaves ORIG_HEAD available, so
     # recover it for the first report when possible. The catalog remains

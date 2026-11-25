@@ -8,9 +8,9 @@ menu_install_paths() {
         ui_heading 'INSTALL OR CHANGE SETUP'
         printf '\n Current setup: %s\n\n' "$(c_cyan "$(detect_install_profile)")"
 
-        if is_cartographer; then
+        if has_cartographer_configuration; then
             ui_menu_item 1 'Return to stock PR Touch' "$(c_yellow 'RECOVERY - PLANNED')"
-            ui_menu_item 2 'Repair or complete Cartographer setup' "$(state_installed)"
+            ui_menu_item 2 'Repair or complete Cartographer setup' "$(state_available)"
         else
             local profile
             profile="$(detect_install_profile)"
@@ -30,13 +30,13 @@ menu_install_paths() {
         read_prompt c
         case "$c" in
             1)
-                if is_cartographer; then
+                if has_cartographer_configuration; then
                     show_return_to_stock_planned
                 else
-                    menu_install_no_carto
+                    run_logged_install stock-probe menu_install_no_carto
                 fi
                 ;;
-            2) menu_install_all ;;
+            2) run_logged_install cartographer menu_install_all ;;
             0|b|B|q|Q) return ;;
             *) ;;
         esac

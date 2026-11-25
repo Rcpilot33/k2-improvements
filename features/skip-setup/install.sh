@@ -8,4 +8,4 @@ jq \
     /mnt/UDISK/creality/userdata/config/system_config.json \
     > $TMPFILE
 mv $TMPFILE /mnt/UDISK/creality/userdata/config/system_config.json
-jq . /mnt/UDISK/creality/userdata/config/system_config.json
+jq '.user_info | {self_test_sw, screensaver}' /mnt/UDISK/creality/userdata/config/system_config.json

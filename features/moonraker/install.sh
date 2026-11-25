@@ -20,7 +20,7 @@ if [ -f /etc/profile.d/entware.sh ]; then
     echo ${PATH} | grep -q /opt || . /etc/profile.d/entware.sh
 fi
 
-if ! command -v git > /dev/null; then
+if [ "${1:-}" != --restore-service ] && ! command -v git > /dev/null; then
     opkg install git
 fi
 
@@ -81,7 +81,7 @@ install_libs() {
 
 replace_moonraker() {
     progress "Stopping legacy mooonraker ..."
-    /etc/init.d/moonraker stop
+    if [ -x /etc/init.d/moonraker ]; then /etc/init.d/moonraker stop; fi
 
     progress "Replacing legacy mooonraker with mainline ..."
 
@@ -91,7 +91,9 @@ replace_moonraker() {
     ln -sf ${SCRIPT_DIR}/moonraker.init /opt/etc/init.d/S56moonraker
 
     # full copy not symlink here
-    cp ${SCRIPT_DIR}/moonraker.conf /mnt/UDISK/printer_data/config/moonraker.conf
+    if [ "${1:-}" != --restore-service ] || [ ! -e /mnt/UDISK/printer_data/config/moonraker.conf ]; then
+        cp "${SCRIPT_DIR}/moonraker.conf" /mnt/UDISK/printer_data/config/moonraker.conf
+    fi
 
     progress "Starting mooonraker ..."
     /etc/init.d/moonraker start
@@ -118,7 +120,15 @@ modify_moonraker_asvc() {
 wait_for_moonraker() {
     progress "Waiting for moonraker to start ..."
     count=0
-    while ! nc -z 127.0.0.1 7125; do
+    while :; do
+        if nc -z 127.0.0.1 7125; then
+            [ "${1:-}" = --restore-service ] || return 0
+            pid=$(cat /var/run/moonraker.pid 2>/dev/null) || pid=
+            if [ -n "$pid" ] && [ "$pid" != "$previous_pid" ] && [ -r "/proc/$pid/cmdline" ] &&
+               tr '\000' '\n' < "/proc/$pid/cmdline" | grep -Fxq "$HOME/moonraker/moonraker/moonraker.py"; then
+                return 0
+            fi
+        fi
         if [ $count -gt 60 ]; then
             echo "E: moonraker failed to start!"
             exit 1
@@ -127,6 +137,30 @@ wait_for_moonraker() {
         sleep 1
     done
 }
+
+if [ "${1:-}" = --restore-service ]; then
+    if [ ! -f "$HOME/moonraker/moonraker/moonraker.py" ] || [ ! -x "$HOME/moonraker-env/bin/python" ]; then
+        echo "E: managed Moonraker source or Python environment is missing; review the core Moonraker installation." >&2
+        exit 1
+    fi
+    for component in moonraker moonraker-env; do
+        if [ -L "$HOME/$component" ] && [ "$(readlink -f "$HOME/$component")" = "$(readlink -f "/usr/share/$component")" ]; then
+            echo "E: $HOME/$component points to the stock installation; review the core Moonraker installation." >&2
+            exit 1
+        fi
+    done
+    config=/mnt/UDISK/printer_data/config/moonraker.conf
+    if { [ -e "$config" ] || [ -L "$config" ]; } && [ ! -s "$config" ]; then
+        echo "E: review the empty or broken Moonraker configuration at $config before restarting." >&2
+        exit 1
+    fi
+    install_libs
+    modify_moonraker_asvc
+    previous_pid=$(cat /var/run/moonraker.pid 2>/dev/null) || previous_pid=
+    replace_moonraker --restore-service
+    wait_for_moonraker --restore-service
+    exit 0
+fi
 
 install_virtualenv
 remove_legacy_symlinks

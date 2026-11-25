@@ -2,7 +2,8 @@
 
 set -e
 
-cd $(dirname ${0})
+cd "$(dirname "$0")"
+. ../prerequisites.sh
 
 unset LD_LIBRARY_PATH
 unset LD_PRELOAD
@@ -16,9 +17,7 @@ if [ -x "$ENTWARE_ROOT/bin/opkg" ]; then
   echo "Info: Preserving the existing Entware installation..."
 else
   FRESH_INSTALL=1
-  echo "Info: Removing an absent or incomplete Entware installation..."
-  [ ! -L /opt ] || rm -f /opt
-  rm -rf "$ENTWARE_ROOT"
+  echo "Info: Bootstrapping opkg in the persistent Entware directory..."
 fi
 
 echo "Info: Creating directory..."
@@ -55,14 +54,12 @@ download_files() {
 
 if [ "$FRESH_INSTALL" -eq 1 ]; then
   echo "Info: Downloading opkg package manager from Entware repo..."
-  if download_files "$URL/opkg" "/opt/bin/opkg"; then
-    download_files "$URL/opkg.conf" "/opt/etc/opkg.conf"
-  else
-    echo "Info: Failed to download from Entware repo..."
-    rm -f /opt
-    rm -rf "$ENTWARE_ROOT"
-    exit 1
-  fi
+  download_files "$URL/opkg" "/opt/bin/opkg.new"
+  mv /opt/bin/opkg.new /opt/bin/opkg
+fi
+if [ ! -s /opt/etc/opkg.conf ]; then
+  download_files "$URL/opkg.conf" "/opt/etc/opkg.conf.new"
+  mv /opt/etc/opkg.conf.new /opt/etc/opkg.conf
 fi
 
 echo "Info: Applying permissions..."
@@ -70,32 +67,37 @@ chmod 755 /opt/bin/opkg
 chmod 777 /opt/tmp
 
 # put the python wget in place long enough to bootstrap opkg with the full version
-cp wget-ssl.py /bin/wget
-
-echo "Info: Installing basic packages..."
-/opt/bin/opkg update
-# replace the bootstrap wget-ssl implementation
-/opt/bin/opkg install wget-ssl
-rm -f /bin/wget
-# ensure newly installed wget-ssl is in path
 export PATH=/opt/bin:$PATH
-/opt/bin/opkg install entware-opt git git-http curl jq unzip
-
-
-echo "Info: Installing SFTP server support..."
-/opt/bin/opkg install openssh-sftp-server
+if ! bootstrap_packages_ready; then
+  wget_dir=$(mktemp -d)
+  trap 'rm -f "$wget_dir/wget"; rmdir "$wget_dir"' EXIT
+  ln -s "$(pwd)/wget-ssl.py" "$wget_dir/wget"
+  download_path="$PATH"
+  [ -x /opt/bin/wget ] || download_path="$wget_dir:$PATH"
+  PATH="$download_path" /opt/bin/opkg update
+  packages=$(/opt/bin/opkg list-installed)
+  for name in wget-ssl entware-opt git git-http curl jq unzip openssh-sftp-server; do
+    if printf '%s\n' "$packages" | grep -q "^$name "; then
+      bootstrap_package_tools_ready "$name" && continue
+      PATH="$download_path" /opt/bin/opkg --force-reinstall install "$name"
+    else
+      PATH="$download_path" /opt/bin/opkg install "$name"
+    fi
+    bootstrap_package_tools_ready "$name" || { echo "Error: $name is still incomplete" >&2; exit 1; }
+    download_path="$PATH"
+  done
+fi
+mkdir -p /usr/libexec
 ln -sf /opt/libexec/sftp-server /usr/libexec/sftp-server
 
 echo "Info: Configuring files..."
-for file in passwd group shells shadow gshadow; do
+for file in passwd group shells shadow gshadow localtime; do
   if [ -f /etc/$file ]; then
     ln -sf /etc/$file /opt/etc/$file
-  else
-    [ -f /opt/etc/$file.1 ] && cp /opt/etc/$file.1 /opt/etc/$file
+  elif [ ! -e "/opt/etc/$file" ] && [ -f "/opt/etc/$file.1" ]; then
+    cp "/opt/etc/$file.1" "/opt/etc/$file"
   fi
 done
-
-[ -f /etc/localtime ] && ln -sf /etc/localtime /opt/etc/localtime
 
 echo "Info: Applying changes in system profile..."
 mkdir -p /etc/profile.d

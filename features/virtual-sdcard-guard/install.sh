@@ -5,7 +5,7 @@ SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
 KLIPPER_ROOT="${KLIPPER_DIR:-${HOME}/klipper}"
 TARGET="${KLIPPER_ROOT}/klippy/extras/virtual_sdcard.py"
 . "$SCRIPT_DIR/../../scripts/stock_nozzle_camera.sh"
-stock_nozzle_camera_require_idle || { echo 'E: confirmed idle printer required for virtual-SD changes' >&2; exit 1; }
+stock_nozzle_camera_require_idle 'changing the virtual SD-card support' || { echo 'E: confirmed idle printer required for virtual-SD changes' >&2; exit 1; }
 
 if [ ! -f "$TARGET" ]; then
     echo "E: virtual_sdcard.py not found at $TARGET" >&2

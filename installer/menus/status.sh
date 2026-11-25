@@ -86,6 +86,8 @@ show_status() {
     pending_updates=$(migration_pending_component_count)
     if [ "$pending_updates" -gt 0 ]; then
         printf '  %-43s %s\n' "$pending_updates component action(s) pending" "$(c_yellow 'ACTION NEEDED')"
+    elif [ "$profile" = 'Cartographer (incomplete)' ]; then
+        printf '  %-43s %s\n' 'Installed components' "$(c_yellow 'REVIEW SETUP (6 -> 4)')"
     else
         printf '  %-43s %s\n' 'Installed components' "$(c_green 'CURRENT')"
     fi

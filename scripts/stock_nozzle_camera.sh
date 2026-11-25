@@ -76,11 +76,30 @@ stock_nozzle_camera_curl() {
     fi
 }
 
-stock_nozzle_camera_require_idle() {
+k2_print_activity_state() {
     local activity
     activity=$(stock_nozzle_camera_curl -fsS --max-time 3 \
-        "${MOONRAKER_URL:-http://127.0.0.1:7125}/printer/objects/query?print_stats=state") || return 1
-    printf '%s' "$activity" | grep -q '"print_stats"' &&
-        ! printf '%s' "$activity" | grep -qE '"state"[[:space:]]*:[[:space:]]*"(printing|paused)"' &&
-        printf '%s' "$activity" | grep -qE '"state"[[:space:]]*:[[:space:]]*"(standby|complete|cancelled|error)"'
+        "${MOONRAKER_URL:-http://127.0.0.1:7125}/printer/objects/query?print_stats=state" 2>/dev/null) || { echo unknown; return; }
+    printf '%s' "$activity" | python3 -c '
+import json, sys
+state = json.load(sys.stdin)["result"]["status"]["print_stats"]["state"]
+print(state if state in ("printing", "paused", "standby", "complete", "cancelled", "error") else "unknown")
+' 2>/dev/null || echo unknown
+}
+
+stock_nozzle_camera_require_idle() {
+    local state answer
+    state=$(k2_print_activity_state)
+    case "$state" in
+        standby|complete|cancelled|error) return 0 ;;
+        printing|paused) echo "E: printer is $state" >&2; return 1 ;;
+    esac
+    [ "${K2_OTA_ACTIVITY_CONFIRM:-0}" = 1 ] && [ -n "${1:-}" ] || return 1
+    printf 'Print status unavailable. Confirm on the printer that it is idle before %s. Continue? [y/N]: ' "$1"
+    IFS= read -r answer || return 1
+    case "$answer" in y|Y|yes|YES) ;; *) return 1 ;; esac
+    case "$(k2_print_activity_state)" in
+        printing|paused) echo 'E: printer became active during confirmation' >&2; return 1 ;;
+    esac
+    return 0
 }

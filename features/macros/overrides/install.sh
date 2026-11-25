@@ -52,9 +52,8 @@ if [ -f ~/printer_data/config/custom/cartographer.cfg ]; then
         ~/printer_data/config/custom/overrides.cfg
 fi
 
-if ! grep -qE 'include overrides.cfg' ~/printer_data/config/custom/main.cfg; then
-    echo '[include overrides.cfg]' >> ~/printer_data/config/custom/main.cfg
-fi
+python3 "${SCRIPT_DIR}/../../../scripts/ensure_included.py" \
+    ~/printer_data/config/custom/main.cfg overrides.cfg
 
 if [ "${1:-}" != "--no-restart" ]; then
     sh "${SCRIPT_DIR}/../../../scripts/firmware_restart.sh"
