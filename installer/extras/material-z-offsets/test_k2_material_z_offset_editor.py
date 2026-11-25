@@ -2,6 +2,10 @@
 
 import importlib.util
 import pathlib
+import os
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 import configparser
@@ -75,15 +79,19 @@ class FakePrinter:
 
 
 class FakeConfig:
-    def __init__(self, printer, path):
+    def __init__(self, printer, path, enable_editor=True):
         self.printer = printer
         self.path = path
+        self.enable_editor = enable_editor
 
     def get_printer(self):
         return self.printer
 
     def get(self, name, default=None):
         return self.path if name == "overrides_path" else default
+
+    def getboolean(self, name, default=None):
+        return self.enable_editor if name == "enable_editor" else default
 
 
 class FakeGCmd:
@@ -130,6 +138,17 @@ class MaterialEditorTests(unittest.TestCase):
         printer = FakePrinter(state)
         editor = MODULE.K2MaterialZOffsetEditor(FakeConfig(printer, str(self.path)))
         return editor, printer
+
+    def test_core_only_registers_and_applies_hyper_pla_without_editor_commands(self):
+        printer = FakePrinter("printing")
+        MODULE.K2MaterialZOffsetEditor(FakeConfig(printer, str(self.path), enable_editor=False))
+        gcode = printer.objects["gcode"]
+        self.assertEqual(set(gcode.commands), {"K2_MATERIAL_Z_APPLY"})
+        apply = gcode.commands["K2_MATERIAL_Z_APPLY"]
+        apply(FakeGCmd(MATERIAL="Hyper-PLA"))
+        apply(FakeGCmd(MATERIAL="Hyper-PLA"))
+        self.assertEqual(gcode.scripts, ["SET_GCODE_OFFSET Z=0.050", "SET_GCODE_OFFSET Z=0.000"])
+        self.assertEqual(self.path.read_text().count("variable_offset_HYPER_PLA: 0.000"), 1)
 
     def test_parser_preserves_order_and_places_default_last(self):
         offsets = MODULE.parse_material_offsets(BASE_CONFIG)
@@ -295,6 +314,9 @@ class MaterialEditorTests(unittest.TestCase):
         self.assertEqual(printer.objects["gcode"].scripts, ["SET_GCODE_OFFSET Z=0.050"])
         self.assertEqual(printer.objects["gcode_macro _START_PRINT_VARS"].variables["offset_petg_cf"], 0.0)
         self.assertIn("current print still uses DEFAULT", command.info[0])
+        editor.cmd_apply(FakeGCmd(MATERIAL="PETG-CF"))
+        self.assertEqual(printer.objects["gcode"].scripts[-1], "SET_GCODE_OFFSET Z=0.000")
+        self.assertEqual(self.path.read_text(encoding="utf-8"), text)
 
     def test_saved_material_missing_from_memory_becomes_active_for_next_print(self):
         text = BASE_CONFIG.replace(
@@ -336,6 +358,46 @@ class MaterialEditorTests(unittest.TestCase):
         restore = installer.index("surface-selection-wrapper/install.sh")
         self.assertLess(capture, refresh)
         self.assertLess(refresh, restore)
+
+    @unittest.skipUnless(shutil.which("sh"), "requires a POSIX shell")
+    def test_registration_works_with_core_only_and_with_existing_editor(self):
+        root = INSTALL_PATH.parents[3]
+        helper = root / "features/macros/start_print/install_material_registration.sh"
+        self.assertIn(helper.name, helper.with_name("install.sh").read_text())
+        self.assertIn(helper.name, INSTALL_PATH.read_text())
+        custom = pathlib.Path(self.temporary.name)
+        extras = custom / "extras"
+        extras.mkdir()
+        main = custom / "main.cfg"
+        main.write_text("[include overrides.cfg]\n")
+        core_include = "[include material_z_registration.cfg]"
+        editor_include = "[include material_z_offsets.cfg]"
+
+        def install():
+            subprocess.run(
+                ["sh", helper.as_posix(), custom.as_posix(), extras.as_posix()],
+                check=True, env=dict(os.environ, K2_PYTHON=pathlib.Path(sys.executable).as_posix()),
+            )
+            self.assertTrue((extras / MODULE_PATH.name).is_file())
+
+        install()
+        install()
+        self.assertEqual(main.read_text().splitlines().count(core_include), 1)
+        self.assertEqual((custom / "material_z_registration.cfg").read_text().splitlines(),
+                         ["[k2_material_z_offset_editor]", "enable_editor: False"])
+        self.assertNotIn(editor_include, main.read_text())
+
+        (custom / "material_z_offsets.cfg").write_text(INSTALL_PATH.with_name("material_z_offsets.cfg").read_text())
+        main.write_text(main.read_text() + editor_include + "\n")
+        install()
+        install()
+        self.assertNotIn(core_include, main.read_text().splitlines())
+        self.assertEqual(main.read_text().splitlines().count(editor_include), 1)
+
+        # Older printers can have only the combined editor/runtime include.
+        main.write_text(editor_include + "\n")
+        install()
+        self.assertEqual(main.read_text().splitlines(), [editor_include])
 
 
 if __name__ == "__main__":

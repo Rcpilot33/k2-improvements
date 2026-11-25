@@ -21,14 +21,18 @@ PLATES = [
 
 
 class OrcaTemplateTests(unittest.TestCase):
+    def templates(self, pattern, count):
+        for model in ("k2-plus", "k2-pro"):
+            files = sorted((TEMPLATES / model).glob(pattern))
+            self.assertEqual(len(files), count, model)
+            yield from files
+
     def test_four_variants_have_correct_material_temperature_and_purge_contract(self):
-        files = sorted(TEMPLATES.glob("orca-start-material-*.gcode"))
-        self.assertEqual(len(files), 4)
-        for path in files:
+        for path in self.templates("orca-start-material-*.gcode", 4):
             code = path.read_text()
             kamp = path.stem.endswith("-kamp")
             surface = "surface-profiles" in path.stem
-            with self.subTest(template=path.name):
+            with self.subTest(template=path.relative_to(TEMPLATES)):
                 starts = [line for line in code.splitlines() if line.startswith("START_PRINT ")]
                 self.assertEqual(len(starts), 7 if surface else 1)
                 for line in starts:
@@ -43,10 +47,21 @@ class OrcaTemplateTests(unittest.TestCase):
                 self.assertLess(code.index("M109 S[nozzle_temperature_initial_layer]"), code.index(purge))
                 self.assertLess(code.index("M83"), code.index(purge))
 
+    def test_pro_stock_start_moves_and_purge(self):
+        tool = "T[initial_no_support_extruder]"
+        prepare = [tool, "M109 S[nozzle_temperature_initial_layer]", "M204 S2000", "G1 Z3 F600", "M83"]
+        fixed_purge = [
+            "G1 Y150 F12000", "G1 X0 F12000", "G1 Z0.2 F600", "G1 X0 Y150 F6000",
+            "G1 X0 Y0 E15 F6000", "G1 X150 Y0 E15 F6000", "G92 E0", "G1 Z1 F600",
+        ]
+        for path in (TEMPLATES / "k2-pro").glob("orca-start-material-*.gcode"):
+            with self.subTest(template=path.name):
+                lines = path.read_text().splitlines()
+                purge = ["LINE_PURGE"] if path.stem.endswith("-kamp") else fixed_purge
+                self.assertEqual(lines[lines.index(tool):], prepare + purge)
+
     def test_all_orca_and_creality_start_branches_quote_material_values(self):
-        files = sorted(TEMPLATES.glob("*-start-material-*.gcode"))
-        self.assertEqual(len(files), 8)
-        for path in files:
+        for path in self.templates("*-start-material-*.gcode", 8):
             starts = [line for line in path.read_text().splitlines() if line.startswith("START_PRINT ")]
             self.assertTrue(starts, path.name)
             for line in starts:
@@ -64,7 +79,7 @@ class OrcaTemplateTests(unittest.TestCase):
                         self.assertEqual(args["CHAMBER_TEMP"], "35")
 
     def test_both_surface_variants_use_exact_captured_names_and_default(self):
-        for path in TEMPLATES.glob("orca-start-material-surface-profiles*.gcode"):
+        for path in self.templates("orca-start-material-surface-profiles*.gcode", 2):
             code = path.read_text()
             mapping = re.findall(r'\{(?:if|elsif) curr_bed_type == "([^"]+)"\}\nSTART_PRINT [^\n]* SURFACE=(\w+)', code)
             self.assertEqual(mapping, PLATES)

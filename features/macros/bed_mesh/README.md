@@ -39,7 +39,7 @@ On a no-Cartographer / stock PR Touch installation, create and save a
 `default` mesh before the first print. That mesh must be generated with the
 same `[bed_mesh] probe_count` that is currently configured.
 
-Use the Fluidd console to run:
+On a K2 Plus, use the Fluidd console to run:
 
 ```gcode
 G28
@@ -48,6 +48,10 @@ G28 Z
 BED_MESH_CALIBRATE PROFILE=default
 SAVE_CONFIG
 ```
+
+On the single-Z K2 Pro, use **Home All** and **Calibrate** in Fluidd's Bed
+Mesh Controls, save the result as `default`, then select **Save Config &
+Restart**. Verify the saved profile dimensions match the new probe count.
 
 Wait for the protected restart to finish before issuing another movement
 command.

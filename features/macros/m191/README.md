@@ -71,6 +71,11 @@ running M191 and START_PRINT macro variables without restarting Klipper. The
 saved values load again after a firmware restart or power cycle. The editor is
 unavailable while printing or paused.
 
+With Screws Tilt Adjust installed, **STC Bed Drop** sets how far the bed
+lowers after screw probing. It defaults to 200 mm. Set it to 0 to skip
+the drop. Save updates the live setting and the `[screws_tilt_adjust]`
+section in `custom/overrides.cfg`.
+
 ## Bed-assist target selection
 
 When `bed_assist_degrees_above_commanded` is greater than zero, M191 adds it to

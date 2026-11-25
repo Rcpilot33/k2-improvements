@@ -1,5 +1,8 @@
 import importlib.util
+import os
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -12,6 +15,46 @@ spec.loader.exec_module(c)
 layout_spec = importlib.util.spec_from_file_location("global_prtouch_layout", HERE / "configure_fluidd_layout.py")
 layout = importlib.util.module_from_spec(layout_spec)
 layout_spec.loader.exec_module(layout)
+
+
+@unittest.skipUnless(shutil.which("sh"), "requires a POSIX shell")
+class RestartTests(unittest.TestCase):
+    def test_installer_restart_handoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            feature = root / "installer/extras/global-prtouch-offsets"
+            feature.mkdir(parents=True)
+            shutil.copy(HERE / "install.sh", feature)
+            overlay = feature.parent / "fluidd-ui-overlay"
+            overlay.mkdir()
+            (overlay / "install.sh").write_text("exit 0\n")
+            scripts = root / "scripts"
+            scripts.mkdir()
+            (scripts / "klippy_code_restart.sh").write_text(
+                'echo "restart defer=${K2_DEFER_FIRMWARE_RESTART:-0}"\nexit "${RESTART_RESULT:-0}"\n'
+            )
+            # Substitute only the configuration work and hardware restart.
+            (feature / "configure.py").write_text(
+                'import os, sys\nprint("configure", sys.argv[1])\nsys.exit(int(os.getenv("CONFIG_RESULT", 0)))\n'
+            )
+            (feature / "configure_fluidd_layout.py").write_text('print("layout")\n')
+            for args, flags, expected, status in (
+                ([], {}, ["configure --check-only", "configure --config-dir", "layout", "restart defer=0"], 0),
+                ([], {"K2_DEFER_FIRMWARE_RESTART": "1"}, ["configure --check-only", "configure --config-dir", "layout", "restart defer=1"], 0),
+                (["--remove"], {}, ["configure --remove", "restart defer=0"], 0),
+                (["--check-only"], {}, ["configure --check-only"], 0),
+                ([], {"CONFIG_RESULT": "1"}, ["configure --check-only"], 1),
+                ([], {"RESTART_RESULT": "1"}, ["configure --check-only", "configure --config-dir", "layout", "restart defer=0"], 1),
+                ([], {"K2_SKIP_KLIPPY_RESTART": "1"}, ["configure --check-only", "configure --config-dir", "layout"], 0),
+            ):
+                with self.subTest(args=args, flags=flags):
+                    env = dict(os.environ, K2_PYTHON=Path(sys.executable).as_posix(),
+                               K2_SKIP_KLIPPY_RESTART="0", K2_DEFER_FIRMWARE_RESTART="0")
+                    env.update(flags)
+                    run = subprocess.run(["sh", (feature / "install.sh").as_posix(), *args],
+                                         env=env, capture_output=True, text=True)
+                    self.assertEqual(run.returncode, status, run.stderr)
+                    self.assertEqual(run.stdout.splitlines(), expected)
 
 
 class Tests(unittest.TestCase):
@@ -83,7 +126,7 @@ class Tests(unittest.TestCase):
     def test_installer_preflights_before_installing_shared_compact_ui(self):
         script = (HERE / "install.sh").read_text()
         self.assertLess(script.index('configure_feature --check-only'), script.index('../fluidd-ui-overlay/install.sh'))
-        self.assertLess(script.index('../fluidd-ui-overlay/install.sh'), script.index('configure_feature "$@"'))
+        self.assertLess(script.index('../fluidd-ui-overlay/install.sh'), script.index('\nconfigure_feature "$@"\n'))
         detector = (c.ROOT / "installer/detect/features.sh").read_text()
         body = detector.split('is_global_prtouch_offsets() {', 1)[1].split('\n}', 1)[0]
         self.assertIn('has_settings_ui_overlay 8', body)

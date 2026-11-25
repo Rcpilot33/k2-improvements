@@ -87,7 +87,6 @@ def main():
         return 0
     print("Global No-Carto Z Offsets %s. Existing calibration and offset data preserved." %
           ("removed" if args.remove else "installed"))
-    print("Power-cycle while idle; wait for full startup. No restart or motion was sent.")
     return 0
 
 

@@ -1,6 +1,7 @@
 """Live Fluidd editor for the configurable M191 chamber-heating settings."""
 
 import hashlib
+import math
 import os
 import re
 import tempfile
@@ -8,6 +9,8 @@ import tempfile
 
 SECTION_NAME = "gcode_macro _M191_VARS"
 START_PRINT_SECTION_NAME = "gcode_macro _START_PRINT_VARS"
+SCREWS_SECTION = "screws_tilt_adjust"
+BED_DROP = "bed_drop_distance"
 SECTION_RE = re.compile(r"^[ \t]*\[([^]]+)\][ \t]*(?:#.*)?(?:\r?\n)?$")
 NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)"
 
@@ -28,17 +31,25 @@ SETTINGS = (
     ("bed_restore_tolerance", "Bed Restore Tolerance", 0.0, 20.0, "C", "number", True),
     ("chamber_wait_max_delta", "Chamber Wait Maximum Delta", 0.0, 20.0, "C", "number", True),
     ("heat_soak", "Machine Heat Soak", 0.0, 120.0, "min", "number", False),
+    (BED_DROP, "STC Bed Drop", 0.0, float("inf"), "mm", "number", False),
 )
 SETTING_BY_KEY = {setting[0]: setting for setting in SETTINGS}
 
 
 def section_for_key(key):
+    if key == BED_DROP:
+        return SCREWS_SECTION
     if key == "heat_soak":
         return START_PRINT_SECTION_NAME
     return SECTION_NAME
 
 
 def _variable_re(key):
+    if key == BED_DROP:
+        return re.compile(
+            r"^([ \t]*bed_drop_distance[ \t]*[:=][ \t]*)"
+            r"([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)"
+            r"([ \t]*(?:[#;].*)?(?:\r?\n)?)$", re.I)
     return re.compile(
         r"^([ \t]*variable_" + re.escape(key) + r"[ \t]*:[ \t]*)"
         r"(" + NUMBER + r")([ \t]*(?:#.*)?(?:\r?\n)?)$",
@@ -50,8 +61,8 @@ VARIABLE_PATTERNS = {key: _variable_re(key) for key in SETTING_BY_KEY}
 
 
 def validate_settings(values):
-    for key in SETTING_BY_KEY:
-        validate_value(key, values[key])
+    for key, value in values.items():
+        validate_value(key, value)
     if values["circulation_fan_high_speed"] < values["circulation_fan_speed"]:
         raise ValueError(
             "circulation_fan_high_speed must be at least circulation_fan_speed"
@@ -74,6 +85,8 @@ def validate_value(key, value):
         raise ValueError("unknown M191 setting: %s" % key)
     _, _, minimum, maximum, _, kind, exclusive_minimum = SETTING_BY_KEY[key]
     value = float(value)
+    if not math.isfinite(value):
+        raise ValueError("%s must be finite" % key)
     if kind == "boolean" and value not in (0.0, 1.0):
         raise ValueError("%s must be 0 or 1" % key)
     if value < minimum or value > maximum or (exclusive_minimum and value <= minimum):
@@ -91,7 +104,7 @@ def parse_settings(text):
         if section:
             current_section = section.group(1).strip().casefold()
             if current_section in (
-                SECTION_NAME.casefold(), START_PRINT_SECTION_NAME.casefold()
+                SECTION_NAME.casefold(), START_PRINT_SECTION_NAME.casefold(), SCREWS_SECTION
             ):
                 found_sections.add(current_section)
             continue
@@ -107,7 +120,7 @@ def parse_settings(text):
     for required_section in (SECTION_NAME, START_PRINT_SECTION_NAME):
         if required_section.casefold() not in found_sections:
             raise ValueError("[%s] was not found" % required_section)
-    missing = [key for key in SETTING_BY_KEY if key not in values]
+    missing = [key for key in SETTING_BY_KEY if key != BED_DROP and key not in values]
     if missing:
         raise ValueError("missing M191 settings: %s" % ", ".join(missing))
     return validate_settings(values)
@@ -126,23 +139,28 @@ def rewrite_settings(text, values):
             output.append(line)
             continue
         if current_section in (
-            SECTION_NAME.casefold(), START_PRINT_SECTION_NAME.casefold()
+            SECTION_NAME.casefold(), START_PRINT_SECTION_NAME.casefold(), SCREWS_SECTION
         ):
             for key, pattern in VARIABLE_PATTERNS.items():
+                if key not in values:
+                    continue
                 if current_section != section_for_key(key).casefold():
                     continue
                 match = pattern.match(line)
                 if match:
                     if key in replaced:
                         raise ValueError("duplicate variable_%s" % key)
-                    output.append(match.group(1) + format_value(key, values[key]) + match.group(3))
+                    if key == BED_DROP and float(match.group(2)) == values[key]:
+                        output.append(line)
+                    else:
+                        output.append(match.group(1) + format_value(key, values[key]) + match.group(3))
                     replaced.add(key)
                     break
             else:
                 output.append(line)
             continue
         output.append(line)
-    missing = [key for key in SETTING_BY_KEY if key not in replaced]
+    missing = [key for key in values if key not in replaced]
     if missing:
         raise ValueError("could not rewrite M191 settings: %s" % ", ".join(missing))
     return "".join(output)
@@ -212,6 +230,20 @@ class K2M191SettingsEditor:
         state = str(print_stats.get_status(0.0).get("state", "")).lower()
         return state in ("printing", "paused")
 
+    def _maximum(self, key):
+        maximum = SETTING_BY_KEY[key][3]
+        if key == BED_DROP:
+            toolhead = self.printer.lookup_object("toolhead")
+            eventtime = self.printer.get_reactor().monotonic()
+            return max(0.0, toolhead.get_status(eventtime)["axis_maximum"][2] - 0.5)
+        if key not in ("bed_assist_z_height", "bed_restore_z_height"):
+            return maximum
+        if self.printer.lookup_object("gcode_macro _K2_PRO_FINAL_Z_HOME", None) is None:
+            return maximum
+        toolhead = self.printer.lookup_object("toolhead")
+        eventtime = self.printer.get_reactor().monotonic()
+        return min(maximum, toolhead.get_status(eventtime)["axis_maximum"][2])
+
     def _action(self, message):
         self.gcode.respond_raw("// action:%s" % message)
 
@@ -238,18 +270,20 @@ class K2M191SettingsEditor:
         except (TypeError, ValueError) as exc:
             raise gcmd.error("Could not parse M191 settings: %s" % exc)
         self.session_digest = file_digest(text)
+        if not hasattr(self.printer.lookup_object(SCREWS_SECTION, None), BED_DROP):
+            values.pop(BED_DROP, None)
         self.settings = [
             {"key": key, "original": values[key], "current": values[key]}
-            for key in SETTING_BY_KEY
+            for key in SETTING_BY_KEY if key in values
         ]
         self._action("m191_settings_begin")
         for index, setting in enumerate(self.settings):
-            _, label, minimum, maximum, unit, kind, exclusive = SETTING_BY_KEY[setting["key"]]
+            _, label, minimum, _, unit, kind, exclusive = SETTING_BY_KEY[setting["key"]]
             self._action(
                 "m191_settings_setting %s|%s|%s|%s|%s|%s|%d|%s|%d"
                 % (
                     setting["key"], label, format_value(setting["key"], setting["current"]),
-                    minimum, maximum, unit, index, kind, 1 if exclusive else 0,
+                    minimum, self._maximum(setting["key"]), unit, index, kind, 1 if exclusive else 0,
                 )
             )
         self._action("m191_settings_show")
@@ -261,6 +295,8 @@ class K2M191SettingsEditor:
         key = self.settings[index]["key"]
         try:
             value = validate_value(key, value)
+            if value > self._maximum(key):
+                raise ValueError("%s exceeds the printer Z limit" % key)
         except ValueError as exc:
             raise gcmd.error(str(exc))
         self.settings[index]["current"] = value
@@ -289,6 +325,12 @@ class K2M191SettingsEditor:
             return
         values = {item["key"]: item["current"] for item in self.settings}
         try:
+            for item in self.settings:
+                key = item["key"]
+                if key == BED_DROP and item["current"] == item["original"]:
+                    continue  # A pre-existing distance is already capped at motion time.
+                if item["current"] > self._maximum(key):
+                    raise ValueError("%s exceeds the printer limit" % key)
             updated = rewrite_settings(text, values)
         except (TypeError, ValueError) as exc:
             raise gcmd.error("Could not update M191 settings: %s" % exc)
@@ -299,7 +341,10 @@ class K2M191SettingsEditor:
                 live_by_section[section] = self._live_variables(gcmd, section, keys)
         self._write(gcmd, updated)
         for item in changed:
-            live_by_section[section_for_key(item["key"])][item["key"]] = item["current"]
+            if item["key"] == BED_DROP:
+                self.printer.lookup_object(SCREWS_SECTION).bed_drop_distance = item["current"]
+            else:
+                live_by_section[section_for_key(item["key"])][item["key"]] = item["current"]
         self.settings = None
         self.session_digest = None
         self._close()

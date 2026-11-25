@@ -1,5 +1,235 @@
 # Validation Status
 
+## K2 Pro stock-probe conversion (November 21, 2026)
+
+**PASS.** After a Creality factory reset, RC3 (K2 Pro F012, firmware
+`1.1.8.3`) completed the no-Cartographer install from `k2-pro-support` at
+`12d50bd`. Klipper and the motor controller reported ready after the
+protected restart. The operator confirmed the printer started printing on
+the fresh installation.
+
+With KAMP, plate-aware saved meshes and both Z-offset extras installed, the
+first Hyper PLA cube created the `high_temp_50.0c_30.0c` mesh and the
+`HYPER_PLA` material offset entry. The repeat print loaded the saved mesh,
+used the material offset of 0.000 mm and the global offset of −0.050 mm,
+ran the KAMP purge and finished at 21:26:40.
+
+## K2 Pro bootstrap and diagnostics (November 20, 2026)
+
+RC3, a stock-probe K2 Pro on firmware `1.1.8.3`, completed a fresh Entware
+installation and cloned `k2-pro-support`. Accepting the bootstrap menu prompt
+opened the read-only diagnostic, which identified model `F012` and board
+`CR0CN200400C10` and returned to the SSH prompt.
+
+After updating to `e5fc5fa`, RC3 opened the interactive K2 Pro Development
+Installer. Selecting **1. Status and diagnostics** displayed the F012 report
+and the component status list. Entware and better-root both showed as installed.
+
+| Axis | Loaded stepper limits (mm) | Reported toolhead limits (mm) |
+| --- | --- | --- |
+| X | −13 to 302 | −9.3 to 302 |
+| Y | −6.5 to 332 | −6.5 to 302 |
+| Z | −10 to 303 | −10 to 303 |
+
+The saved stepper limits matched the loaded settings. `PRINTER_PARAM` reported
+a Y maximum of 302 mm. Moonraker reported `standby`, `motor_ready=true`, and
+an empty `homed_axes` string. This run validates bootstrap and diagnostic
+routing. Motion and recovery from a failed restart still need hardware tests.
+
+### RC3 web interface and Moonraker baseline
+
+On firmware `1.1.8.3`, nginx served Fluidd `v1.30.0` on port 4408.
+Moonraker on port 7125 reported API `1.0.5`, Klippy ready, and no failed
+components. Read-only requests returned heater temperatures, homing and print
+state, file roots, database namespaces, and the webcam list.
+
+The running service loaded `/usr/share/moonraker/moonraker.conf`.
+Its Python components live directly under
+`/usr/share/moonraker/components`. The Plus Fluidd installer expects
+`printer_data/config/moonraker.conf` and the maintained Moonraker package
+layout. The stock service lacks the `moonraker.common.RequestType` module
+used by our bridge. The bridge status endpoint returned HTTP 404.
+
+A read-only query to Creality's local WebSocket on port 9999 returned all
+three fan percentages, printer and feed state, external-spool and four-slot
+CFS data, humidity, and auto-refill status.
+
+### Better Init hardware test
+
+The Plus 1.1.8.0 firmware image and RC3’s stock
+1.1.8.3 Klipper init script both register `/var/run/klippy.pid` and launch
+Creality’s one-shot watcher, which sets Klippy’s `oom_score_adj` to `-500`.
+Before Better Init was installed, `cat "/proc/$(cat /var/run/klippy.pid)/oom_score_adj"`
+returned `-500` on RC3, confirming the adjustment on the running stock Klippy process.
+On RC3 at commit `6fff16c`, the standalone Better Init installer restarted the
+Klippy host, waited for motor readiness, and requested one `FIRMWARE_RESTART`
+through stock Moonraker. Klippy and the motor controller both reported ready
+afterward. The menu showed Better Init installed, and the same command returned
+`-500` for the running Klippy process. The separate `save-config-restart`
+component still awaited installation and testing.
+
+On RC1, the K2 Plus, the same command returned `0` for its running Klippy process.
+
+### RC3 maintained Moonraker hardware test
+
+Option 5 completed on RC3. The running service used the dedicated
+`moonraker-env` and loaded `/mnt/UDISK/printer_data/config/moonraker.conf`.
+The checkout was `Rcpilot33/moonraker` branch `k2` at `ae1b034`, matching
+the version reported by the running API. On port 7125, `/server/info` reported
+API `1.5.0`, Klippy connected and ready, and empty lists for failed components,
+warnings, and missing Klippy requirements. The printer reported `standby`
+and `motor_ready=true`.
+
+### RC3 Fluidd fan and CFS hardware test
+
+Option 6 installed Fluidd `v1.37.5` on RC3. The operator confirmed that the
+fan controls and both CFS actions, Feed and Retract, worked on the printer.
+A read-only query to `/server/k2_device/status` reported a connected bridge
+and matched the cards on port 4408. All three fans read 0%. Slot 1A showed
+white Hyper-PLA at 20% remaining, the other slots and spool holder were empty,
+CFS humidity was 28%, and auto-refill was on. Filament Deck was present on
+this printer, so testing on a printer without it remains open.
+
+### RC3 bed screw positions
+
+With the stock probe, the operator jogged the nozzle to the four screw centers.
+Fluidd showed front left (9, 59), front right (290, 59), rear right (290, 239),
+and rear left (9, 239), in mm. RC3 exposes one Z stepper and has no
+`Z_TILT_ADJUST` command. Option 7 installed successfully. RC3 offered the
+one-time Screws Tilt Adjust update from `dfadef5`, and the operator applied it.
+On November 21, the operator confirmed that running `SCREWS_TILT_CALCULATE`
+from the Fluidd console with the axes unhomed homed the printer and probed all
+four screws. Verification of knob turn direction and amount is still pending.
+
+Fluidd showed a 0.0251 mm spread across the four screw positions on RC3.
+
+| Screw | Probed Z (mm) | Difference from front left (mm) | Displayed adjustment |
+| --- | ---: | ---: | --- |
+| Front left | −0.1349 | 0.0000 | Base |
+| Front right | −0.1290 | +0.0059 | 00:01 |
+| Rear right | −0.1098 | +0.0251 | 00:02 |
+| Rear left | −0.1320 | +0.0029 | 00:00 |
+
+### RC3 Abort Homing
+
+Option 9 applied the webhooks patch and completed the protected Klippy restart.
+Afterward, Moonraker reported `webhooks.state=ready`,
+`can_force_stop_homing=true`, and `print_stats.state=standby` with all axes
+unhomed. Stopping an active homing move remains untested on RC3.
+
+### RC3 SAVE_CONFIG restart protection
+
+Option 10 completed the Klippy host reload and one protected firmware restart
+on RC3. After installation, Moonraker reported Klipper ready, the printer in
+standby, `motor_ready=true`, and `save_config_pending=false`. The config
+directory contained five timestamped primary printer backups.
+
+On November 21, the operator saved a 9×9 `default` bed mesh through Fluidd.
+At 00:37:09 Klipper reported the config written and the protected restart
+armed. It disconnected at 00:37:11, and Moonraker recorded one
+`FIRMWARE_RESTART` at 00:37:43. Afterward, RC3 reported Klipper ready,
+`motor_ready=true`, standby, and `save_config_pending=false`. The reloaded
+config contained the saved mesh. Its first and last rows matched the Fluidd
+save dialog. No mesh profile was active at the time of the read-only check.
+The operator then ran `G28` and confirmed that RC3 homed correctly after
+the protected restart.
+
+### RC3 virtual SD-card upload guard
+
+Option 11 installed both the trailing upload-boundary guard and the CFS
+pause/refill file-position fix. The installed module's SHA-256 matched the
+patch tested against RC3's original module. Both installer backups matched
+the pre-install copy. After the protected restart, Moonraker reported Klipper
+ready, `motor_ready=true`, standby, and an idle virtual SD reader. Handling a
+trailing upload boundary and resuming after a CFS refill still need print tests
+on RC3.
+
+### RC3 core macro bundle review
+
+Option 12 (memory diagnostics) is deferred. Before the F012 macro profile,
+an offline render using the cube's `EXTRUDER_TEMP=220 BED_TEMP=50`
+produced one `Z_TILT_ADJUST` with a matching temperature mesh and two when
+the mesh had to be created. RC3 has one Z stepper and no Z tilt command.
+Both paths emitted `G0 Y350` after the native chute command. RC3 reports
+a normal Y maximum of 302 mm and a configured stepper maximum of 332 mm.
+
+The F012 profile uses the factory chute command, single-Z preparation,
+Z-driver mode, cleaning and fan handoff. The first trial build inherited
+RC3's 9×9 mesh. The next stock-probe trial starts with an editable 19×19
+grid in `custom/overrides.cfg`. Both M191 and the editor cap bed positions at the reported Z
+maximum (303 mm on RC3). M191 follows the factory integer-temperature test
+for active chamber heating. The stock-probe final home pairs
+`NEXT_HOMEZ_NACCU` with `G28 Z` for both existing and newly generated meshes.
+A prepared print with all axes homed and a saved matching mesh skips
+the repeated home. Released axes force preparation again.
+
+Offline tests cover those Pro paths. Across 384 comparisons, the Plus
+rendered command lists matched the `integration-testing` reference for
+START_PRINT, mesh lookup, mesh creation and M191, including Cartographer
+Touch and Scan modes.
+
+RC3 completed option 13 and the protected restart. A read-only Moonraker
+check confirmed that the loaded `START_PRINT`, `_K2_PRO_FINAL_Z_HOME`,
+`_CREATE_MESH` and `M191` macro bodies matched the tested files from
+`e8c8f5f`. Klipper reported ready, the motor controller ready, the printer
+in standby, all axes unhomed and no configuration warnings. The stock
+PR Touch probe was configured with a 9×9 grid. Only the `default` mesh was
+present and active. The mesh soak was five minutes. Fast Stop reported
+both its command handler and stock mesh cancellation hook active.
+
+RC3 applied the one-time macros update from `ce0f7a0`. After the protected
+restart, Moonraker reported a configured probe count of 19×19, Klipper ready
+and the motor controller ready. The active and saved `default` profile still
+had 9×9 points. The operator then selected 5×5 for faster trials, matching the
+Plus test grid. Moonraker confirmed a loaded probe count of 5×5 and an active,
+saved 5×5 `default` profile with no configuration change pending. Klipper
+and the motor controller were ready.
+
+The first `Cube_Hyper-PLA_5m59s.gcode` run completed at 07:06:37. It took
+the missing-mesh path at a bed target of 50 °C with chamber heating off.
+The five-minute soak was followed by a 25-point probe pass lasting 65.585 s
+with a 0.266 mm range. Moonraker confirmed `50.0c_0.0c` was active during
+the print. Fluidd reported 7m 55s actual, 15m 19s total, and 1.36 m of
+filament. After saving, the loaded configuration contained identical 5×5
+points for `default` and `50.0c_0.0c` with no pending changes.
+
+RC3 reused the saved mesh on the repeat cube print. The stock homing
+sequence loaded `default` before the file opened at 07:13:17. Print
+preparation then advanced to the 220 °C nozzle target at 07:13:22,
+skipping the five-minute mesh soak and the 25-point calibration. At 36%
+file progress, Moonraker reported `50.0c_0.0c` active and no pending
+configuration changes.
+
+RC3 verified the saved-mesh console messages from `2c84de4` on the same
+Hyper-PLA cube. The file opened at 08:03:05 after factory preparation.
+At 08:03:10, `START_PRINT` acknowledged the homed axes, found and loaded
+`50.0c_0.0c`, and reported the 220 °C extruder target. At 08:03:44 it
+reported a 0.0 mm Z offset because no material was supplied, then reported
+startup complete. The file finished at 08:11:53, 8m 48s after opening
+compared with 8m 47s before the update. The new missing-profile console
+message still needs a hardware run with a missing profile.
+
+On November 21, RC1 (K2 Plus) updated to `2c84de4`. The installer reported
+all installed components current and skipped the Pro-only Macros update.
+RC1 repeated the same PLA+ 2.0 cube used for its pre-update baseline. Bed
+tilt passed with zero retries on both runs (0.0075 mm before, 0.0120 mm
+after, tolerance 0.1000 mm). Both runs performed the final native Z home,
+loaded the saved `50.0c_35.0c` mesh, applied the −0.080 mm global Z offset,
+and ran the same 25 mm KAMP purge. File open to completion took 9m 27s
+before the update and 9m 22s after it.
+
+The resume fan patch applied in memory to RC3's factory macro file, and the
+installed Klippy command loop exposes the Fast Stop cancellation interface.
+PR Touch cancellation and clearance behavior still need hardware validation.
+
+### Fluidd follow-up
+
+- [ ] Enable **Tool → Tools → SCREWS_TILT_CALCULATE** with unhomed axes when
+  the K2 Pro auto-homing macro is installed. Fluidd `v1.37.5` disables the
+  menu item before it can send the command. Keep the active manual-probe
+  guard and the homing requirement for configurations that need it. Verify
+  on RC3 that one selection homes and probes just as the console command does.
+
 ## Cartographer plugin main rollout (September 2026)
 
 The `main` installer now tracks the released Cartographer plugin `main` branch.

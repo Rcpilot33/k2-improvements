@@ -4,6 +4,8 @@
 
 migration_catalog() {
     cat <<'EOF'
+bed-assist-stc-drop-v1|macros|is_macros|Add the printer-limited STC Bed Drop setting to the Bed Assist editor
+cartographer-touchscreen-get-mesh-v1|cartographer|is_cartographer|Restore the Creality touchscreen mesh read used during self-check to prevent a missing get_mesh callback (2184)
 moonraker-maintained-fork-v1|moonraker-source|is_managed_moonraker|Switch existing managed Moonraker to Rcpilot33/moonraker k2, preserving printer configuration and virtualenv; restart Moonraker only
 virtual-sdcard-ignored-tool-position-v2|virtual-sdcard-guard|is_virtual_sdcard_guard|Count ignored tool-selection lines in the saved file offset so refill and pause resumes start at complete G-code lines
 resume-off-fan-defaults-v1|macros|is_macros|Restore zero-speed model and side fans without generating an empty M106 speed after refill or pause
@@ -135,7 +137,8 @@ global-touch-offsets-fluidd-namespace-bootstrap-v1|global-touch-offsets|is_globa
 global-touch-offsets-fluidd-post-restart-layout-v2|global-touch-offsets|is_global_touch_offsets|Reapply and verify persistent Global Carto Touch Fluidd grouping after the upgraded macros are active
 global-touch-offsets-live-save-v5|global-touch-offsets|is_global_touch_offsets|Saving Global Carto Touch Z offsets now updates live Cartographer models without restarting
 global-carto-scan-offsets-v1|global-touch-offsets|is_global_touch_offsets|Let the global Cartographer Z-offset editor select Scan or Touch models from the active final-Z mode
-material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor and automatic material registration are available
+material-z-registration-core-v1|macros|is_macros|Register new slicer materials in overrides.cfg and use DEFAULT for their first print on the K2 Plus and Pro
+material-z-offsets-editor-v1|material-z-offsets|is_material_z_offsets|The optional Material Z Offsets editor is available
 material-z-offsets-start-print-bridge-v2|material-z-offsets|is_material_z_offsets|Material Z Offsets now refreshes and verifies its START_PRINT handoff
 material-z-offsets-zero-new-material-v3|material-z-offsets|is_material_z_offsets|Newly discovered materials now start with a zero Z offset instead of inheriting the former 0.050 mm seed
 material-z-offsets-fluidd-namespace-bootstrap-v1|material-z-offsets|is_material_z_offsets|Create the Fluidd database namespace when a wiped printer has not initialized it before Material Z Offset layout setup
@@ -186,4 +189,14 @@ nozzle-camera-jimmyv-removal-v1|nozzle-camera-mount-compatibility|is_nozzle_came
 nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer|is_nozzle_usb_cartographer|Refresh opted-in nozzle-camera AI and USB power protection without changing the selected wiring mode
 nozzle-usb-cartographer-boot-dependencies-v2|nozzle-usb-cartographer|is_nozzle_usb_cartographer|Order nozzle USB power after factory GPIO initialization and block Klipper startup until Cartographer USB is detected
 EOF
+    if [ "${K2_PRINTER_MODEL:-}" = F012 ]; then
+        cat <<'EOF'
+screws-tilt-pro-home-before-probing-v1|screws_tilt_adjust|is_screws_tilt|Load the K2 Pro screw positions and home before probing when any axis is unhomed
+k2-pro-native-print-macros-v1|macros|is_macros|Use the F012 stock-probe print preparation, chamber limits and single-Z mesh routine
+k2-pro-stock-probe-count-v1|macros|is_macros|Add editable 19x19 stock probe count to Pro overrides if missing. Recalibrate and save the default mesh after a grid change.
+k2-pro-stock-start-messages-v1|macros|is_macros|Show K2 Pro stock-probe print preparation, mesh lookup and loading, and startup completion
+k2-pro-shared-start-print-v1|macros|is_macros|Refresh K2 Pro startup and Fast Stop for the installed probe
+k2-pro-carto-optical-home-v1|cartographer|is_cartographer|Home Z directly with Cartographer during ordinary K2 Pro homing and honor factory optical calibration requests
+EOF
+    fi
 }

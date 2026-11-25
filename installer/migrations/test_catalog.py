@@ -101,6 +101,13 @@ class MigrationCatalogTests(unittest.TestCase):
         self.assertEqual(recommended({"macros", "screws_tilt_adjust"},
                                      ids - {update_id}), set())
 
+    def test_registration_update_reaches_core_macros_with_or_without_editor(self):
+        migration = "material-z-registration-core-v1"
+        completed = {row[0] for row in entries()}
+        for installed in ({"macros"}, {"macros", "material-z-offsets"}):
+            self.assertEqual(recommended(installed, completed - {migration}), {"macros"})
+            self.assertEqual(recommended(installed, completed), set())
+
     def test_native_final_z_fix_is_offered_once_to_installed_macros(self):
         update_id = "prtouch-final-z-after-tilt-v1"
         catalog_ids = {entry[0] for entry in entries()}

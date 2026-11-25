@@ -18,7 +18,7 @@ class CameraMountCompatibilityTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="k2-camera-mount-")
         self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name)
-        paths = ["scripts/stock_nozzle_camera.sh",
+        paths = ["scripts/stock_nozzle_camera.sh", "features/cartographer/mesh_limits.sh",
                  "installer/extras/cartographer-offset-setup/install.sh"]
         paths += ["installer/extras/nozzle-camera/" + name for name in
                   ("install.sh", "uninstall.sh", "nozzle-camera.sh", "nozzle_camera.cfg")]
@@ -41,6 +41,9 @@ class CameraMountCompatibilityTests(unittest.TestCase):
         self.set_mount(12)
         self.bin = self.base / "bin"
         self.bin.mkdir()
+        model = self.bin / "get_sn_mac.sh"
+        model.write_text("#!/bin/sh\necho F008\n", newline="\n")
+        model.chmod(0o755)
         self.events = self.base / "events"
         self.curl = self.base / "fake-curl"
         self.curl.write_text('''#!/bin/sh
@@ -65,6 +68,7 @@ esac
 
     def run_shell(self, script, input_text="", **extra):
         env = dict(os.environ, INSTALLER_DIR=self.base.as_posix(),
+                   PATH=str(self.bin) + os.pathsep + os.environ["PATH"],
                    PRINTER_CFG_DIR=self.custom.parent.as_posix(),
                    K2_BIN_DIR=self.bin.as_posix(), K2_CURL=self.curl.as_posix(),
                    NOZZLE_CAM_PIDFILE=(self.base / "camera.pid").as_posix(),

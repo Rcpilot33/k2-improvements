@@ -8,6 +8,7 @@
 set -eu
 
 SCRIPT_DIR="$(readlink -f $(dirname $0))"
+. "$SCRIPT_DIR/model.sh"
 CUSTOM="${PRINTER_CFG_DIR:-/mnt/UDISK/printer_data/config}/custom"
 HAD_SURFACE_WRAPPER=0
 

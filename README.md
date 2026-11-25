@@ -7,11 +7,10 @@
 > - ▶️ [Watch Rcpilot33 K2 Improvements on YouTube](https://www.youtube.com/@Rcpilot33)
 
 > [!IMPORTANT]
-> **This project supports the Creality K2 Plus only.** Do not install it on a
-> K2 Pro or any other K2-series printer. The scripts, Klipper patches, service
-> paths, homing behavior, motor-controller handling, and printer configuration
-> are specific to the K2 Plus. Other models are not supported or validated and
-> may be damaged by these changes.
+> **Printer features are supported on the Creality K2 Plus.** On the
+> `integration-testing` branch, the K2 Pro installer supports testing the stock
+> probe and Cartographer setups. Option 1 shows the installed component status.
+> Use the [K2 Pro bootstrap instructions](./INSTALL.md#k2-pro-development-bootstrap).
 
 This fork is built on the primary technical work maintained by
 [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements).
@@ -162,11 +161,12 @@ Create and save a `default` bed mesh using the same `[bed_mesh] probe_count`
 that will be active while printing. Recreate it whenever `probe_count` changes.
 Saved `5,5` and `19,19` meshes are not interchangeable.
 
-Run `G28`, `Z_TILT_ADJUST`, `G28 Z`,
+On the K2 Plus, run `G28`, `Z_TILT_ADJUST`, `G28 Z`,
 `BED_MESH_CALIBRATE PROFILE=default`, and `SAVE_CONFIG` in that order, then
 wait for the protected restart to finish before moving the printer.
 
-See the [bed-mesh guide](./features/macros/bed_mesh/README.md).
+For the single-Z K2 Pro, use the stock-probe Pro sequence in the
+[bed-mesh guide](./features/macros/bed_mesh/README.md).
 
 ### Cartographer
 
