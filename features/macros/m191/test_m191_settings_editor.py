@@ -200,6 +200,29 @@ class LiveSaveTests(unittest.TestCase):
         self.assertIsNone(self.editor.settings)
         self.assertEqual(self.gcode.scripts, [])
 
+    def test_stc_drop_uses_each_printers_z_limit_and_saves_to_native_setting(self):
+        screws = Mock(bed_drop_distance=200.0)
+        self.printer.objects["screws_tilt_adjust"] = screws
+        toolhead = self.printer.objects["toolhead"] = Mock()
+        self.printer.get_reactor = Mock()
+        for z_max, new_drop in ((303, 0), (350, 325)):
+            with self.subTest(z_max=z_max):
+                self.path.write_text(sample_text() + "[screws_tilt_adjust]\nbed_drop_distance: 200 # mm\n")
+                toolhead.get_status.return_value = {"axis_maximum": [0, 0, z_max]}
+                self.editor.cmd_open(self.command)
+                index = next(i for i, item in enumerate(self.editor.settings) if item["key"] == "bed_drop_distance")
+                self.assertTrue(any("STC Bed Drop|200.0|0.0|%s|" % (z_max - 0.5) in line
+                                    for line in self.gcode.actions))
+                self.command.get_int = lambda *args, **kwargs: index
+                self.command.get_float = lambda *args: z_max
+                with self.assertRaisesRegex(RuntimeError, "Z limit"):
+                    self.editor.cmd_stage(self.command)
+                self.command.get_float = lambda *args: new_drop
+                self.editor.cmd_stage(self.command)
+                self.editor.cmd_save(self.command)
+                self.assertEqual(screws.bed_drop_distance, new_drop)
+                self.assertIn("bed_drop_distance: %.1f # mm" % new_drop, self.path.read_text())
+
     def test_invalid_combination_does_not_write_or_update(self):
         self.change("circulation_fan_high_speed", 10.0)
         with self.assertRaisesRegex(RuntimeError, "must be at least"):

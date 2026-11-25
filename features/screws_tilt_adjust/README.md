@@ -22,8 +22,11 @@ command lowers the bed by up to 200 mm by default to provide room to remove the 
 plate and reach the adjustment screws. The final position is automatically
 limited to 0.5 mm below the configured Z maximum.
 
-Set the distance in millimeters in `custom/overrides.cfg` (merge these options
-into an existing `[screws_tilt_adjust]` section if present):
+With the macro bundle installed, open **Bed Assist → STC Bed Drop** in Fluidd.
+Save applies the distance to the next screw check and stores it in
+`custom/overrides.cfg`. The editor uses the printer's configured Z maximum
+minus 0.5 mm. Each move also accounts for the bed position after probing.
+For example, a 100 mm setting appears as:
 
 ```ini
 [screws_tilt_adjust]
@@ -36,7 +39,7 @@ rejected. Larger distances remain capped at Z maximum minus 0.5 mm. The setting
 does not change screw-to-screw travel speed or the final drop speed.
 
 Install this module update through the installer updater so its protected
-Klippy code reload runs. Later changes to the setting require a protected
+Klippy code reload runs. Manual file edits require a protected
 configuration restart (`FIRMWARE_RESTART`).
 
 Repeat the command and adjustments until the reported values are close to

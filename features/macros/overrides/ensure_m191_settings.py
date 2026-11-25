@@ -101,6 +101,32 @@ def update(contents):
     return "".join(lines)
 
 
+def ensure_stc_bed_drop(contents):
+    """Seed the native screws setting only when the component is installed."""
+    newline = "\r\n" if "\r\n" in contents else "\n"
+    lines = contents.splitlines(keepends=True)
+    section = None
+    insert_at = None
+    for index, line in enumerate(lines):
+        match = SECTION_RE.match(line)
+        if match:
+            section = match.group(1).strip().casefold()
+            if section == "screws_tilt_adjust":
+                insert_at = index + 1
+        elif section == "screws_tilt_adjust" and re.match(
+            r"^\s*bed_drop_distance\s*[:=]", line, re.I
+        ):
+            return contents
+    default_line = "bed_drop_distance: 200" + newline
+    if insert_at is None:
+        return (contents.rstrip("\r\n") + newline * 2
+                + "[screws_tilt_adjust]" + newline + default_line)
+    if not lines[insert_at - 1].endswith("\n"):
+        lines[insert_at - 1] += newline
+    lines.insert(insert_at, default_line)
+    return "".join(lines)
+
+
 def write_atomic(path, contents):
     mode = stat.S_IMODE(os.stat(path).st_mode)
     directory = os.path.dirname(path) or "."
@@ -132,7 +158,9 @@ def main():
     with open(path, "r", encoding="utf-8", newline="") as source:
         original = source.read()
     try:
-        updated = update(original)
+        updated = original if "--stc-only" in sys.argv[2:] else update(original)
+        if os.path.isfile(os.path.join(os.path.dirname(path), "screws_tilt_adjust.cfg")):
+            updated = ensure_stc_bed_drop(updated)
     except ValueError as exc:
         sys.stderr.write("ERROR: could not add M191 settings: %s\n" % exc)
         return 1

@@ -23,6 +23,11 @@ python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
 python "${SCRIPT_DIR}/../../scripts/ensure_included.py" \
     ~/printer_data/config/printer.cfg custom/main.cfg
 
+if [ -f ~/printer_data/config/custom/overrides.cfg ]; then
+    python3 "$SCRIPT_DIR/../macros/overrides/ensure_m191_settings.py" \
+        ~/printer_data/config/custom/overrides.cfg --stc-only
+fi
+
 sh ${SCRIPT_DIR}/../../scripts/klippy_code_restart.sh
 
 STATE_DIR=/mnt/UDISK/root/.k2-improvements/installer-state

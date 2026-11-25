@@ -14,6 +14,16 @@ SPEC.loader.exec_module(MODULE)
 
 
 class EnsureM191SettingsTests(unittest.TestCase):
+    def test_seeds_native_bed_drop_once_and_keeps_user_setting(self):
+        for original in ("[bed_mesh]\nprobe_count: 5,5\n",
+                         "[screws_tilt_adjust]\r\nscrew_thread: CW-M4\r\n",
+                         "[screws_tilt_adjust]"):
+            seeded = MODULE.ensure_stc_bed_drop(original)
+            self.assertEqual(seeded.count("[screws_tilt_adjust]"), 1)
+            self.assertIn("bed_drop_distance: 200", seeded)
+            custom = seeded.replace("bed_drop_distance: 200", "bed_drop_distance = 0 # disabled")
+            self.assertEqual(MODULE.ensure_stc_bed_drop(custom), custom)
+
     def test_installer_runs_m191_settings_migration(self):
         self.assertIn(
             'python3 "${SCRIPT_DIR}/ensure_m191_settings.py"',
