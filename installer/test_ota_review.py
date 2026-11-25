@@ -289,6 +289,33 @@ migration_offer_on_startup
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("option=material-z-offsets", self.snapshot.read_text())
 
+    def test_probe_specific_options_on_first_review_backup_and_existing_snapshot(self):
+        stock = {"global-prtouch-offsets", "plate-aware-mesh"}
+        carto = {"global-touch-offsets", "cartographer-plate-workflow"}
+        detected = stock | carto | {"material-z-offsets"}
+        for setup, choice, model, label, allowed in (
+            ("cartographer", "2", "F012", "K2 Pro", carto),
+            ("stock-probe", "1", "F008", "K2 Plus", stock),
+        ):
+            with self.subTest(setup=setup):
+                harness = "ota_detect_options() { printf '%s\\n' " + " ".join(sorted(detected)) + "; }\n"
+                if setup == "cartographer":
+                    harness += "has_cartographer_configuration() { return 0; }\n"
+                expected = allowed | {"material-z-offsets"}
+                for command, saved in (("ota_review", False), ("ota_save_before_update", False),
+                                       ("ota_review", True)):
+                    self.snapshot.unlink(missing_ok=True)
+                    answers = choice + "\n\n"
+                    if saved:
+                        self.snapshot.write_text("setup=" + setup + "\n" +
+                                                 "".join("option=" + x + "\n" for x in detected))
+                        answers = ""
+                    result = self.shell(harness + command, answers, K2_PRINTER_MODEL=model)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    lines = self.snapshot.read_text().splitlines()
+                    self.assertIn("model=" + label, lines)
+                    self.assertEqual({s[7:] for s in lines if s.startswith("option=")}, expected)
+
     def test_missing_fluidd_grouping_can_be_restored_after_runtime_is_ready(self):
         script = """
 python3() { case "$1" in */verify_fluidd_layout.py) return 1 ;; *) return 0 ;; esac; }

@@ -148,12 +148,23 @@ ota_detect_options() {
     done
 }
 
+# Use the selected setup even when a firmware upgrade has erased its files.
+ota_filter_setup_options() {
+    awk -v setup="$1" '
+        setup == "cartographer" && ($0 == "global-prtouch-offsets" || $0 == "plate-aware-mesh") { next }
+        setup == "stock-probe" && ($0 == "global-touch-offsets" || $0 == "cartographer-plate-workflow") { next }
+        NF && !seen[$0]++
+    '
+}
+
 ota_write_snapshot() {
     local fw="$1" setup="$2" options="$3" state="$4" option tmp="$OTA_SNAPSHOT.new.$$"
+    local model='K2 Plus'
+    if [ "${K2_PRINTER_MODEL:-}" = F012 ]; then model='K2 Pro'; fi
     [ -n "$fw" ] || { warn 'Installed firmware version is unknown; keeping previous snapshot'; return 1; }
     mkdir -p "$MIGRATION_STATE_DIR" || return 1
     {
-        printf 'firmware=%s\nmodel=K2 Plus\nsetup=%s\nstate=%s\n' "$fw" "$setup" "$state"
+        printf 'firmware=%s\nmodel=%s\nsetup=%s\nstate=%s\n' "$fw" "$model" "$setup" "$state"
         for option in $options; do printf 'option=%s\n' "$option"; done
     } > "$tmp" || return 1
     if [ "$state" = captured ] || [ ! -f "$MIGRATION_STATE_DIR/settings-$setup.zip" ]; then
@@ -188,17 +199,13 @@ ota_verify_setup() {
 }
 
 ota_setup_options() {
-    local setup="$1" options old
-    options=$(ota_detect_options)
-    if [ -f "$OTA_SNAPSHOT" ]; then
-        old=$(sed -n 's/^option=//p' "$OTA_SNAPSHOT")
-        # Detect only additions on a reinstall; an OTA can erase all traces of an option.
-        options=$(printf '%s\n%s\n' "$options" "$old" | awk 'NF && !seen[$0]++')
-        if [ "$setup" = cartographer ]; then
-            options=$(printf '%s\n' "$options" | awk '$0 != "global-prtouch-offsets" && $0 != "plate-aware-mesh"')
+    {
+        ota_detect_options
+        if [ -f "$OTA_SNAPSHOT" ]; then
+            # A firmware upgrade can erase all traces of an installed option.
+            sed -n 's/^option=//p' "$OTA_SNAPSHOT"
         fi
-    fi
-    printf '%s\n' "$options"
+    } | ota_filter_setup_options "$1"
 }
 
 ota_setup_installed() {
@@ -236,7 +243,7 @@ ota_bootstrap_preflight() {
 }
 
 ota_review() (
-    local setup options fw name missing manual extra tmp choice requirement repair_nozzle_usb=0
+    local setup options available fw name missing manual extra tmp choice requirement repair_nozzle_usb=0
     OTA_REVIEW_ACTIVE=1
     fw=$(detect_installed_firmware)
     printf 'Reviewing local setup. Installed firmware: %s, saved baseline: %s\n' \
@@ -246,20 +253,21 @@ ota_review() (
     fi
     if [ -f "$OTA_SNAPSHOT" ]; then
         setup=$(sed -n 's/^setup=//p' "$OTA_SNAPSHOT")
-        options=$(sed -n 's/^option=//p' "$OTA_SNAPSHOT")
         case "$setup" in cartographer|stock-probe) ;; *) warn 'Invalid setup in saved snapshot'; return 1 ;; esac
+        options=$(sed -n 's/^option=//p' "$OTA_SNAPSHOT" | ota_filter_setup_options "$setup")
     else
         if has_cartographer_configuration; then setup=cartographer; else setup=stock-probe; fi
         printf 'No saved setup snapshot. Detected %s. Select the previously installed setup:\n' "$setup"
         printf '  1. Stock probe\n  2. Cartographer\n  0. Back\n'
         read_prompt choice
         case "$choice" in 1) setup=stock-probe ;; 2) setup=cartographer ;; *) return 0 ;; esac
-        options=$(ota_detect_options)
-        printf 'Detected options:\n%s\nAvailable option names:\n%s\n' "${options:-none}" "$OTA_OPTIONS"
+        options=$(ota_setup_options "$setup")
+        available=$(printf '%s\n' $OTA_OPTIONS | ota_filter_setup_options "$setup" | tr '\n' ' ')
+        printf 'Detected options:\n%s\nAvailable option names:\n%s\n' "${options:-none}" "$available"
         printf 'Enter any additional previously installed option names (Enter to continue): '
         read_prompt extra
         for name in $extra; do
-            case " $OTA_OPTIONS " in *" $name "*) ;; *) warn "Unknown option: $name"; return 1 ;; esac
+            case " $available " in *" $name "*) ;; *) warn "Option unavailable for $setup: $name"; return 1 ;; esac
         done
         options=$(printf '%s\n' $options $extra | awk 'NF && !seen[$0]++')
     fi
