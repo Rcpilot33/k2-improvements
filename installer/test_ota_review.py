@@ -263,6 +263,26 @@ migration_offer_on_startup
         marker.touch()
         self.assertEqual(self.shell(dispatch).stdout.strip(), "UPDATE_RESULTS")
 
+    def test_update_reload_offers_missing_registration_on_verified_firmware(self):
+        self.snapshot.write_text("firmware=1.1.8.0\nsetup=cartographer\nstate=verified\n")
+        (self.state / "settings-cartographer.zip").touch()
+        (self.state / "review-after-reload").touch()
+        result = self.shell("""
+has_cartographer_configuration() { return 0; }
+ota_component_ready() { [ "$1" != cartographer-registration ]; }
+ota_settings() { return 0; }
+extra_line() { :; }
+press_enter() { :; }
+bootstrap_home_ready() { return 1; }
+run_logged_install() { shift; "$@"; }
+confirm() { echo "$1"; return 1; }
+menu_update_results() { echo UPDATE_RESULTS; }
+migration_offer_on_startup
+""")
+        self.assertIn("Missing or incomplete components:\ncartographer-registration", result.stdout)
+        self.assertIn("Repair the listed automatic components", result.stdout)
+        self.assertNotIn("UPDATE_RESULTS", result.stdout)
+
     def test_first_review_adopts_previously_installed_extras(self):
         self.snapshot.unlink()
         result = self.shell("ota_detect_options() { :; }; ota_review", "1\nmaterial-z-offsets\n")

@@ -47,6 +47,9 @@ ota_review_notice() {
         echo 'SETTINGS RESTORE PENDING'
     elif [ -z "$old" ] && { is_macros || has_cartographer_configuration; }; then
         echo 'SETUP BASELINE NEEDED'
+    elif grep -Fxq 'setup=cartographer' "$OTA_SNAPSHOT" 2>/dev/null &&
+         ! ota_component_ready cartographer-registration 2>/dev/null; then
+        echo 'CARTOGRAPHER REGISTRATION INCOMPLETE | REVIEW SETUP'
     fi
 }
 
