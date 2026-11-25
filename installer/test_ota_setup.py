@@ -112,6 +112,9 @@ bash ./install.sh --restore-service
         # Run the real installers with only the service and HTTP call replaced.
         repo = self.base / "checkout"
         for relative in ("features/cartographer/register.sh", "features/cartographer/update-manager.cfg",
+                         "features/cartographer/install_touchscreen_compat.sh",
+                         "features/cartographer/k2_cartographer_touchscreen.cfg",
+                         "features/cartographer/k2_cartographer_touchscreen.py",
                          "scripts/ensure_included.py", "installer/lib/common.sh",
                          "installer/detect/features.sh", "installer/extras/cartographer-macros/install.sh",
                          "installer/extras/cartographer-macros/cartographer_macros.cfg"):
@@ -139,8 +142,10 @@ bash ./install.sh --restore-service
         (shim / "python3").write_text('#!/bin/sh\nexec "$TEST_PYTHON" "$@"\n', newline="\n")
         (shim / "python3").chmod(0o755)
         self.env["SHIM"] = shim.as_posix()
+        shutil.copy(shim / "python3", shim / "python")
         script = """
 export PATH="$(cd "$SHIM" && pwd):$PATH"
+export HOME="$(cd "$PRINTER_CFG_DIR/../.." && pwd)"
 cd "$CHECKOUT" && sh features/cartographer/register.sh
 """
         check = '. installer/detect/features.sh; is_cartographer_registered'
@@ -155,8 +160,13 @@ cd "$CHECKOUT" && sh features/cartographer/register.sh
             result = self.shell(script)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(self.shell(check).returncode, 0)
+            if attempt == 0:
+                main = self.custom / "main.cfg"
+                main.write_text(main.read_text().replace("[include k2_cartographer_touchscreen.cfg]", ""))
+                self.assertNotEqual(self.shell(check).returncode, 0)
         self.assertEqual((self.custom / "overrides.cfg").read_bytes(), offsets)
         includes = (self.custom / "main.cfg").read_text().splitlines()
         self.assertEqual(includes.count("[include cartographer_macros.cfg]"), 1)
+        self.assertEqual(includes.count("[include k2_cartographer_touchscreen.cfg]"), 1)
         self.assertEqual(includes[-1], "[include overrides.cfg]")
         self.assertEqual((self.cfg / "moonraker.conf").read_text().count("[include"), 1)

@@ -50,6 +50,9 @@ is_managed_moonraker() { [ -d "${HOME:-/mnt/UDISK/root}/moonraker/.git" ]; }
 is_cartographer_registered() {
     local custom="$PRINTER_CFG_DIR/custom"
     [ ! -e "$custom/.cartographer-registration-pending" ] &&
+    [ -f "${KLIPPER_DIR:-/usr/share/klipper}/klippy/extras/k2_cartographer_touchscreen.py" ] &&
+    [ -f "$custom/k2_cartographer_touchscreen.cfg" ] &&
+    grep -Fxq '[include k2_cartographer_touchscreen.cfg]' "$custom/main.cfg" &&
     is_carto_macros &&
     grep -Fxq '[include custom/main.cfg]' "$PRINTER_CFG_DIR/printer.cfg" || return 1
     if ! grep -q '^\[cartographer\]' "$PRINTER_CFG_DIR/printer.cfg"; then

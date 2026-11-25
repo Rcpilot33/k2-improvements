@@ -48,5 +48,6 @@ python3 "$INSTALLER_DIR/scripts/ensure_included.py" "$cfg/printer.cfg" custom/ma
 if ! grep -q '^\[cartographer\]' "$cfg/printer.cfg"; then
     python3 "$INSTALLER_DIR/scripts/ensure_included.py" "$custom/main.cfg" cartographer.cfg
 fi
+sh "$HERE/install_touchscreen_compat.sh" --no-restart
 sh "$INSTALLER_DIR/installer/extras/cartographer-macros/install.sh"
 rm -f "$pending"

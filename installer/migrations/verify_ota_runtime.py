@@ -36,6 +36,11 @@ def verify(setup, options=(), request=query):
     if missing:
         raise ValueError("missing Moonraker updaters: {}. Check the updater includes and Moonraker log."
                          .format(", ".join(sorted(missing))))
+    if setup == "cartographer":
+        status = request("/printer/objects/query?k2_cartographer_touchscreen=installed&probe=z_offset")["status"]
+        if (status.get("k2_cartographer_touchscreen", {}).get("installed") is not True
+                or status.get("probe", {}).get("z_offset") is None):
+            raise ValueError("Cartographer touchscreen live Z offset is unavailable. Check the active include and Klipper log.")
 
 
 if __name__ == "__main__":

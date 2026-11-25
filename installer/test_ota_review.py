@@ -32,6 +32,14 @@ class RuntimeTests(unittest.TestCase):
         api["/printer/gcode/help"].update(dict.fromkeys(("A63_CARTO_INFO", "A62_CARTO_LIST_MODELS")))
         with self.assertRaisesRegex(ValueError, "missing Moonraker updaters: cartographer"):
             runtime.verify("cartographer", request=api.__getitem__)
+        api["/machine/update/status?refresh=false"]["version_info"]["cartographer"] = {}
+        status = {"k2_cartographer_touchscreen": {}, "probe": {"z_offset": None}}
+        api["/printer/objects/query?k2_cartographer_touchscreen=installed&probe=z_offset"] = {"status": status}
+        with self.assertRaisesRegex(ValueError, "touchscreen"):
+            runtime.verify("cartographer", request=api.__getitem__)
+        status["k2_cartographer_touchscreen"]["installed"] = True
+        status["probe"]["z_offset"] = 0.0
+        runtime.verify("cartographer", request=api.__getitem__)
         api["/printer/info"]["state"] = "error"
         with self.assertRaisesRegex(ValueError, "Ready"):
             runtime.verify("stock-probe", request=api.__getitem__)
