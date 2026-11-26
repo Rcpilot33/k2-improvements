@@ -164,6 +164,52 @@ ota_review
         self.assertEqual(repaired.stdout.count("camera restart"), 1)
         self.assertIn("Verified cartographer on firmware 1.1.8.0", repaired.stdout)
 
+    def test_stock_ota_activates_runtime_before_offset_repair(self):
+        original = b"firmware=1.1.8.0\nsetup=stock-probe\noption=global-prtouch-offsets\noption=nozzle-camera\n"
+        script = """
+INSTALLER_DIR=$PWD
+extra_line() { :; }
+confirm() { return 0; }
+ota_component_ready() {
+    case "$1" in
+        macros|moonraker-service|nozzle-camera|global-prtouch-offsets) test -f "$MIGRATION_STATE_DIR/$1" ;;
+        *) return 0 ;;
+    esac
+}
+printer_activity_state() {
+    if [ -f "$MIGRATION_STATE_DIR/ready" ]; then echo "$AFTER_RESTART"; else echo unknown; fi
+}
+press_enter() { :; }
+migration_repair_component() {
+    echo "install $1"
+    if [ "$1" = global-prtouch-offsets ]; then
+        [ "$(printer_activity_state)" = standby ] || return 1
+    fi
+    touch "$MIGRATION_STATE_DIR/$1"
+}
+migration_reconcile_fluidd_layout() { return 0; }
+migration_mark_component_current() { return 0; }
+sh() {
+    echo "restart"
+    touch "$MIGRATION_STATE_DIR/ready"
+}
+ota_review
+"""
+        self.snapshot.write_bytes(original)
+        busy = self.shell(script, FW="1.1.5.2", AFTER_RESTART="paused")
+        self.assertNotEqual(busy.returncode, 0)
+        self.assertIn("cannot update or repair components while the printer is paused", busy.stderr)
+        self.assertNotIn("install global-prtouch-offsets", busy.stdout)
+        self.assertEqual(self.snapshot.read_bytes(), original)
+        for name in ("ready", "macros", "moonraker-service", "nozzle-camera"):
+            (self.state / name).unlink()
+        result = self.shell(script, FW="1.1.5.2", AFTER_RESTART="standby")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        stages = [line for line in result.stdout.splitlines() if line.startswith("install ") or line == "restart"]
+        self.assertEqual(stages, ["install moonraker-service", "install macros", "install nozzle-camera",
+                                  "restart", "install global-prtouch-offsets", "restart"])
+        self.assertIn("firmware=1.1.5.2", self.snapshot.read_text())
+
     def test_review_repairs_nozzle_protection_after_core_and_resumes_after_back(self):
         original = b"firmware=1.1.6.4\nsetup=cartographer\noption=nozzle-usb-cartographer\n"
         self.snapshot.write_bytes(original)

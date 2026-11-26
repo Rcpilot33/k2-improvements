@@ -253,6 +253,7 @@ ota_bootstrap_preflight() {
 
 ota_review() (
     local setup options available fw name missing manual extra tmp choice requirement repair_nozzle_usb=0
+    local offsets_after_restart=0
     OTA_REVIEW_ACTIVE=1
     fw=$(detect_installed_firmware)
     printf 'Reviewing local setup. Installed firmware: %s, saved baseline: %s\n' \
@@ -316,6 +317,13 @@ ota_review() (
                     continue
                 fi
             fi
+            # This editor checks live print_stats and the loaded stock probe.
+            # Moonraker and the managed Klipper setup must be active first.
+            if [ "$name" = global-prtouch-offsets ] &&
+               grep -Eq '^(better-init|moonraker-service|moonraker-source|macros)$' "$tmp"; then
+                offsets_after_restart=1
+                continue
+            fi
             case "$name" in
                 nozzle-usb-cartographer)
                     info 'This review will ask how the Cartographer probe is wired before restoring nozzle-camera protection.'
@@ -332,8 +340,15 @@ ota_review() (
                 warn "The plan replaces firmware files. Check compatibility with printer model ${K2_PRINTER_MODEL:-unknown} on firmware ${fw:-unknown} before applying it."
                 return 1
             fi
-            confirm 'Repair the listed automatic components and perform their required restart?' || return 1
+            if [ "$offsets_after_restart" = 1 ]; then
+                info 'Global No-Carto Z Offsets will be repaired after the first restart, then activated with a second restart.'
+            fi
+            confirm 'Repair the listed automatic components and perform any required restarts?' || return 1
             K2_OTA_ACTIVITY_CONFIRM=1 migration_apply_components "$tmp" || return 1
+            if [ "$offsets_after_restart" = 1 ]; then
+                printf '%s\n' global-prtouch-offsets > "$tmp" || return 1
+                K2_OTA_ACTIVITY_CONFIRM=1 migration_apply_components "$tmp" || return 1
+            fi
         fi
         if [ "$repair_nozzle_usb" = 1 ] && ! ota_component_ready nozzle-usb-cartographer; then
             # The hardware installer checks live print status. Recover Moonraker
