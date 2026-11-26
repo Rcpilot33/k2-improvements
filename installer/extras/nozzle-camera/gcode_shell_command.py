@@ -21,7 +21,12 @@ class ShellCommand:
             self.lock = self.reactor.mutex()
             printer.add_object("k2_shell_command_mutex", self.lock)
         printer.register_event_handler("klippy:disconnect", self._disconnect)
+        self.shutoff_timer = None
+        self.timer_generation = 0
         self.command = config.get("command")
+        if config.getboolean("camera_shutoff_timer", False):
+            self.shutoff_timer = self.reactor.register_timer(self._shutoff_due)
+            self.gcode.register_command("K2_SET_CAMERA_SHUTOFF", self._set_shutoff)
         self.timeout = config.getfloat("timeout", 2.0, above=0.0)
         self.verbose = config.getboolean("verbose", True)
         self.gcode.register_mux_command(
@@ -51,9 +56,23 @@ class ShellCommand:
             except (OSError, RuntimeError) as exc:
                 raise gcmd.error(str(exc))
 
-    def _run_background(self, argv):
+    def _set_shutoff(self, gcmd):
+        duration = gcmd.get_float("DURATION", minval=0.)
+        self.timer_generation += 1
+        deadline = self.reactor.monotonic() + duration if duration else self.reactor.NEVER
+        self.reactor.update_timer(self.shutoff_timer, deadline)
+
+    def _shutoff_due(self, eventtime):
+        # A print-start macro can own the G-code mutex for several minutes.
+        # Dispatch the OFF helper directly without entering the G-code queue.
+        generation = self.timer_generation
+        self.reactor.register_callback(
+            lambda now: self._run_background(shlex.split(self.command), generation))
+        return self.reactor.NEVER
+
+    def _run_background(self, argv, generation=None):
         try:
-            self._run(argv)
+            self._run(argv, generation)
         except (OSError, RuntimeError) as exc:
             logging.warning("Shell command %s: %s", self.name, exc)
             if self.live:
@@ -68,12 +87,14 @@ class ShellCommand:
 
     def _disconnect(self):
         self.live = False
+        if self.shutoff_timer is not None:
+            self.reactor.unregister_timer(self.shutoff_timer)
         self._terminate()
 
-    def _run(self, argv):
+    def _run(self, argv, generation=None):
         # Serialize ON/OFF, including timer requests, while other reactor work runs.
         with self.lock:
-            if not self.live:
+            if not self.live or (generation is not None and generation != self.timer_generation):
                 return
             with tempfile.TemporaryFile() as output:
                 self.process = Popen(argv, stdout=output, stderr=output, start_new_session=True)

@@ -49,8 +49,11 @@ class CameraMountCompatibilityTests(unittest.TestCase):
         self.curl.write_text('''#!/bin/sh
 case "$*" in
     *objects/query*) echo '{"result":{"status":{"print_stats":{"state":"'"$TEST_STATE"'"}}}}' ;;
-    *objects/list*) echo '{"result":{"objects":["delayed_gcode _NOZZLE_CAMERA_AUTO_OFF"]}}' ;;
-    *gcode/script*) echo cancel-timer >> "$TEST_EVENTS"; printf '%s\n' "$TEST_CANCEL_REPLY" ;;
+    *objects/list*) printf '{"result":{"objects":["%s"]}}' "${TEST_TIMER_OBJECT:-delayed_gcode _NOZZLE_CAMERA_AUTO_OFF}" ;;
+    *gcode/script*) if [ -n "${TEST_EXPECT_CANCEL:-}" ]; then
+        case "$*" in *"$TEST_EXPECT_CANCEL"*) ;; *) exit 1 ;; esac
+    fi
+    echo cancel-timer >> "$TEST_EVENTS"; printf '%s\n' "$TEST_CANCEL_REPLY" ;;
 esac
 ''', newline="\n")
         subprocess.run([BASH, "-c", 'chmod +x "$1"', "test", self.curl.as_posix()], check=True)
@@ -140,7 +143,10 @@ extra_state nozzle-camera
     def test_removal_accepts_previous_installer_config(self):
         self.install_camera_fixture()
         cfg = self.custom / "nozzle_camera.cfg"
-        cfg.write_text(cfg.read_text().replace(" BACKGROUND=1", ""), newline="\n")
+        old = cfg.read_text().replace("camera_shutoff_timer: True\n", "").replace(
+            "K2_SET_CAMERA_SHUTOFF", "UPDATE_DELAYED_GCODE ID=_NOZZLE_CAMERA_AUTO_OFF")
+        old += "\n[delayed_gcode _NOZZLE_CAMERA_AUTO_OFF]\ngcode:\n    RUN_SHELL_COMMAND CMD=nozzle_camera_off BACKGROUND=1\n"
+        cfg.write_text(old.replace(" BACKGROUND=1", ""), newline="\n")
         result = self.remove()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(cfg.exists())
@@ -154,7 +160,9 @@ stock_camera_private_config "$INSTALLER_DIR/installer/extras/nozzle-camera/nozzl
         self.assertIn("[k2_camera_command nozzle_camera_on]", result.stdout)
         self.assertIn("K2_RUN_CAMERA_COMMAND CMD=nozzle_camera_off BACKGROUND=1", result.stdout)
         (self.custom / "nozzle_camera.cfg").write_text(result.stdout, newline="\n")
-        self.assertEqual(self.remove().returncode, 0)
+        result = self.remove(TEST_TIMER_OBJECT="k2_camera_command nozzle_camera_off",
+                             TEST_EXPECT_CANCEL="K2_SET_CAMERA_SHUTOFF DURATION=0")
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_busy_printer_and_failed_timer_cancel_prevent_removal(self):
         self.install_camera_fixture()
