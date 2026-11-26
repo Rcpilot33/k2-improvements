@@ -495,6 +495,10 @@ migration_repair_component() {
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/plate-aware-mesh/install.sh" --no-restart
             ;;
+        nozzle-camera)
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
+                sh "$INSTALLER_DIR/installer/extras/nozzle-camera/install.sh"
+            ;;
         nozzle-camera-mount-compatibility)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/nozzle-camera/uninstall.sh" --no-restart
@@ -547,7 +551,7 @@ migration_repair_component() {
 
 migration_component_restart_kind() {
     case "$1" in
-        cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|global-touch-offsets|global-prtouch-offsets|material-z-offsets|start-print-fast-stop|nozzle-usb-cartographer)
+        cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|global-touch-offsets|global-prtouch-offsets|material-z-offsets|start-print-fast-stop|nozzle-camera|nozzle-usb-cartographer)
             echo code
             ;;
         moonraker-source|fluidd)

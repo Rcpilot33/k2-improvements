@@ -101,6 +101,36 @@ ota_review
         self.assertIn("Missing or incomplete components:\nkamp-adaptive-purge", result.stdout)
         self.assertEqual(original, self.snapshot.read_bytes())
 
+    def test_review_recovers_saved_factory_camera_with_one_protected_restart(self):
+        original = b"firmware=1.1.5.5\nsetup=cartographer\noption=nozzle-camera\n"
+        self.snapshot.write_bytes(original)
+        script = """
+INSTALLER_DIR=$PWD
+. installer/menus/extras.sh
+has_cartographer_configuration() { return 0; }
+is_stock_nozzle_camera_available() { [ "$COMPATIBLE" = yes ]; }
+ota_component_ready() { [ "$1" != nozzle-camera ] || [ -f "$MIGRATION_STATE_DIR/stream" ]; }
+migration_require_idle() { return 0; }
+migration_reconcile_fluidd_layout() { return 0; }
+migration_mark_component_current() { return 0; }
+sh() {
+    case "$1:$K2_DEFER_FIRMWARE_RESTART" in
+        */extras/nozzle-camera/install.sh:1) touch "$MIGRATION_STATE_DIR/stream" ;;
+        */scripts/klippy_code_restart.sh:0) echo 'camera restart' ;;
+        *) return 1 ;;
+    esac
+}
+ota_review
+"""
+        blocked = self.shell(script, COMPATIBLE="no")
+        self.assertNotEqual(blocked.returncode, 0)
+        self.assertFalse((self.state / "stream").exists())
+        self.assertEqual(self.snapshot.read_bytes(), original)
+        repaired = self.shell(script, "y\n", COMPATIBLE="yes")
+        self.assertEqual(repaired.returncode, 0, repaired.stdout + repaired.stderr)
+        self.assertEqual(repaired.stdout.count("camera restart"), 1)
+        self.assertIn("Verified cartographer on firmware 1.1.8.0", repaired.stdout)
+
     def test_review_repairs_nozzle_protection_after_core_and_resumes_after_back(self):
         original = b"firmware=1.1.6.4\nsetup=cartographer\noption=nozzle-usb-cartographer\n"
         self.snapshot.write_bytes(original)

@@ -311,8 +311,8 @@ ota_review() (
                 nozzle-usb-cartographer)
                     info 'This review will ask how the Cartographer probe is wired before restoring nozzle-camera protection.'
                     repair_nozzle_usb=1 ;;
-                secure-auth|nozzle-camera)
-                    warn "Review $name in Optional extras to confirm the current hardware or SSH settings."
+                secure-auth)
+                    warn "Review $name in Optional extras to confirm the current SSH settings."
                     manual=1 ;;
                 *) printf '%s\n' "$name" >> "$tmp" ;;
             esac
