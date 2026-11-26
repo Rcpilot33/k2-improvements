@@ -17,10 +17,10 @@ test -d ~/printer_data/config/custom || mkdir -p ~/printer_data/config/custom
 
 ln -sf "$SCRIPT_DIR/$screw_config" \
     ~/printer_data/config/custom/screws_tilt_adjust.cfg
-python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg \
     screws_tilt_adjust.cfg
-python "${SCRIPT_DIR}/../../scripts/ensure_included.py" \
+python3 "${SCRIPT_DIR}/../../scripts/ensure_included.py" \
     ~/printer_data/config/printer.cfg custom/main.cfg
 
 if [ -f ~/printer_data/config/custom/overrides.cfg ]; then

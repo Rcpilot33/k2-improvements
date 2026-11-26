@@ -18,7 +18,7 @@ cd ${HOME}
 sh "${SCRIPT_DIR}/install_plugin.sh" "${HOME}/cartographer3d-plugin"
 
 echo "I: installing python dependencies"
-~/klippy-env/bin/pip install --disable-pip-version-check typing_extensions
+~/klippy-env/bin/pip install --disable-pip-version-check typing_extensions==4.16.0
 
 # A partial conversion may already have cartographer.cfg and the core links.
 # Retain the original probe state so a retry completes the same conversion.
@@ -69,14 +69,14 @@ if grep -q '^[[:space:]]*\[prtouch_v3\][[:space:]]*$' \
 else
     echo "I: stock [prtouch_v3] section is already removed"
 fi
-python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg prtouch_v3.cfg True
-python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
     ~/printer_data/config/printer.cfg custom/main.cfg
 if [ "${K2_KEEP_CARTOGRAPHER_CONFIG:-0}" = 1 ]; then
     if ! grep -Eq '^[[:space:]]*\[cartographer\][[:space:]]*$' ~/printer_data/config/printer.cfg; then
         [ -s ~/printer_data/config/custom/cartographer.cfg ] || { echo 'E: restore the saved Cartographer configuration first' >&2; exit 1; }
-        python "${SCRIPT_DIR}/../../scripts/ensure_included.py" ~/printer_data/config/custom/main.cfg cartographer.cfg
+        python3 "${SCRIPT_DIR}/../../scripts/ensure_included.py" ~/printer_data/config/custom/main.cfg cartographer.cfg
     fi
     echo 'I: retained existing Cartographer configuration during firmware repair'
 else
@@ -92,7 +92,7 @@ else
     chmod 644 "$CARTO_NEW"
     mv "$CARTO_NEW" "$CARTO_CFG"
     trap - EXIT
-    python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+    python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
         ~/printer_data/config/custom/main.cfg cartographer.cfg
 fi
 

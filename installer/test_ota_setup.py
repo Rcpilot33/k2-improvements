@@ -44,6 +44,18 @@ run_logged_install cartographer fixture
             self.assertIn(expected, result.stdout)
             self.assertIn(expected, log)
 
+    def test_closed_prompt_does_not_mark_logged_repair_successful(self):
+        result = self.shell("""
+. installer/lib/common.sh
+detect_printer_fw() { echo 1.1.8.0; }
+detect_installer_commit() { echo abcdef; }
+run_logged_install ota-review confirm 'Apply repair?'
+""")
+        self.assertEqual(result.returncode, 75, result.stderr)
+        log = (self.cfg.parent / "logs/k2-installer.log").read_text()
+        self.assertIn("ota-review interrupted before completion", log)
+        self.assertNotIn("Successful.", log)
+
     def test_busy_printer_stops_install_paths_before_changes(self):
         common = """
 . installer/menus/update.sh

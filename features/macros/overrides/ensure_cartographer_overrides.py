@@ -24,6 +24,8 @@ CARTOGRAPHER_PROBE_COUNT = "50,50"
 LEGACY_MANAGED_SPEED_COMMENTS = (
     "150 recommended for lite firmware",
     "lite firmware: 150 recommended",
+    "150 recommended for lite firmware; 200 recommended for full firmware",
+    "lite firmware: 150 recommended; full firmware: 200 recommended",
 )
 
 BED_MESH = "bed_mesh"

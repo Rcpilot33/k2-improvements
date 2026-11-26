@@ -4,6 +4,7 @@
 
 migration_catalog() {
     cat <<'EOF'
+cartographer-scan-abort-planner-limits-v1|cartographer|is_cartographer|Restore active K2 motion planner limits after an interrupted Cartographer scan
 bed-assist-stc-drop-v1|macros|is_macros|Add the printer-limited STC Bed Drop setting to the Bed Assist editor
 cartographer-touchscreen-get-mesh-v1|cartographer|is_cartographer|Restore the Creality touchscreen mesh read used during self-check to prevent a missing get_mesh callback (2184)
 moonraker-maintained-fork-v1|moonraker-source|is_managed_moonraker|Switch existing managed Moonraker to Rcpilot33/moonraker k2, preserving printer configuration and virtualenv; restart Moonraker only

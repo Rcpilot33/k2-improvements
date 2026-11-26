@@ -243,6 +243,11 @@ Additional acknowledgements:
 - [Entware](https://github.com/Entware/Entware)
 - [Cartographer 3D](https://github.com/Cartographer3D)
 
+## License
+
+The installer is licensed under the [GNU General Public License v3.0](./LICENSE).
+Third-party components retain their own license terms.
+
 ## Disclaimer
 
 This software is provided without warranty. Installation and use are entirely

@@ -2,8 +2,12 @@
 
 set -e
 
-SCRIPT_DIR="$(readlink -f $(dirname $0))"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AUTHORIZED_KEYS=/etc/dropbear/authorized_keys
+service=/etc/init.d/dropbear
+backup=/etc/dropbear/before-secure-auth.init
+factory=/rom/etc/init.d/dropbear
+marker='# k2-improvements: secure-auth installed'
 
 has_public_key() {
     [ -s "$AUTHORIZED_KEYS" ] || return 1
@@ -21,27 +25,72 @@ has_public_key() {
     ' "$AUTHORIZED_KEYS"
 }
 
-if ! has_public_key; then
+action=${1:-install}
+case "$action" in
+    install|--restore) ;;
+    *) echo "Usage: $0 [--restore]" >&2; exit 1 ;;
+esac
+
+if [ "$action" = install ] && ! has_public_key; then
     echo "ERROR: secure-auth was not installed."
     echo "ERROR: no valid-looking SSH public key was found in $AUTHORIZED_KEYS"
     echo "Add and test a key-based SSH login first; password authentication remains enabled."
     exit 1
 fi
 
-echo "I: SSH public key found in $AUTHORIZED_KEYS"
-echo "I: make sure key-based login has been tested from another terminal."
+[ -f "$service" ] && [ -x "$service" ] || { echo "Missing Dropbear startup script" >&2; exit 1; }
+source_script="$SCRIPT_DIR/dropbear.init"
+if [ "$action" = --restore ]; then
+    if ! grep -Fq "$marker" "$service"; then
+        echo "Secure Auth is already disabled."
+        exit 0
+    fi
+    source_script="$backup"
+    [ -e "$source_script" ] || source_script="$factory"
+    if [ ! -s "$source_script" ] || [ ! -x "$source_script" ] || grep -Fq "$marker" "$source_script"; then
+        echo "No original Dropbear startup script available for recovery." >&2
+        exit 1
+    fi
+fi
 
-echo "Updating dropbear init script to disable password authentication ..."
-cp -f "${SCRIPT_DIR}/dropbear.init" /etc/init.d/dropbear
-chmod +x /etc/init.d/dropbear
+# Stage under /etc so the live script can be replaced by rename.
+work=$(mktemp -d /etc/.secure-auth.XXXXXX)
+cleanup() {
+    rm -f "$work/previous" "$work/backup" "$work/next"
+    rmdir "$work"
+}
+trap cleanup EXIT
+cp -p "$service" "$work/previous"
+if [ "$action" = install ] && ! grep -Fq "$marker" "$work/previous"; then
+    cp -p "$work/previous" "$work/backup"
+    mv -f "$work/backup" "$backup"
+fi
+cp -p "$source_script" "$work/next"
+if [ "$action" = install ]; then chmod 755 "$work/next"; fi
+sh -n "$work/next"
+mv -f "$work/next" "$service"
 
-echo "Restarting dropbear..."
-/etc/init.d/dropbear restart
-
-echo "Done"
-
-echo "I: you need to log back in for changes to take effect!"
-echo "I: logging you out now!"
-echo "I: please reconnect to continue"
-# terminate the SSH session
-pgrep dropbear | grep -v "^$(pgrep -o dropbear)$" | xargs kill -9
+# Capture connected clients before restarting. A new listener can have a
+# newer PID than an existing session.
+clients=''
+if [ "$action" = install ]; then
+    for pid in $(pidof dropbear); do
+        clients="$clients $(pgrep -P "$pid" -x dropbear || :)"
+    done
+fi
+if ! "$service" restart; then
+    echo "Dropbear restart failed. Restoring the previous startup script." >&2
+    mv -f "$work/previous" "$service"
+    "$service" restart || echo "Dropbear could not restart with the previous script." >&2
+    exit 1
+fi
+cleanup
+trap - EXIT
+if [ "$action" = --restore ]; then
+    echo "Restored the original Dropbear startup script."
+else
+    echo "Secure Auth installed. Reconnect with your SSH key."
+    for pid in $clients; do
+        [ "$(cat "/proc/$pid/comm" 2>/dev/null)" = dropbear ] && kill -KILL "$pid" || :
+    done
+fi

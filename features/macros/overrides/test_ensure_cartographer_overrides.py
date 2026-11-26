@@ -200,6 +200,20 @@ class CartographerOverridesTests(unittest.TestCase):
         self.assertEqual(updated.count("variable_carto_final_z_mode:"), 1)
         self.assertNotIn("speed: 150", updated)
 
+    def test_migrates_historical_speed_comments_only_when_unmodified(self):
+        for comment in (
+            "150 recommended for Lite firmware; 200 recommended for Full firmware",
+            "Lite firmware: 150 recommended; Full firmware: 200 recommended",
+        ):
+            with self.subTest(comment=comment):
+                speed_line = "speed: 200 # " + comment
+                updated, _ = MODULE.ensure_defaults("[bed_mesh]\n" + speed_line + "\n")
+                self.assertIn("speed: 150", updated)
+                self.assertEqual(MODULE.ensure_defaults(updated), (updated, False))
+                customized = speed_line + " (tested on this printer)\n"
+                updated, _ = MODULE.ensure_defaults("[bed_mesh]\n" + customized)
+                self.assertIn(customized, updated)
+
     def test_creates_valid_start_print_section_when_missing(self):
         updated, _ = MODULE.ensure_defaults("[bed_mesh]\nprobe_count: 50,50\n")
         start_section = updated.split("[gcode_macro _START_PRINT_VARS]", 1)[1]

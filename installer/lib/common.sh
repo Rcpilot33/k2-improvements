@@ -55,6 +55,7 @@ warn() { echo "W: $*" >&2; }
 # prompts and unrelated menu activity stay outside the install transcript.
 run_logged_install() (
     local label="$1" directory log status result
+    export K2_LOGGED_INSTALL=1
     shift
     directory="${PRINTER_CFG_DIR%/*}/logs"
     log="$directory/k2-installer.log"
@@ -80,6 +81,8 @@ run_logged_install() (
     [ -n "$result" ] || result=1
     if [ "$result" = 0 ]; then
         printf 'Successful.\n'
+    elif [ "$result" = 75 ]; then
+        printf '%s interrupted before completion (exit code 75).\n' "$label"
     else
         printf '%s did not complete (exit code %s).\n' "$label" "$result"
     fi | tee -a "$log"
@@ -94,6 +97,7 @@ read_prompt() {
         return 0
     fi
     printf '\nI: installer input closed; exiting.\n' >&2
+    [ "${K2_LOGGED_INSTALL:-0}" != 1 ] || exit 75
     exit 0
 }
 

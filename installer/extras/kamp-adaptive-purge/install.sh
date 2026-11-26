@@ -15,6 +15,7 @@ set -e
 SCRIPT_DIR="$(readlink -f $(dirname $0))"
 KAMP_DIR="${HOME}/Klipper-Adaptive-Meshing-Purging"
 KAMP_REPO="https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging.git"
+KAMP_REVISION=997838cb36447d697da780aedf74d97dc1763e1e
 OVERRIDES_CFG="${HOME}/printer_data/config/custom/overrides.cfg"
 
 configure_kamp_settings() {
@@ -57,15 +58,25 @@ test -d ~/printer_data/config/custom || mkdir -p ~/printer_data/config/custom
 sh "${SCRIPT_DIR}/../../../features/prime_tower/install.sh"
 
 # ------------------------------------------------------------
-# 1. Clone or update KAMP at $HOME/Klipper-Adaptive-Meshing-Purging
+# 1. Read the tested upstream purge macro without changing a user's checkout.
 # ------------------------------------------------------------
-if [ -d "${KAMP_DIR}/.git" ]; then
-    echo "I: KAMP repo already present at ${KAMP_DIR}, pulling latest"
-    git -C "${KAMP_DIR}" pull --ff-only
+if [ ! -d "${KAMP_DIR}/.git" ]; then
+    git clone --no-checkout --depth=1 "$KAMP_REPO" "$KAMP_DIR"
+    new_checkout=1
 else
-    echo "I: cloning KAMP to ${KAMP_DIR}"
-    git clone --depth=1 "${KAMP_REPO}" "${KAMP_DIR}"
+    new_checkout=0
 fi
+if ! git -C "$KAMP_DIR" cat-file -e "${KAMP_REVISION}^{commit}" 2>/dev/null; then
+    git -C "$KAMP_DIR" fetch --depth=1 "$KAMP_REPO" "$KAMP_REVISION"
+fi
+if [ "$new_checkout" = 1 ]; then
+    git -C "$KAMP_DIR" checkout --detach "$KAMP_REVISION"
+fi
+purge_source=$(mktemp)
+trap 'rm -f "$purge_source"' EXIT
+git -C "$KAMP_DIR" show "${KAMP_REVISION}:Configuration/Line_Purge.cfg" > "$purge_source"
+# The patcher preserves its input mode on the installed printer config.
+chmod 644 "$purge_source"
 
 # ------------------------------------------------------------
 # 2. Install a corrected copy of KAMP's Line_Purge.cfg into custom/
@@ -77,7 +88,7 @@ fi
 # own retract/travel/unretract sequence starts from a balanced extrusion state.
 echo "I: creating K2-compatible Line_Purge.cfg from upstream KAMP"
 python3 "${SCRIPT_DIR}/patch_line_purge.py" \
-    "${KAMP_DIR}/Configuration/Line_Purge.cfg" \
+    "$purge_source" \
     ~/printer_data/config/custom/Line_Purge.cfg
 
 # ------------------------------------------------------------

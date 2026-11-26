@@ -35,17 +35,17 @@ PRINTER_FW="$(detect_printer_fw)"
 ln -sf "${SCRIPT_DIR}/firmware_11313.cfg" \
     ~/printer_data/config/custom/firmware_11313.cfg
 if [ "$PRINTER_FW" = "1.1.3.13" ]; then
-    python "${SCRIPT_DIR}/../../../scripts/ensure_included.py" \
+    python3 "${SCRIPT_DIR}/../../../scripts/ensure_included.py" \
         ~/printer_data/config/custom/main.cfg firmware_11313.cfg
 else
-    python "${SCRIPT_DIR}/../../../scripts/ensure_included.py" \
+    python3 "${SCRIPT_DIR}/../../../scripts/ensure_included.py" \
         ~/printer_data/config/custom/main.cfg firmware_11313.cfg True
 fi
 
 # The case-fan release is now guarded by live fan state on every firmware.
 # Remove the former 1.1.5.2-only include and its installed link. The tracked
 # placeholder remains harmless while an older checkout is being updated.
-python "${SCRIPT_DIR}/../../../scripts/ensure_included.py" \
+python3 "${SCRIPT_DIR}/../../../scripts/ensure_included.py" \
     ~/printer_data/config/custom/main.cfg firmware_1152.cfg True
 rm -f ~/printer_data/config/custom/firmware_1152.cfg
 

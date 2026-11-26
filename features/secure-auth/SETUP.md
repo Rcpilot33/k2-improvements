@@ -147,6 +147,18 @@ C:\Users\YOUR_WINDOWS_NAME\.ssh\k2plus_secure_auth
 
 Open a new MobaXterm session to confirm it connects successfully.
 
+## Restore the previous SSH settings
+
+From a working SSH session, choose **Optional extras → Secure Auth → Restore
+previous SSH settings**. This restores the Dropbear startup script saved at
+`/etc/dropbear/before-secure-auth.init` and restarts SSH. Your authorized
+keys stay in place.
+
+For an older installation without a saved copy, recovery uses the startup
+script from the printer's read-only firmware at `/rom/etc/init.d/dropbear`
+when available. If neither copy is available, the installer reports that
+before changing SSH.
+
 ## Factory reset warning
 
 Treat `/etc/dropbear/authorized_keys` as erased by a printer factory reset or

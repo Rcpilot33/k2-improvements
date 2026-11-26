@@ -31,8 +31,8 @@ apply updates -> 2. Review pending update actions -> Fluidd settings dialogs and
 K2 device cards**. The normal maintenance/reinstall entry also uses the same
 Fluidd core installer. No manual ZIP transfer is required.
 
-The installer downloads the latest stable `fluidd.zip` from `Rcpilot33/fluidd`. Capability validation
-runs before replacing any UI. A printer already on the compatible stable UI
+The installer downloads the tested `v1.37.6` release of `Rcpilot33/fluidd`
+and verifies the ZIP checksum and required capabilities before replacing the UI. A printer already on the compatible stable UI
 keeps that UI while the installer adds or refreshes the bridge.
 
 Migration `fluidd-stable-consolidated-release-v9` also covers printers that

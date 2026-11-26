@@ -11,32 +11,12 @@ export INSTALLER_DIR
 check_installer_model menu || exit 1
 
 INSTALLER_LOCK=/tmp/k2-improvements-installer.lock
-acquire_installer_lock() {
-    if mkdir "$INSTALLER_LOCK" 2>/dev/null; then
-        printf '%s\n' "$$" > "$INSTALLER_LOCK/pid"
-        return 0
-    fi
+if [ "${K2_MENU_LOCK_PID:-}" != "$$" ]; then
+    exec python3 "$SCRIPT_DIR/installer/menu_lock.py" "$INSTALLER_LOCK" sh "$SCRIPT_DIR/menu.sh" "$@"
+fi
 
-    lock_pid=$(cat "$INSTALLER_LOCK/pid" 2>/dev/null || true)
-    # update.sh reloads this menu with exec, which retains the same PID.
-    [ "$lock_pid" = "$$" ] && return 0
-    if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
-        echo "ERROR: another K2 Plus installer is running (PID $lock_pid)." >&2
-        exit 1
-    fi
-
-    rm -rf "$INSTALLER_LOCK"
-    mkdir "$INSTALLER_LOCK"
-    printf '%s\n' "$$" > "$INSTALLER_LOCK/pid"
-}
-
-release_installer_lock() {
-    lock_pid=$(cat "$INSTALLER_LOCK/pid" 2>/dev/null || true)
-    [ "$lock_pid" != "$$" ] || rm -rf "$INSTALLER_LOCK"
-}
-
-acquire_installer_lock
-trap release_installer_lock EXIT
+# Keep the old PID marker for older checkouts. The kernel owns the actual lock.
+trap 'rm -f "$INSTALLER_LOCK/pid"; rmdir "$INSTALLER_LOCK" 2>/dev/null || :' EXIT
 # Signal traps must terminate the shell.  A cleanup-only trap returns to the
 # interrupted menu loop and can leave an installer running after its terminal
 # has closed.

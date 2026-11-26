@@ -33,6 +33,8 @@ class FakeGcode:
 class FakeToolhead:
     def __init__(self):
         self.recalculated = 0
+        self.min_cruise_ratio = 0.9
+        self.requested_accel_to_decel = 100
         self.kin = FakeKinematics()
         self.position = [175., 175., 3., 0.]
         self.moves = []
@@ -51,7 +53,16 @@ class FakeToolhead:
         self.moves.append((coords, speed))
         self.position[1] = coords[1]
 
+    def set_max_accel(self, value):
+        self.max_accel = value
+
+    def set_max_velocity(self, value):
+        self.max_velocity = value
+
     def _calc_junction_deviation(self):
+        if self.min_cruise_ratio is not None:
+            self.requested_accel_to_decel = self.max_accel * (1 - self.min_cruise_ratio)
+        self.max_accel_to_decel = min(self.max_accel, self.requested_accel_to_decel)
         self.recalculated += 1
 
 
@@ -293,6 +304,21 @@ class ScanLimitGuardTests(unittest.TestCase):
         self.assertEqual(toolhead.max_accel_to_decel, 3000.0)
         self.assertEqual(toolhead.recalculated, 1)
         self.assertFalse(guard.active)
+
+    def test_restore_uses_configured_cruise_ratio_or_firmware_half_accel_default(self):
+        for settings, expected in (({"min_cruise_ratio": "0.75"}, 1500), ({}, 3000)):
+            with self.subTest(settings=settings):
+                config = FakeConfig()
+                guard = MODULE.K2CartographerScanGuard(config)
+                class Limits:
+                    def get_status(self, eventtime):
+                        return {"settings": {"printer": dict(settings, max_accel=6000,
+                                max_velocity=500, square_corner_velocity=5)}}
+                lookup = config.printer.lookup_object
+                config.printer.lookup_object = lambda name: Limits() if name == "configfile" else lookup(name)
+                guard.cmd_guard(FakeCommand(1))
+                guard._handle_command_error()
+                self.assertEqual(config.printer.toolhead.max_accel_to_decel, expected)
 
     def test_inactive_errors_do_not_change_limits(self):
         config = FakeConfig()

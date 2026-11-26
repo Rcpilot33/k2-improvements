@@ -23,6 +23,7 @@ class ModelRoutingTests(unittest.TestCase):
         }
         exec 3>&2
         stop_install() { echo "reached-install ${BRANCH:-}" >&3; exit 73; }
+        exec() { stop_install; }
         mkdir() { stop_install; }
         rm() { stop_install; }
         mktemp() { stop_install; }
@@ -64,6 +65,7 @@ class ModelRoutingTests(unittest.TestCase):
         )
         with tempfile.TemporaryDirectory() as tmp:
             harness = """
+            K2_MENU_LOCK_PID=$$
             get_sn_mac.sh() { echo F012; }
             id() { echo 0; }
             clear() { :; }
