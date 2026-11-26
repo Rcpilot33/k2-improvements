@@ -318,11 +318,12 @@ ota_review() (
             esac
         done
         if [ -s "$tmp" ]; then
-            # Stock replacement modules are version-specific. Unknown firmware
-            # can still be audited locally without applying those replacements.
-            case "$fw" in 1.1.3.13|1.1.5.2|1.1.5.5|1.1.8.0) ;;
+            # Plus and Pro firmware can share a version number.
+            case "${K2_PRINTER_MODEL:-}:$fw" in
+                F008:1.1.3.13|F008:1.1.5.2|F008:1.1.5.5|F008:1.1.8.0) ;;
+                F012:1.1.5.5|F012:1.1.8.3) ;;
                 *) if grep -Eq '^(cartographer|save-config-restart|better-init|screws_tilt_adjust|abort_homing|virtual-sdcard-guard|macros|start-print-fast-stop)$' "$tmp"; then
-                       warn "The plan replaces firmware files. Check compatibility with ${fw:-unknown} before applying it."
+                       warn "The plan replaces firmware files. Check compatibility with printer model ${K2_PRINTER_MODEL:-unknown} on firmware ${fw:-unknown} before applying it."
                        return 1
                    fi ;;
             esac

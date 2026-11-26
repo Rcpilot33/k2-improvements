@@ -68,7 +68,7 @@ ota_component_ready() { return 0; }
 python3() { return "$RUNTIME_STATUS"; }
 """
         environment = dict(os.environ, MIGRATION_STATE_DIR=self.state.as_posix(),
-                           FW="1.1.8.0", RUNTIME_STATUS="0")
+                           FW="1.1.8.0", K2_PRINTER_MODEL="F008", RUNTIME_STATUS="0")
         environment.update(env)
         result = subprocess.run([BASH, "-c", setup + script], cwd=ROOT, env=environment,
                                 input=stdin.encode(), capture_output=True, timeout=15)
@@ -87,6 +87,32 @@ python3() { return "$RUNTIME_STATUS"; }
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("firmware=1.1.8.0", self.snapshot.read_text())
         self.assertIn("option=kamp-adaptive-purge", self.snapshot.read_text())
+
+    def test_core_repairs_require_a_supported_model_and_firmware_pair(self):
+        script = """
+extra_line() { :; }
+ota_component_ready() { [ "$1" != macros ] || [ -f "$MIGRATION_STATE_DIR/repaired" ]; }
+migration_apply_components() {
+    [ "$(cat "$1")" = macros ] && touch "$MIGRATION_STATE_DIR/repaired"
+}
+ota_review
+"""
+        original = self.snapshot.read_bytes()
+        repaired = self.state / "repaired"
+        for model, fw, allowed in (
+            ("F012", "1.1.8.3", True), ("F012", "1.1.5.5", True),
+            ("F008", "1.1.5.5", True), ("F008", "1.1.8.0", True),
+            ("F008", "1.1.8.3", False), ("F012", "1.1.8.0", False),
+            ("", "1.1.5.5", False), ("F012", "9.9.9", False),
+        ):
+            with self.subTest(model=model, fw=fw):
+                self.snapshot.write_bytes(original)
+                repaired.unlink(missing_ok=True)
+                result = self.shell(script, "y\n", K2_PRINTER_MODEL=model, FW=fw)
+                self.assertEqual(result.returncode == 0, allowed, result.stdout + result.stderr)
+                self.assertEqual(repaired.exists(), allowed)
+                if not allowed:
+                    self.assertEqual(self.snapshot.read_bytes(), original)
 
     def test_erased_option_stays_in_repair_plan_after_failure(self):
         original = self.snapshot.read_bytes()
