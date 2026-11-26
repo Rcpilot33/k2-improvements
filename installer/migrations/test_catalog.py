@@ -31,6 +31,7 @@ KNOWN_COMPONENTS = {
     "better-init",
     "start-print-fast-stop",
     "nozzle-camera-mount-compatibility",
+    "nozzle-camera",
     "nozzle-usb-cartographer",
 }
 
@@ -55,6 +56,7 @@ EXPECTED_DETECTORS = {
     "better-init": "is_better_init",
     "start-print-fast-stop": "is_start_print_fast_stop",
     "nozzle-camera-mount-compatibility": "is_nozzle_camera_mount_compatible",
+    "nozzle-camera": "is_nozzle_camera",
     "nozzle-usb-cartographer": "is_nozzle_usb_cartographer",
 }
 

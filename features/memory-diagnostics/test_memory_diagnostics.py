@@ -2,6 +2,7 @@ import importlib.util
 import inspect
 import tempfile
 import unittest
+from unittest.mock import MagicMock
 from pathlib import Path
 
 
@@ -13,6 +14,17 @@ SPEC.loader.exec_module(MEMORY_DIAGNOSTICS)
 
 
 class ParserTests(unittest.TestCase):
+    def test_disconnect_stops_the_waiting_worker(self):
+        config = MagicMock()
+        config.getfloat.side_effect = lambda name, default, **kwargs: default
+        config.getint.side_effect = lambda name, default, **kwargs: default
+        diagnostics = MEMORY_DIAGNOSTICS.MemoryDiagnostics(config)
+        event, handler = config.get_printer.return_value.register_event_handler.call_args.args
+        self.assertEqual(event, "klippy:disconnect")
+        handler()
+        self.assertFalse(diagnostics.worker.is_alive())
+        diagnostics.reactor.unregister_timer.assert_called_once_with(diagnostics.timer)
+
     def test_reactor_callback_only_queues_background_work(self):
         source = inspect.getsource(MEMORY_DIAGNOSTICS.MemoryDiagnostics._sample)
         self.assertIn("put_nowait", source)

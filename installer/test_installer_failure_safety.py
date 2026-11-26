@@ -34,20 +34,13 @@ class InstallerFailureSafetyTests(unittest.TestCase):
                 )
 
     def test_better_root_copies_are_rerunnable_and_noninteractive_safe(self):
-        scripts = (
-            ROOT / "features/better-root/install.sh",
-            ROOT / "bootstrap/better-root/install.sh",
-        )
-        for script in scripts:
-            with self.subTest(script=script):
-                text = script.read_text(encoding="utf-8")
-                self.assertIn("ensure_link /usr/share/klipper klipper", text)
-                self.assertIn('elif [ -e "$link_path" ]; then', text)
-                self.assertIn("elif [ -t 0 ]; then", text)
-                self.assertNotIn(
-                    "if grep -qE 'root.*UDISK' /etc/passwd; then\n    exit 0",
-                    text,
-                )
+        for name in ("features/better-root/install.sh", "installer/extras/better-root-safe/install.sh"):
+            wrapper = (ROOT / name).read_text()
+            self.assertIn("bootstrap/better-root/install.sh", wrapper)
+            self.assertNotIn("rsync", wrapper)
+        canonical = (ROOT / "bootstrap/better-root/install.sh").read_text()
+        self.assertIn("rsync --ignore-existing", canonical)
+        self.assertIn("ensure_link /usr/share/klipper klipper", canonical)
 
     def test_entware_entries_propagate_opkg_failures(self):
         wrapper = (ROOT / "features/entware/install.sh").read_text(encoding="utf-8")

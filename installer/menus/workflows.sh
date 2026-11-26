@@ -238,6 +238,7 @@ EOF
         return
     fi
 
+    migration_require_idle || { press_enter; return 1; }
     printf '\n'
     if sh "$INSTALLER_DIR/scripts/firmware_restart.sh"; then
         printf '\n%s\n' "$(c_green 'Protected firmware restart completed successfully.')"
@@ -271,6 +272,7 @@ EOF
         return
     fi
 
+    migration_require_idle || { press_enter; return 1; }
     printf '\n'
     if sh "$INSTALLER_DIR/scripts/klippy_code_restart.sh"; then
         printf '\n%s\n' "$(c_green 'Klippy Python modules and K2 MCU state reloaded successfully.')"

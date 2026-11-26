@@ -2,18 +2,30 @@
 
 import logging
 import shlex
-from subprocess import PIPE, Popen, TimeoutExpired
+import os
+import signal
+import tempfile
+from subprocess import Popen
 
 
 class ShellCommand:
     def __init__(self, config):
         self.name = config.get_name().split()[-1]
-        self.gcode = config.get_printer().lookup_object("gcode")
+        printer = config.get_printer()
+        self.gcode = printer.lookup_object("gcode")
+        self.reactor = printer.get_reactor()
+        self.live = True
+        self.process = None
+        self.lock = printer.lookup_object("k2_shell_command_mutex", None)
+        if self.lock is None:
+            self.lock = self.reactor.mutex()
+            printer.add_object("k2_shell_command_mutex", self.lock)
+        printer.register_event_handler("klippy:disconnect", self._disconnect)
         self.command = config.get("command")
         self.timeout = config.getfloat("timeout", 2.0, above=0.0)
         self.verbose = config.getboolean("verbose", True)
         self.gcode.register_mux_command(
-            "RUN_SHELL_COMMAND",
+            "K2_RUN_CAMERA_COMMAND" if config.get_name().startswith("k2_camera_command ") else "RUN_SHELL_COMMAND",
             "CMD",
             self.name,
             self.cmd_RUN_SHELL_COMMAND,
@@ -31,32 +43,62 @@ class ShellCommand:
         except ValueError as exc:
             raise gcmd.error("Bad shell command: %s" % (exc,))
 
-        try:
-            process = Popen(argv, stdout=PIPE, stderr=PIPE)
-        except Exception as exc:
-            raise gcmd.error("Unable to start shell command: %s" % (exc,))
+        if gcmd.get_int("BACKGROUND", 0, minval=0, maxval=1):
+            self.reactor.register_callback(lambda eventtime: self._run_background(argv))
+        else:
+            try:
+                self._run(argv)
+            except (OSError, RuntimeError) as exc:
+                raise gcmd.error(str(exc))
 
+    def _run_background(self, argv):
         try:
-            stdout, stderr = process.communicate(timeout=self.timeout)
-        except TimeoutExpired:
-            process.kill()
-            stdout, stderr = process.communicate()
-            raise gcmd.error("Shell command timed out after %.1f seconds" % self.timeout)
+            self._run(argv)
+        except (OSError, RuntimeError) as exc:
+            logging.warning("Shell command %s: %s", self.name, exc)
+            if self.live:
+                self.gcode.respond_info("%s: %s" % (self.name, exc))
 
-        out = (stdout or b"").decode("utf-8", errors="replace").strip()
-        err = (stderr or b"").decode("utf-8", errors="replace").strip()
-        if self.verbose and out:
-            gcmd.respond_info(out)
-        if self.verbose and err:
-            gcmd.respond_info(err)
-        if process.returncode:
-            logging.warning(
-                "shell command %s exited with %d", self.name, process.returncode
-            )
-            raise gcmd.error(
-                "Shell command %s failed with exit code %d"
-                % (self.name, process.returncode)
-            )
+    def _terminate(self):
+        if self.process is not None and self.process.poll() is None:
+            try:
+                os.killpg(self.process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+    def _disconnect(self):
+        self.live = False
+        self._terminate()
+
+    def _run(self, argv):
+        # Serialize ON/OFF, including timer requests, while other reactor work runs.
+        with self.lock:
+            if not self.live:
+                return
+            with tempfile.TemporaryFile() as output:
+                self.process = Popen(argv, stdout=output, stderr=output, start_new_session=True)
+                try:
+                    deadline = self.reactor.monotonic() + self.timeout
+                    while self.process.poll() is None:
+                        now = self.reactor.monotonic()
+                        if now >= deadline:
+                            self._terminate()
+                            raise RuntimeError("Shell command timed out after %.1f seconds" % self.timeout)
+                        self.reactor.pause(min(now + 0.1, deadline))
+                    if not self.live:
+                        return
+                    output.seek(0)
+                    message = output.read(8192).decode("utf-8", errors="replace").strip()
+                    if self.verbose and message:
+                        self.gcode.respond_info(message)
+                    if self.process.returncode:
+                        raise RuntimeError("Shell command %s failed with exit code %d"
+                                           % (self.name, self.process.returncode))
+                finally:
+                    self._terminate()
+                    while self.process.poll() is None:
+                        self.reactor.pause(self.reactor.monotonic() + 0.05)
+                    self.process = None
 
 
 def load_config_prefix(config):

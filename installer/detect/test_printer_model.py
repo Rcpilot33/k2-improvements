@@ -42,11 +42,11 @@ class ModelRoutingTests(unittest.TestCase):
                 for model in ("F008", "F012", "F021", ""):
                     with self.subTest(entry=entry, model=model):
                         result = self.run_entry(entry, model, tools)
-                        if model == "F008":
-                            self.assertIn("reached-install", result.stderr)
+                        if model in ("F008", "F012") and entry in ("bootstrap.sh", "bootstrap/bootstrap.sh"):
+                            self.assertIn("reached-install main", result.stderr)
                             self.assertEqual(result.returncode, 73)
-                        elif model == "F012" and entry in ("bootstrap.sh", "bootstrap/bootstrap.sh"):
-                            self.assertIn("reached-install integration-testing", result.stderr)
+                        elif model == "F008":
+                            self.assertIn("reached-install", result.stderr)
                             self.assertEqual(result.returncode, 73)
                         elif model == "F012" and entry == "menu.sh":
                             # Both models proceed to the normal menu lock.
@@ -83,20 +83,21 @@ class ModelRoutingTests(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         output = result.stdout.decode()
-        self.assertLess(output.index("K2 PRO DEVELOPMENT INSTALLER"), output.index("INSTALL OR CHANGE SETUP"))
+        self.assertLess(output.index("K2 PRO INSTALLER"), output.index("INSTALL OR CHANGE SETUP"))
         status = output.split("SYSTEM STATUS AND DIAGNOSTICS", 1)[1]
         self.assertNotIn("baseline-report", status)
-        self.assertLess(status.index("Setup profile"), status.index("K2 PRO DEVELOPMENT INSTALLER"))
+        self.assertLess(status.index("Setup profile"), status.index("K2 PRO INSTALLER"))
 
     def test_pro_bootstrap_branch_selection(self):
         with tempfile.TemporaryDirectory() as tmp:
             for entry in ("bootstrap.sh", "bootstrap/bootstrap.sh"):
-                for requested in ("main", "integration-testing", "k2-pro-support"):
-                    for args, env_branch in ((("--branch", requested), ""), ((), requested)):
+                for requested in ("main", "integration-testing", "k2-pro-support", "plus-only"):
+                    for args, env_branch in ((("--branch", requested), "other"), ((), requested)):
                         with self.subTest(entry=entry, args=args, env_branch=env_branch):
                             result = self.run_entry(entry, "F012", Path(tmp), *args, branch=env_branch)
-                            if requested in ("integration-testing", "k2-pro-support"):
+                            if requested != "plus-only":
                                 self.assertEqual(result.returncode, 73)
+                                self.assertIn(f"reached-install {requested}", result.stderr)
                             else:
                                 self.assertEqual(result.returncode, 1)
                                 self.assertNotIn("reached-install", result.stderr)

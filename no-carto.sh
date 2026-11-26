@@ -5,6 +5,8 @@ set -xe
 SCRIPT_DIR=$(readlink -f $(dirname ${0}))
 . "$SCRIPT_DIR/installer/detect/printer_model.sh"
 check_installer_model setup || exit 1
+. "$SCRIPT_DIR/scripts/stock_nozzle_camera.sh"
+k2_require_no_active_job || exit 1
 RUN_MARKERS=$(mktemp -d /tmp/k2-no-carto.XXXXXX)
 trap 'rm -rf "$RUN_MARKERS"' EXIT INT TERM
 

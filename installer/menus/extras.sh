@@ -144,6 +144,7 @@ run_carto_plate_workflow() {
         return 0
     fi
 
+    migration_require_idle || return 1
     local pwd_home failed plate_slicers
     choose_plate_workflow_slicers || return 1
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
@@ -397,6 +398,7 @@ menu_extras() {
             9)
                 if is_cartographer; then
                     show_feature_readme nozzle-usb-cartographer "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/README.md"
+                    migration_require_idle || continue
                     if sh "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/install.sh"; then
                         if is_nozzle_usb_cartographer; then
                             migration_mark_component_current nozzle-usb-cartographer
@@ -536,6 +538,7 @@ install_extra() {
             ;;
     esac
 
+    migration_require_idle || return 1
     local pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
     [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
     [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root

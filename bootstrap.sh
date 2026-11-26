@@ -8,8 +8,7 @@ set -e
 REPO="Rcpilot33/k2-improvements"
 MODEL=$(get_sn_mac.sh model 2>/dev/null) || MODEL=
 case "$MODEL" in
-    F008) BRANCH="${K2_BRANCH:-main}" ;;
-    F012) BRANCH="${K2_BRANCH:-integration-testing}" ;;
+    F008|F012) BRANCH="${K2_BRANCH:-main}" ;;
     *) echo "Unsupported printer model: ${MODEL:-unknown}" >&2; exit 1 ;;
 esac
 
@@ -45,10 +44,12 @@ esac
 
 BASE_URL="https://raw.githubusercontent.com/$REPO/$BRANCH"
 
-# Other branches can still expose the Plus setup menu on a Pro.
-if [ "$MODEL" = F012 ] && [ "$BRANCH" != integration-testing ] && [ "$BRANCH" != k2-pro-support ]; then
-    echo 'K2 Pro bootstrap requires --branch integration-testing or --branch k2-pro-support for the development menu.' >&2
-    exit 1
+# Older Plus-only branches do not have the Pro setup menu.
+if [ "$MODEL" = F012 ]; then
+    case "$BRANCH" in
+        main|integration-testing|k2-pro-support) ;;
+        *) echo "Unsupported K2 Pro installer branch: $BRANCH. Use main for installation." >&2; exit 1 ;;
+    esac
 fi
 
 BOOTSTRAP_DIR="/tmp/bootstrap"

@@ -38,6 +38,24 @@ class PrinterFirmwareVersionTests(unittest.TestCase):
             with self.subTest(version=version):
                 self.assertEqual(self.compare(version), 0)
 
+    def test_plus_image_fallback_is_limited_to_plus(self):
+        script = '''
+. "$SCRIPT"
+detect_installed_firmware() { echo "$LOG_VERSION"; }
+get_sn_mac.sh() { echo "$MODEL"; }
+ls() { echo CR0CN240110C10_ota_img_V1.1.8.0.img; }
+detect_printer_fw
+'''
+        for model, logged, expected in (("F008", "", "1.1.8.0"), ("F012", "", "unknown"),
+                                        ("", "", "unknown"), ("F012", "1.1.8.3", "1.1.8.3")):
+            with self.subTest(model=model, logged=logged):
+                result = subprocess.run(
+                    [BASH, "-c", script], check=True, capture_output=True, text=True,
+                    env=dict(os.environ, SCRIPT=SCRIPT.as_posix(), MODEL=model,
+                             K2_PRINTER_MODEL="", LOG_VERSION=logged),
+                )
+                self.assertEqual(result.stdout.strip(), expected)
+
     def test_older_unknown_and_malformed_versions_are_rejected(self):
         for version in ("1.1.5.4", "1.1.3.13", "unknown", "1.1.beta.5", ""):
             with self.subTest(version=version):

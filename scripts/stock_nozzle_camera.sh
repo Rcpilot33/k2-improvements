@@ -66,6 +66,12 @@ stock_nozzle_camera_require_available() {
     fi
 }
 
+# Render a camera-only namespace if another add-on owns RUN_SHELL_COMMAND.
+stock_camera_private_config() {
+    sed -e 's/^\[gcode_shell_command /[k2_camera_command /' \
+        -e 's/^    RUN_SHELL_COMMAND /    K2_RUN_CAMERA_COMMAND /' "$1"
+}
+
 stock_nozzle_camera_curl() {
     if [ -n "${K2_CURL:-}" ]; then
         "$K2_CURL" "$@"
@@ -85,6 +91,17 @@ import json, sys
 state = json.load(sys.stdin)["result"]["status"]["print_stats"]["state"]
 print(state if state in ("printing", "paused", "standby", "complete", "cancelled", "error") else "unknown")
 ' 2>/dev/null || echo unknown
+}
+
+# Menus confirm unknown state before installing. During OTA recovery the
+# API can be offline, so only veto a known active job at the restart itself.
+k2_require_no_active_job() {
+    local state
+    state=$(k2_print_activity_state)
+    case "$state" in
+        printing|paused) echo "E: cannot restart Klipper while the printer is $state" >&2; return 1 ;;
+    esac
+    return 0
 }
 
 stock_nozzle_camera_require_idle() {

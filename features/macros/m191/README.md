@@ -1,15 +1,17 @@
 # M191 Chamber Temperature Macro
 
-Adds `M191 S<temperature>` to control the K2 Plus chamber temperature. Targets
-from 1 through 35 C put the chamber heater in passive mode and return without
-waiting because Creality does not actively heat the chamber in that range.
-Targets above 35 C enable the heater and wait for the requested temperature.
+Use `M191 S<temperature>` to set the chamber target. On the K2 Plus, a target
+above 35 C enables active heating and waits for the chamber. The K2 Pro
+uses the whole-degree target and starts waiting at 41 C. Lower positive
+targets use passive mode and return immediately.
 While M191 is waiting, its once-per-second temperature report adds
 `C:<actual> /<target>` using the same `temperature_sensor chamber_temp`
 measurement that controls the wait. The bed and tool values remain in the
 standard Klipper report.
 
 ## Configuration
+
+On the K2 Pro, both bed-assist Z heights are also limited to the configured Z travel.
 
 The installer keeps these settings in `[gcode_macro _M191_VARS]` within
 `custom/overrides.cfg`. Reinstalling or updating the macros adds settings that

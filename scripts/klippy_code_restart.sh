@@ -19,6 +19,8 @@ if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" = "1" ]; then
     exit 0
 fi
 
+. "$SCRIPT_DIR/stock_nozzle_camera.sh"
+k2_require_no_active_job || exit 1
 touch "$RESTART_MARKER"
 echo "I: restarting the Klippy host process to load installed Python modules"
 if ! "$KLIPPER_SERVICE" restart; then

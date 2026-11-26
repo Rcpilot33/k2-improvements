@@ -137,9 +137,13 @@ is_secure_auth()   { grep -Fq '# k2-improvements: secure-auth installed' /etc/in
 is_nozzle_camera() {
     local custom="$PRINTER_CFG_DIR/custom"
     local klipper_dir="${KLIPPER_DIR:-/usr/share/klipper}"
+    local bridge=gcode_shell_command
+    if grep -q '^\[k2_camera_command ' "$custom/nozzle_camera.cfg" 2>/dev/null; then
+        bridge=k2_camera_command
+    fi
     [ -e "$custom/nozzle_camera.cfg" ] &&
     [ -x /mnt/UDISK/bin/nozzle-camera.sh ] &&
-    [ -e "$klipper_dir/klippy/extras/gcode_shell_command.py" ] &&
+    [ -e "$klipper_dir/klippy/extras/$bridge.py" ] &&
     grep -q '^\[include nozzle_camera\.cfg\]$' "$custom/main.cfg" 2>/dev/null
 }
 is_skip_setup()    {

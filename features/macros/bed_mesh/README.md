@@ -1,6 +1,6 @@
 # Bed Mesh Macros
 
-The K2 Plus bed changes shape as it heats. A mesh created at room temperature
+The print bed changes shape as it heats. A mesh created at room temperature
 may not represent the bed at printing temperature.
 
 These macros create temperature-specific mesh profiles after heating and

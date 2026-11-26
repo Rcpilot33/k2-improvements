@@ -24,17 +24,14 @@ the installer updater. It installs the combined Fluidd release if needed, update
 the bridge, and participates in the updater's Moonraker restart. Later UI-only
 updates continue through Fluidd's existing Moonraker web updater.
 
-## Testing before promotion
+## Update Fluidd from the installer
 
-### RC1 through the existing installer menus
-
-Bootstrap branch `fluidd-ui-consolidation`, then select **6. Update installer /
+Select **6. Update installer /
 apply updates -> 2. Review pending update actions -> Fluidd settings dialogs and
 K2 device cards**. The normal maintenance/reinstall entry also uses the same
 Fluidd core installer. No manual ZIP transfer is required.
 
-This branch now downloads the latest stable `fluidd.zip` from `Rcpilot33/fluidd`
-(currently v1.37.5). The prerelease pin has been removed. Capability validation
+The installer downloads the latest stable `fluidd.zip` from `Rcpilot33/fluidd`. Capability validation
 runs before replacing any UI. A printer already on the compatible stable UI
 keeps that UI while the installer adds or refreshes the bridge.
 
@@ -49,14 +46,8 @@ Fluidd after Moonraker and before the macros and Z-offset settings installers.
 
 ### Optional local ZIP installation
 
-Use K2-improvements branch `fluidd-ui-consolidation` with Fluidd branch
-`k2-dashboard-cards`, based on `k2`. The Fluidd test workflow uploads an artifact
-containing `fluidd.zip`; it never creates a release. A local build can be packaged
-with `python3 tools/package_k2_build.py` in the Fluidd checkout after `pnpm run build`.
-The ZIP includes `k2-build.json` identifying its source commit and branch and
-whether that checkout had modifications.
-
-Transfer the test ZIP to the test printer, then run from this repository while idle:
+If you already have a compatible Fluidd ZIP, transfer it to the printer and
+run the following command from this repository while the printer is idle.
 
 ```sh
 sh features/fluidd/install.sh --archive /absolute/path/fluidd.zip --nocam

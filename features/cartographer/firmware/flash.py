@@ -411,6 +411,11 @@ class DirectFlasher:
     def flash(self):
         """Flash firmware with Rich progress bar."""
         with open(self.firmware_path, 'rb') as f:
+            path = pathlib.Path(self.firmware_path)
+            expected = BUNDLED_CHECKSUMS.get(path.name)
+            if expected is not None or path.resolve().parent == pathlib.Path(__file__).resolve().parent / "firmware":
+                if hashlib.sha256(f.read()).hexdigest() != expected:
+                    raise ValueError("Bundled firmware checksum mismatch: " + path.name)
             f.seek(0, os.SEEK_END)
             self.file_size = f.tell()
             f.seek(0)
@@ -516,6 +521,21 @@ V4_620_CHECKSUMS = {
     "CartographerV4_6.2.0_USB_lite_8kib_offset.bin":
         "45d4e6f8b520ecb5412fadb358e15974012e6b9935236bfe612af1bf63a532c4",
 }
+
+
+LEGACY_CHECKSUMS = {
+    "Cartographer_V4_USB_8kib_offset.bin":
+        "e44bb359a1ae56e79a3ee3ba1f1564fc949702dab45234ee025ff2cd0ea8e351",
+    "CartographerV4_6.0.0_USB_full_8kib_offset.bin":
+        "6487e285e1186688cdad51387acf3da6f647a5f6355c0ad576e315cc2307df63",
+    "CartographerV4_6.0.0_USB_lite_8kib_offset.bin":
+        "efd76b888ef06ea1c3ae2ea6066f1b5f65a9bf65e6b433b9f675ab5b6415cf1e",
+    "Survey_Cartographer_K1_USB_8kib_offset.bin":
+        "bbe149dfd59512458e07d3b5a4936118d75cd52b0d850e8ad4446482f1e09aee",
+    "Survey_Cartographer_USB_8kib_offset.bin":
+        "a137f51457ea32601d8882bee437926618ee520b6dee8d709e6b98fe6e938fdb",
+}
+BUNDLED_CHECKSUMS = {**V3_610_CHECKSUMS, **V4_620_CHECKSUMS, **LEGACY_CHECKSUMS}
 
 
 def format_firmware_label(version: str) -> str:
@@ -718,8 +738,8 @@ def prompt_firmware(mcu: str, proto_str: str, fw_version: Optional[str] = None) 
                               "Refresh the K2 Cartographer plugin before flashing.[/red]")
                 console.print(plugin_support_error(), markup=False)
                 return None
-            expected = V3_610_CHECKSUMS.get(path.name) or V4_620_CHECKSUMS.get(path.name)
-            if expected and hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            expected = BUNDLED_CHECKSUMS.get(path.name)
+            if not expected or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
                 console.print("[red]Firmware checksum mismatch; refusing to flash.[/red]")
                 return None
             clean_name = re.sub(r'\[/?[^\]]+\]', '', name)

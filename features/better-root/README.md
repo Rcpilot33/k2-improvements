@@ -18,10 +18,10 @@ printer_data
 
 The installer:
 
-1. Moves existing root-home content to `/mnt/UDISK/root`.
+1. Copies missing root-home files to `/mnt/UDISK/root` and preserves existing files there.
 2. Updates `/etc/passwd` with the new home directory.
 3. Creates the required links to the printer software and configuration.
-4. Ends the current SSH session so the new home directory takes effect.
+4. Keeps the SSH session open when run from bootstrap or the menu.
 
 Reconnect to the printer after installation. Re-running the installer is safe
 when Better Root is already active.

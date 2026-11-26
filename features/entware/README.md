@@ -1,7 +1,7 @@
 # Entware
 
 Installs the Entware package manager and the command-line tools required by
-the K2 Plus improvements installers.
+the K2 Improvements installer.
 
 The installer places Entware under `/mnt/UDISK/opt`, links it to `/opt`, and
 installs packages including Git, curl, jq, unzip, secure wget, and SFTP support.

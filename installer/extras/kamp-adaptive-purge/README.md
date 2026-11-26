@@ -35,7 +35,7 @@ Use **Optional extras -> KAMP adaptive purge**. The installer adds:
 - `[exclude_object]` when it is not already configured; and
 - optional firmware retraction when selected.
 
-During an interactive install, the installer displays the K2 Plus KAMP
+During an interactive install, the installer displays the KAMP
 settings and lets you keep or change them. User selections are written to the
 later-loaded `custom/overrides.cfg`; reinstalling or updating KAMP refreshes
 the maintained defaults without replacing those selections. Reopen
@@ -69,7 +69,7 @@ upstream macro:
    than on a feed-only `G0`, which would check the still-out-of-range position.
 
 Creality Print's **Prime tower -> No sparse layers (beta)** option is not
-supported on the K2 Plus. It can delay the tower until a color change, then
+supported by the adaptive mesh workflow. It can delay the tower until a color change, then
 command the bed back to first-layer height while a tall model is already on
 it, potentially driving the model into the toolhead or X rail. When an enabled
 prime tower and that setting are both present, the printer-side
@@ -249,4 +249,4 @@ before homing.
 
 KAMP is maintained by Kyle Isom in
 [Klipper-Adaptive-Meshing-Purging](https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging).
-This repository provides the K2 Plus installer, settings, and slicer templates.
+This repository provides the K2 Plus and K2 Pro installer, settings, and slicer templates.

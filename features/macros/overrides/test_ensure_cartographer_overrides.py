@@ -96,6 +96,14 @@ class CartographerOverridesTests(unittest.TestCase):
         self.assertIn("speed: 150", updated)
         self.assertNotIn("probe_count: 19,19", updated)
 
+    def test_preserves_user_stock_sized_mesh_across_repairs(self):
+        for line in ("probe_count: 19,19", "probe_count: 19, 19 # calibrated", "probe_count: 31,31 # my mesh"):
+            for comment in ("", " # measured"):
+                settings = line + "\nspeed: 150" + comment + "\n"
+                result, _ = MODULE.ensure_defaults("[bed_mesh]\n" + settings)
+                self.assertIn(settings, result)
+                self.assertEqual(MODULE.ensure_defaults(result), (result, False))
+
     def test_adds_cartographer_probe_count_when_missing(self):
         updated, changed = MODULE.ensure_defaults("[bed_mesh]\nmesh_pps: 0,0\n")
 
@@ -184,11 +192,7 @@ class CartographerOverridesTests(unittest.TestCase):
         )
         updated, _ = MODULE.ensure_defaults(original)
 
-        self.assertIn("speed: 200", updated)
-        self.assertIn(
-            "# 200 can be set for Full firmware",
-            updated,
-        )
+        self.assertIn("speed: 200 # user choice", updated)
         self.assertIn("max_noisy_samples: 0", updated)
         self.assertIn("mesh_runs: 3", updated)
         self.assertIn("mesh_path: hilbert", updated)

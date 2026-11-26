@@ -137,6 +137,25 @@ extra_state nozzle-camera
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.events.read_text().splitlines(), ["cancel-timer", "restart"])
 
+    def test_removal_accepts_previous_installer_config(self):
+        self.install_camera_fixture()
+        cfg = self.custom / "nozzle_camera.cfg"
+        cfg.write_text(cfg.read_text().replace(" BACKGROUND=1", ""), newline="\n")
+        result = self.remove()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(cfg.exists())
+
+    def test_private_bridge_config_is_recognized_on_removal(self):
+        self.install_camera_fixture()
+        result = self.run_shell('''
+. "$INSTALLER_DIR/scripts/stock_nozzle_camera.sh"
+stock_camera_private_config "$INSTALLER_DIR/installer/extras/nozzle-camera/nozzle_camera.cfg"
+''')
+        self.assertIn("[k2_camera_command nozzle_camera_on]", result.stdout)
+        self.assertIn("K2_RUN_CAMERA_COMMAND CMD=nozzle_camera_off BACKGROUND=1", result.stdout)
+        (self.custom / "nozzle_camera.cfg").write_text(result.stdout, newline="\n")
+        self.assertEqual(self.remove().returncode, 0)
+
     def test_busy_printer_and_failed_timer_cancel_prevent_removal(self):
         self.install_camera_fixture()
         for extra in ({"TEST_STATE": "printing"}, {"TEST_STATE": "paused"},

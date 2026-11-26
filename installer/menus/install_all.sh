@@ -17,7 +17,7 @@
 # cartographer (the orphan SAVE_CONFIG block only appears once cartographer's
 # alter_config.py has run).
 _INSTALL_ALL_ORDER='entware|is_entware|features/entware/install.sh
-better-root|is_better_root|installer/extras/better-root-safe/install.sh
+better-root|is_better_root|bootstrap/better-root/install.sh
 better-init|is_better_init|features/better-init/install.sh
 skip-setup|is_skip_setup|features/skip-setup/install.sh
 moonraker|is_moonraker|features/moonraker/install.sh
@@ -60,8 +60,9 @@ menu_install_all() {
     printf '         Make sure no print is active.\n\n'
 
     if ! confirm "Proceed with Cartographer setup installation?"; then return 0; fi
+    migration_require_idle || return 1
     if [ "${bootstrap_needs_review:-0}" = 1 ]; then
-        migration_require_idle && ota_repair_bootstrap || return 1
+        ota_repair_bootstrap || return 1
     fi
 
     local installed=0 skipped=0 failed=0
@@ -100,7 +101,7 @@ menu_install_all() {
         # A full setup reloads Klipper once after all components and the
         # mandatory mount-selection step. Individual component installers
         # retain their immediate restart behavior.
-        if HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 sh "$script"; then
+        if HOME="$pwd_home" K2_SKIP_BETTER_ROOT_LOGOUT=1 K2_DEFER_FIRMWARE_RESTART=1 sh "$script"; then
             installed=$((installed+1))
             case "$name" in
                 better-init|fluidd|screws_tilt_adjust|cartographer|abort_homing|save-config-restart|macros)

@@ -8,7 +8,7 @@ check_installer_model() {
             if [ "$1" = menu ]; then
                 return 0
             fi
-            echo 'K2 Pro (F012). Use menu.sh to open the development installer.' >&2
+            echo 'K2 Pro (F012). Use menu.sh to open the installer.' >&2
             return 1 ;;
         *) echo "Unsupported printer model: ${K2_PRINTER_MODEL:-unknown}" >&2; return 1 ;;
     esac

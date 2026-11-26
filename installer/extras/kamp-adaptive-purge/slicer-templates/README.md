@@ -1,4 +1,47 @@
-# KAMP Slicer Templates
+# Slicer templates for the K2 Plus and K2 Pro
+
+For **Machine start G-code**, choose your printer and slicer first.
+Use the [K2 Plus templates](#k2-plus), [K2 Pro Creality Print templates](#k2-pro-creality-print),
+or [K2 Pro OrcaSlicer templates](#k2-pro-orcaslicer).
+
+OrcaSlicer has separate preset fields for [filament changes and temperatures](#orcaslicer-filament-changes-k2-plus-and-k2-pro-04-mm)
+and [layer reporting in Fluidd](#orcaslicer-layer-reporting-in-fluidd).
+
+## OrcaSlicer layer reporting in Fluidd
+
+On the K2 Plus and K2 Pro, Orca can report the layer being printed to Fluidd
+even while the nozzle lifts for travel or a filament change. This works with
+or without KAMP. Append the [layer-change template](./orca-layer-change.gcode)
+to **Printer preset → Machine G-code → Layer change G-code**
+(`layer_change_gcode`, the **after** layer-change field).
+
+Save the preset. For an existing 3MF, reselect the updated printer preset and
+reslice. In a 60-layer export, the first layer should contain
+`SET_PRINT_STATS_INFO CURRENT_LAYER=1 TOTAL_LAYER=60` and the last should
+report `CURRENT_LAYER=60 TOTAL_LAYER=60`.
+
+## OrcaSlicer filament changes (K2 Plus and K2 Pro, 0.4 mm)
+
+In your **printer preset → Machine G-code → Change filament G-code**, use
+the template for your model. Both guard the travel moves with
+`{if layer_num >= 0}`. The Plus parks at Y245. The Pro parks at Y160 and
+includes extra Z clearance when printing by object.
+Both templates end at the park position with the spiral lift still in effect.
+Orca's subsequent print moves handle the return to printing height.
+
+- [K2 Plus change filament G-code](./k2-plus/orca-change-filament.gcode)
+- [K2 Pro change filament G-code](./k2-pro/orca-change-filament.gcode)
+
+If a CFS tool change leaves the nozzle at its flush temperature, add the
+[temperature snippet](./orca-filament-start-temperature.gcode) to **Filament
+start G-code** in each participating filament preset. Preserve any other
+filament initialization you use. The snippet issues `M104` with the filament's
+first-layer or regular nozzle target. It applies with either purge method.
+
+An existing 3MF can carry older copies of these settings. After updating the
+presets, reslice and check the exported G-code. For example, when changing to
+black PETG configured for 240 °C, look for `M104 S240` **after** the incoming
+tool command and before printing resumes.
 
 ## K2 Pro Creality Print
 
@@ -62,7 +105,6 @@ arguments and fails before `START_PRINT` can run. Quoting also works for
 single-word types such as `PLA` and `PETG` in both slicers.
 
 The four Creality Print variants were validated on printer firmware `1.1.5.5`.
-See the repository [validation report](../../../../VALIDATION.md).
 
 ## Use
 

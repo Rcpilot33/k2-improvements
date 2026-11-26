@@ -5,6 +5,15 @@ OTA_OPTIONS='r3men-bed kamp-adaptive-purge cartographer-plate-workflow global-to
 
 ota_baseline_firmware() { sed -n 's/^firmware=//p' "$OTA_SNAPSHOT" 2>/dev/null; }
 
+ota_firmware_repair_supported() {
+    case "$1:$2" in
+        F008:*.*.*.*.*) return 1 ;;
+        F008:1.1.*.*) printer_fw_at_least "$2" 1.1.3.13 && printer_fw_at_least 1.1.8.0 "$2" ;;
+        F012:1.1.5.5|F012:1.1.8.3) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 ota_settings() {
     local action="$1" setup="$2"
     shift 2
@@ -318,15 +327,11 @@ ota_review() (
             esac
         done
         if [ -s "$tmp" ]; then
-            # Plus and Pro firmware can share a version number.
-            case "${K2_PRINTER_MODEL:-}:$fw" in
-                F008:1.1.3.13|F008:1.1.5.2|F008:1.1.5.5|F008:1.1.8.0) ;;
-                F012:1.1.5.5|F012:1.1.8.3) ;;
-                *) if grep -Eq '^(cartographer|save-config-restart|better-init|screws_tilt_adjust|abort_homing|virtual-sdcard-guard|macros|start-print-fast-stop)$' "$tmp"; then
-                       warn "The plan replaces firmware files. Check compatibility with printer model ${K2_PRINTER_MODEL:-unknown} on firmware ${fw:-unknown} before applying it."
-                       return 1
-                   fi ;;
-            esac
+            if grep -Eq '^(cartographer|save-config-restart|better-init|screws_tilt_adjust|abort_homing|virtual-sdcard-guard|macros|start-print-fast-stop)$' "$tmp" &&
+               ! ota_firmware_repair_supported "${K2_PRINTER_MODEL:-}" "$fw"; then
+                warn "The plan replaces firmware files. Check compatibility with printer model ${K2_PRINTER_MODEL:-unknown} on firmware ${fw:-unknown} before applying it."
+                return 1
+            fi
             confirm 'Repair the listed automatic components and perform their required restart?' || return 1
             K2_OTA_ACTIVITY_CONFIRM=1 migration_apply_components "$tmp" || return 1
         fi

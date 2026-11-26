@@ -58,6 +58,7 @@ class ReviewTests(unittest.TestCase):
         setup = """
 set -u
 . installer/lib/common.sh
+. installer/detect/printer_fw.sh
 . installer/menus/update.sh
 . installer/menus/ota_review.sh
 detect_installed_firmware() { echo "$FW"; }
@@ -102,6 +103,12 @@ ota_review
         for model, fw, allowed in (
             ("F012", "1.1.8.3", True), ("F012", "1.1.5.5", True),
             ("F008", "1.1.5.5", True), ("F008", "1.1.8.0", True),
+            ("F008", "1.1.3.13", True), ("F008", "1.1.4.8", True),
+            ("F008", "1.1.4.11", True), ("F008", "1.1.6.4", True),
+            ("F008", "1.1.7.0", True), ("F008", "1.1.3.12", False),
+            ("F008", "1.1.8.0.1", False), ("F008", "1.1.6.beta", False),
+            ("F008", "1.1.6.4.1", False), ("F008", "1.1.8.0.0", False),
+            ("F012", "1.1.4.11", False),
             ("F008", "1.1.8.3", False), ("F012", "1.1.8.0", False),
             ("", "1.1.5.5", False), ("F012", "9.9.9", False),
         ):

@@ -38,6 +38,7 @@ MJPEG Adaptive). Enter `http://PRINTER_IP:8081/` as the stream URL. Fluidd
 also requires its snapshot field to contain a URL, even though MJPEG Stream
 mode does not use it; enter the same `http://PRINTER_IP:8081/` URL there.
 
+Camera commands run in order in the background. Fluidd reports their results when they finish.
 The camera automatically turns off after 10 minutes. Run `NOZZLE_CAM_ON`
 again to start another 10-minute viewing period.
 

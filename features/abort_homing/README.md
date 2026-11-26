@@ -1,12 +1,11 @@
 # Abort Homing
 
-Adds the backend support required by the custom Fluidd **Force Stop Homing**
+Adds the Klipper `force_stop_homing` endpoint. A compatible interface can use
+it to interrupt an active homing move and then disable the motors.
+
+**Installed** in the installer diagnostics refers to the Klipper patch. The
+project's Fluidd v1.37.5 and v1.37.6 interfaces lack a **Force Stop Homing**
 button.
-
-Use it to stop an incorrect homing move without issuing a full emergency stop.
-This is especially useful if an axis begins moving in the wrong direction.
-
-![Abort Homing button](image.png)
 
 ## Install
 

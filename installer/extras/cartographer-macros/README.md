@@ -170,8 +170,7 @@ A22_CARTO_TOUCH_SELECTED START=2100
 The selector/action workflow passed printer testing on firmware `1.1.3.13`,
 `1.1.5.2`, and `1.1.5.5`. The exhaustive `1.1.5.5` cycle included all five
 selectors, selected Scan calibration, selected Touch calibration, combined
-Scan + Touch loading, correct model names, and Fluidd sorting/readability. See
-the repository [validation report](../../../VALIDATION.md).
+Scan + Touch loading, correct model names, and Fluidd sorting/readability.
 
 ## Custom plates
 

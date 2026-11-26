@@ -1,4 +1,4 @@
-# K2 Plus Improvements — Menu Installer
+# K2 Improvements — K2 Plus and K2 Pro Menu Installer
 
 > [!TIP]
 > **Community and video guides**
@@ -7,23 +7,24 @@
 > - ▶️ [Watch Rcpilot33 K2 Improvements on YouTube](https://www.youtube.com/@Rcpilot33)
 
 > [!IMPORTANT]
-> **Printer features are supported on the Creality K2 Plus.** On the
-> `integration-testing` branch, the K2 Pro installer supports testing the stock
-> probe and Cartographer setups. Option 1 shows the installed component status.
-> Use the [K2 Pro bootstrap instructions](./INSTALL.md#k2-pro-development-bootstrap).
+> **K2 Improvements supports the Creality K2 Plus (F008) and K2 Pro (F012).**
+> Both models can use the stock PR Touch probe or Cartographer.
 
 This fork is built on the primary technical work maintained by
 [Jacob10383/k2-improvements](https://github.com/Jacob10383/k2-improvements).
 It adds a guided, status-aware installer and documented installation,
-calibration, and maintenance workflows for the Creality K2 Plus.
+calibration, and maintenance workflows for both printers.
 
-The menu provides separate, resumable paths for:
+## Start here
 
-- Keeping the stock PR Touch probe
-- Installing Cartographer V3 or V4
-- Converting an existing no-Cartographer setup to Cartographer
-- Installing optional features individually
-- Diagnosing, flashing, recovering, and maintaining the installation
+| What do you want to do? | Guide |
+|---|---|
+| Install K2 Improvements | [Prepare the printer](./INSTALL.md#before-installation), then [run the installer for your model](./INSTALL.md#bootstrap) |
+| Set up for a first print | [Stock PR Touch](./INSTALL.md#stock-pr-touch-first-print-preparation) or [Cartographer setup and calibration](./features/cartographer/SETUP.md) |
+| Configure OrcaSlicer or Creality Print | [Machine start, filament changes, and Fluidd layer reporting](./installer/extras/kamp-adaptive-purge/slicer-templates/README.md) |
+| Add a feature | [Optional features and their guides](#optional-features) |
+| Update an existing printer | [Update the installer](./INSTALL.md#updating) or [back up and restore settings around a firmware OTA](./INSTALL.md#recover-after-a-firmware-ota) |
+| Troubleshoot a print or installation | [FAQ and troubleshooting](./FAQ.md) |
 
 ## Important warnings
 
@@ -52,25 +53,12 @@ insert a separate Creality-controlled bed-stabilization delay before
 
 ## Validated firmware
 
-The following installation paths have completed hardware validation:
+| Printer | Firmware compatibility |
+|---|---|
+| K2 Plus (F008) | Expected to work from `1.1.3.13` through `1.1.8.0` based on tests across multiple releases. For a new installation, choose `1.1.5.2` or later within that range for Creality's firmware fixes. |
+| K2 Pro (F012) | `1.1.8.3` with stock PR Touch or Cartographer. Cartographer also completed a print on `1.1.5.5` after firmware recovery. |
 
-| Creality firmware | Stock PR Touch | Straight Cartographer | Stock → Cartographer |
-|---|:---:|:---:|:---:|
-| `1.1.3.13` | PASS | PASS | PASS |
-| `1.1.5.2` | PASS | PASS | PASS |
-| `1.1.5.5` | PASS | PASS | PASS |
-| `1.1.8.0` | PASS | PASS* | Not separately confirmed |
-
-*On November 18, 2026, the maintainer confirmed successful no-Cartographer and
-Cartographer operation on `1.1.8.0` with no issues. The Cartographer installation
-route was not specified; the conversion path is not separately recorded.
-
-Testing covered material offsets, KAMP and standard purge profiles,
-Cartographer default fallback and plate selection, and switching between PLA
-and PETG. See the [complete validation report](./VALIDATION.md).
-
-Cartographer V3 and V4 normal USB/Katapult flashing and bundled STM32 DFU
-recovery have also been tested on printer hardware.
+Use the firmware image for your printer model. Both models have a release numbered `1.1.5.5`.
 
 ## Quick start
 
@@ -106,7 +94,7 @@ After installing the firmware or completing the reset:
 3. Record the root password and printer IP address.
 4. Connect over SSH as `root` on port `22` and make sure no print is active.
 
-Copy this entire command into the printer's SSH session:
+On either printer, run this command over SSH to install from `main`.
 
 ```sh
 python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githubusercontent.com/Rcpilot33/k2-improvements/main/bootstrap.sh", "/tmp/bootstrap.sh")' && sh /tmp/bootstrap.sh --menu
@@ -121,9 +109,9 @@ path or optional feature you select.
 The same documented bootstrap command is also the installer recovery path. It
 first attempts a normal fast-forward update. If the checkout has diverged or is
 too old to update normally, bootstrap clones and verifies the selected branch
-before replacing the checkout. A checkout containing local file changes is
-preserved without its Git history under
-`/mnt/UDISK/root/.k2-improvements/bootstrap-recovery/`.
+before replacing the checkout. It saves the previous checkout, including local
+edits and any existing Git history, in
+`/mnt/UDISK/root/.k2-improvements/bootstrap-recovery/previous-checkout/`.
 
 For factory-reset preparation, Cartographer hardware and firmware steps,
 unattended bootstrap, recovery procedures, and detailed menu behavior, read
@@ -224,8 +212,6 @@ replacement hardware is fitted. Run any required calibration after activation.
 
 - [Step-by-step K2 Plus installation, calibration, and troubleshooting videos](https://www.youtube.com/@Rcpilot33)
 - [Complete installation, update, and recovery guide](./INSTALL.md)
-- [Firmware and feature validation report](./VALIDATION.md)
-- [External dependency preservation record](./DEPENDENCY_PRESERVATION.md)
 - [Cartographer setup and calibration](./features/cartographer/SETUP.md)
 - [Cartographer firmware and DFU recovery](./features/cartographer/firmware/README.md)
 - [Slicer `START_PRINT` setup](./features/macros/start_print/README.md)
@@ -256,9 +242,6 @@ Additional acknowledgements:
 - [Fluidd](https://github.com/fluidd-core/fluidd)
 - [Entware](https://github.com/Entware/Entware)
 - [Cartographer 3D](https://github.com/Cartographer3D)
-
-Donations supporting Jacob's work are available through
-[Jacob10383's Ko-fi](https://ko-fi.com/jacob10383).
 
 ## Disclaimer
 

@@ -26,6 +26,10 @@ for target in "$CAMERA_CFG" "$BIN_LINK"; do
             */installer/extras/nozzle-camera/$(basename "$source_file")) ;;
             *) echo "ERROR: refusing to remove unfamiliar camera link: $target" >&2; exit 1 ;;
         esac
+    elif [ "$target" = "$CAMERA_CFG" ] && stock_camera_private_config "$source_file" | cmp -s "$target" -; then
+        :
+    elif [ "$target" = "$CAMERA_CFG" ] && sed 's/ BACKGROUND=1$//' "$source_file" | cmp -s "$target" -; then
+        : # Exact copy installed before background camera commands.
     elif ! cmp -s "$target" "$source_file"; then
         echo "ERROR: refusing to remove modified camera file: $target" >&2
         exit 1

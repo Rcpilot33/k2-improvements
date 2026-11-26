@@ -74,6 +74,7 @@ migration_component_applicable() {
     if [ "$1" = global-prtouch-offsets ] && is_cartographer; then
         return 1
     fi
+    if [ "$1" = nozzle-camera ] && ! is_stock_nozzle_camera_available; then return 1; fi
     if [ "$1" = nozzle-camera-mount-compatibility ]; then
         _load_stock_nozzle_camera_helpers &&
             stock_nozzle_camera_is_jimmyv && stock_nozzle_camera_present
@@ -1069,9 +1070,6 @@ migration_offer_on_startup() {
         return
     fi
     [ "${bootstrap_needs_review:-0}" = 0 ] && [ -z "$(ota_review_notice)" ] || return 0
-    # Enter the Pro development menu directly. An explicit update still gets
-    # its results on reload via the handoff above.
-    [ "${K2_PRINTER_MODEL:-}" != F012 ] || return 0
     # The pre-tracker updater could not write a handoff record before pulling
     # this code. A fast-forward pull normally leaves ORIG_HEAD available, so
     # recover it for the first report when possible. The catalog remains

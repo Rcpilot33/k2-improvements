@@ -43,21 +43,29 @@ mkdir -p "$BIN_DIR" "$CUSTOM"
 chmod 755 "$SCRIPT_DIR/nozzle-camera.sh"
 ln -sfn "$SCRIPT_DIR/nozzle-camera.sh" "$BIN_DIR/nozzle-camera.sh"
 
-# Do not replace an unrelated implementation if another feature already
-# supplied this common Klipper extra.
-if [ -e "$SHELL_EXTRA" ] || [ -L "$SHELL_EXTRA" ]; then
-    if ! grep -q 'class ShellCommand' "$SHELL_EXTRA" 2>/dev/null; then
-        echo "ERROR: incompatible gcode_shell_command.py already exists:" >&2
-        echo "  $SHELL_EXTRA" >&2
+# Preserve an unrelated shell-command module and its macros. In that case
+# give the factory camera its own Klipper module and G-code command.
+cfg="$CUSTOM/nozzle_camera.cfg"
+if { [ -e "$SHELL_EXTRA" ] || [ -L "$SHELL_EXTRA" ]; } &&
+   [ "$(readlink -f "$SHELL_EXTRA")" != "$SCRIPT_DIR/gcode_shell_command.py" ]; then
+    camera_extra="$KLIPPER_EXTRAS/k2_camera_command.py"
+    if { [ -e "$camera_extra" ] || [ -L "$camera_extra" ]; } &&
+       [ "$(readlink -f "$camera_extra")" != "$SCRIPT_DIR/gcode_shell_command.py" ]; then
+        echo "ERROR: unrelated module already uses $camera_extra" >&2
         exit 1
     fi
+    ln -sfn "$SCRIPT_DIR/gcode_shell_command.py" "$camera_extra"
+    tmp=$(mktemp "$CUSTOM/.nozzle_camera.cfg.XXXXXX")
+    trap 'rm -f "$tmp"' EXIT HUP INT TERM
+    stock_camera_private_config "$SCRIPT_DIR/nozzle_camera.cfg" > "$tmp"
+    chmod 644 "$tmp"
+    mv -f "$tmp" "$cfg"
 else
-    ln -s "$SCRIPT_DIR/gcode_shell_command.py" "$SHELL_EXTRA"
+    ln -sfn "$SCRIPT_DIR/gcode_shell_command.py" "$SHELL_EXTRA"
+    ln -sfn "$SCRIPT_DIR/nozzle_camera.cfg" "$cfg"
 fi
-
-ln -sfn "$SCRIPT_DIR/nozzle_camera.cfg" "$CUSTOM/nozzle_camera.cfg"
-rm -f "$KLIPPER_EXTRAS/gcode_shell_command.pyc" \
-    "$KLIPPER_EXTRAS/__pycache__/gcode_shell_command."*.pyc
+rm -f "$KLIPPER_EXTRAS/gcode_shell_command.pyc" "$KLIPPER_EXTRAS/k2_camera_command.pyc" \
+    "$KLIPPER_EXTRAS/__pycache__/gcode_shell_command."*.pyc "$KLIPPER_EXTRAS/__pycache__/k2_camera_command."*.pyc
 
 "$PYTHON" "$INSTALLER_BASE/scripts/ensure_included.py" \
     "$CFG_DIR/printer.cfg" custom/main.cfg

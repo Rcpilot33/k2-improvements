@@ -44,6 +44,59 @@ run_logged_install cartographer fixture
             self.assertIn(expected, result.stdout)
             self.assertIn(expected, log)
 
+    def test_busy_printer_stops_install_paths_before_changes(self):
+        common = """
+. installer/menus/update.sh
+. installer/menus/install_all.sh
+. installer/menus/install_no_carto.sh
+. installer/menus/features.sh
+. installer/menus/extras.sh
+INSTALLER_DIR=$PWD
+clear() { :; }
+ui_heading() { :; }
+show_feature_readme() { :; }
+confirm() { return 0; }
+press_enter() { :; }
+warn() { echo "$*"; }
+c_yellow() { :; }
+has_cartographer_configuration() { return 1; }
+state_installed() { :; }
+state_pending() { :; }
+printer_activity_state() { echo "$STATE"; }
+_INSTALL_ALL_ORDER='example|false|fake'
+_INSTALL_NO_CARTO_ORDER=$_INSTALL_ALL_ORDER
+sh() { echo INSTALL_RAN; }
+run_logged_install() { echo INSTALL_RAN; }
+"""
+        for state in ("printing", "paused"):
+            for action in ("menu_install_all", "menu_install_no_carto", "install_feature macros",
+                           "install_extra 'material-z-offsets|false||installer/extras/material-z-offsets/install.sh|'"):
+                with self.subTest(state=state, action=action):
+                    result = self.shell(common + "\nSTATE=" + state + "\n" + action)
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertIn("printer is " + state, result.stdout)
+                    self.assertNotIn("INSTALL_RAN", result.stdout)
+
+    def test_protected_restarts_refuse_active_jobs_before_restart(self):
+        curl = self.base / "query"
+        curl.write_text("""#!/bin/sh
+case "$*" in
+    *'print_stats=state'*) printf '{"result":{"status":{"print_stats":{"state":"%s"}}}}' "$STATE" ;;
+    *) echo unexpected-request >&2; exit 1 ;;
+esac
+""", newline="\n")
+        curl.chmod(0o755)
+        self.env.update(K2_CURL=curl.as_posix(), K2_KLIPPER_SERVICE="false")
+        for state in ("printing", "paused"):
+            self.env["STATE"] = state
+            for helper in ("firmware_restart.sh", "klippy_code_restart.sh"):
+                with self.subTest(state=state, helper=helper):
+                    result = self.shell("sh scripts/" + helper)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn("cannot restart Klipper while the printer is " + state, result.stderr)
+                    self.assertNotIn("unexpected-request", result.stderr)
+                    self.assertNotIn("restarting the Klippy host process", result.stdout)
+
     def test_surviving_configuration_with_missing_driver_is_incomplete(self):
         (self.custom / "cartographer.cfg").write_text("[cartographer]\n")
         result = self.shell("""

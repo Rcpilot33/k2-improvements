@@ -115,7 +115,7 @@ main_menu() {
 
         ui_rule
         if [ "${K2_PRINTER_MODEL:-}" = F012 ]; then
-            printf ' %s\n' "$(c_cyan 'K2 PRO DEVELOPMENT INSTALLER')"
+            printf ' %s\n' "$(c_cyan 'K2 PRO INSTALLER')"
         else
             printf ' %s\n' "$(c_cyan 'K2 PLUS COMPATIBILITY INSTALLER')"
         fi

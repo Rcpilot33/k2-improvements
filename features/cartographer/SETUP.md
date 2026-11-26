@@ -27,7 +27,7 @@ Flashing instructions are available [here](./firmware/README.md).
    setup**, or use **Convert stock setup to Cartographer** when the supported
    stock-probe path is already installed.
 2. Select the mount profile matching the physical mount. Jamin has been
-   print-tested on the Plus and fit-checked on the Pro. The JimmyV presets
+   used for successful prints on both the Plus and the Pro. The JimmyV presets
    use the documented mount offsets and still need physical validation.
 3. Confirm the installer's protected Klippy-code reload, firmware-reset
    recovery, and K2 initialization wait completed successfully. If it did not,
@@ -48,7 +48,7 @@ Flashing instructions are available [here](./firmware/README.md).
    selectors for separate `textured_pei`, `epoxy`, `high_temp`, and `custom`
    model pairs and add automatic slicer selection.
 
-### First K2 Pro test with the Jamin mount
+### First setup on a K2 Pro with the Jamin mount
 
 1. After conversion and the protected restart, inspect the **loaded**
    configuration. For the 5.8 mm spacers, Y endstop and minimum should both
@@ -60,7 +60,7 @@ Flashing instructions are available [here](./firmware/README.md).
 3. Load the calibrated model pair, home and scan the bed. Check the mesh
    in Fluidd before starting the first small print. During print preparation
    verify the adaptive mesh, selected final Z mode and return from the rear
-   purge area to Y300. These movements await verification on RC3.
+   purge area to Y300.
 
 ## Print Mount and spacers for K2
 

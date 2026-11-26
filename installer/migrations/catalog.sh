@@ -42,6 +42,7 @@ cartographer-final-z-mode-macros-v1|macros|is_macros|Add a persistent Touch or S
 cartographer-final-z-mode-plate-v1|cartographer-plate-workflow|is_carto_plate_workflow|Load a Touch plate model only when Touch is selected for final Z
 cartographer-scan-only-load-v1|cartographer-plate-workflow|is_carto_plate_workflow|Let the Cartographer load button work without a Touch model in Scan final Z mode
 audit-cartographer-config-runtime-safety-v1|cartographer|is_cartographer|Back up managed Cartographer settings and restore configured motion limits automatically after an aborted mesh
+memory-diagnostics-disconnect-v1|memory-diagnostics|is_memory_diagnostics|Release the diagnostic worker when Klipper disconnects or restarts
 audit-memory-diagnostics-worker-v1|memory-diagnostics|is_memory_diagnostics|Move procfs sampling and UDISK logging off Klipper's motion reactor
 audit-abort-homing-patcher-safety-v1|abort_homing|is_abort_homing|Back up webhooks.py, reject partial patches, and replace it atomically
 audit-cartographer-install-safety-v1|cartographer|is_cartographer|Preserve SAVE_CONFIG data, verify probe XY offsets, and tolerate a missing Cartographer object during patched homing
@@ -185,6 +186,7 @@ fluidd-test-updater-isolation-v8|fluidd|is_fluidd|Keep the stable Fluidd web upd
 fluidd-stable-consolidated-release-v9|fluidd|is_fluidd|Use stable consolidated Fluidd, refresh the K2 bridge and restore normal Fluidd web updates
 fluidd-stable-build-verification-v10|fluidd|is_fluidd|Replace remaining Fluidd test builds with stable releases, including printers that completed the earlier stable migration
 chamber-fan-output-resync-v1|macros|is_macros|Resynchronize the chamber thermostat output after releasing Creality's direct case-fan request
+nozzle-camera-reactor-v1|nozzle-camera|is_nozzle_camera|Refresh the factory camera commands so streaming and automatic shutoff can run during printing
 nozzle-camera-jimmyv-removal-v1|nozzle-camera-mount-compatibility|is_nozzle_camera_mount_compatible|Remove the managed stock nozzle-camera stream from JimmyV mounts without switching off shared USB power
 nozzle-usb-cartographer-protection-v1|nozzle-usb-cartographer|is_nozzle_usb_cartographer|Refresh opted-in nozzle-camera AI and USB power protection without changing the selected wiring mode
 nozzle-usb-cartographer-boot-dependencies-v2|nozzle-usb-cartographer|is_nozzle_usb_cartographer|Order nozzle USB power after factory GPIO initialization and block Klipper startup until Cartographer USB is detected
