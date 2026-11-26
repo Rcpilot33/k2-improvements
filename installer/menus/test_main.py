@@ -23,7 +23,7 @@ class MainMenuTests(unittest.TestCase):
                                    ("results", "\n".join(results) + "\n"), ("calls", ""),
                                    ("version", version),
                                    ("version_calls", "")):
-                (base / name).write_text(contents, newline="\n")
+                (base / name).write_bytes(contents.encode("utf-8"))
             script = '''
 set -eu
 . "$COMMON_SCRIPT"

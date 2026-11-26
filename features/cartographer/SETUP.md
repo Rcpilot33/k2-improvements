@@ -13,9 +13,11 @@ The installer changes the untouched stock `probe_count: 19,19` to
 `custom/overrides.cfg`. These defaults were validated with the supported V3
 and V4 firmware. Full-firmware users may explicitly raise the speed to `200`
 when they prefer faster scans and have verified adequate sample coverage.
-The 50 by 50 grid places mesh points closer together than a 31 by 31
-grid. The 150 mm/s default keeps more samples per unit of travel than 200 mm/s
-at the same probe sampling rate. An existing customized count or speed is preserved.
+The 50 by 50 grid places mesh points closer together than a 31 by 31 grid.
+On Lite firmware, samples along the scan path are about 0.63 mm apart at
+150 mm/s. For the roughly 0.45 mm spacing target from mesh tuning, consider
+setting `speed: 100` in the same section. At that speed, Lite samples about
+every 0.42 mm. Updates preserve a customized probe count or speed.
 The same Cartographer-only override selects one spiral run by default, avoiding
 the direction-aligned ridges observed with snake scanning on K2 installations.
 Cartographer settings are grouped in `overrides.cfg` with the other settings a

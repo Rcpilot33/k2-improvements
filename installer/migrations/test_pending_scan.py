@@ -18,14 +18,13 @@ class PendingScanTests(unittest.TestCase):
                  snapshot=(), eligible=False, script="migration_pending_entries"):
         with tempfile.TemporaryDirectory(prefix="k2-pending-scan-") as directory:
             base = Path(directory)
-            (base / "catalog").write_text("\n".join(catalog) + "\n", newline="\n")
+            (base / "catalog").write_bytes(("\n".join(catalog) + "\n").encode("utf-8"))
             if completed is not None:
-                (base / "completed-migrations").write_text(
-                    "\n".join(completed) + "\n", newline="\n"
-                )
+                (base / "completed-migrations").write_bytes(
+                    ("\n".join(completed) + "\n").encode("utf-8"))
             for name, values in (("installed", installed), ("present", present),
                                  ("installed-before-update", snapshot)):
-                (base / name).write_text("\n".join(values) + "\n", newline="\n")
+                (base / name).write_bytes(("\n".join(values) + "\n").encode("utf-8"))
             calls = base / "calls"
             calls.touch()
             shell = '''

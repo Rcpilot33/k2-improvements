@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # Mesh bounds are in probe coordinates. With Jamin's 5.8 mm spacers,
 # the stock Y endstops (-6.2 Plus, -6.5 Pro) become -0.4 and -0.7.
 CARTO_MODEL=$(get_sn_mac.sh model) || return 1

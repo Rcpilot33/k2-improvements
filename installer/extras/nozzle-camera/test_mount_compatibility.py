@@ -25,9 +25,9 @@ class CameraMountCompatibilityTests(unittest.TestCase):
         for name in paths:
             dest = self.base / name
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_text((ROOT / name).read_text(), newline="\n")
-        (self.base / "scripts/firmware_restart.sh").write_text(
-            'echo restart >> "$TEST_EVENTS"\n', newline="\n")
+            dest.write_bytes((ROOT / name).read_text().encode("utf-8"))
+        (self.base / "scripts/firmware_restart.sh").write_bytes(
+            b'echo restart >> "$TEST_EVENTS"\n')
         self.camera = self.base / "installer/extras/nozzle-camera"
         self.custom = self.base / "config/custom"
         self.custom.mkdir(parents=True)
@@ -42,11 +42,11 @@ class CameraMountCompatibilityTests(unittest.TestCase):
         self.bin = self.base / "bin"
         self.bin.mkdir()
         model = self.bin / "get_sn_mac.sh"
-        model.write_text("#!/bin/sh\necho F008\n", newline="\n")
+        model.write_bytes(b"#!/bin/sh\necho F008\n")
         model.chmod(0o755)
         self.events = self.base / "events"
         self.curl = self.base / "fake-curl"
-        self.curl.write_text('''#!/bin/sh
+        self.curl.write_bytes(b'''#!/bin/sh
 case "$*" in
     *objects/query*) echo '{"result":{"status":{"print_stats":{"state":"'"$TEST_STATE"'"}}}}' ;;
     *objects/list*) printf '{"result":{"objects":["%s"]}}' "${TEST_TIMER_OBJECT:-delayed_gcode _NOZZLE_CAMERA_AUTO_OFF}" ;;
@@ -55,7 +55,7 @@ case "$*" in
     fi
     echo cancel-timer >> "$TEST_EVENTS"; printf '%s\n' "$TEST_CANCEL_REPLY" ;;
 esac
-''', newline="\n")
+''')
         subprocess.run([BASH, "-c", 'chmod +x "$1"', "test", self.curl.as_posix()], check=True)
 
     def set_mount(self, y, custom=False):
@@ -146,7 +146,7 @@ extra_state nozzle-camera
         old = cfg.read_text().replace("camera_shutoff_timer: True\n", "").replace(
             "K2_SET_CAMERA_SHUTOFF", "UPDATE_DELAYED_GCODE ID=_NOZZLE_CAMERA_AUTO_OFF")
         old += "\n[delayed_gcode _NOZZLE_CAMERA_AUTO_OFF]\ngcode:\n    RUN_SHELL_COMMAND CMD=nozzle_camera_off BACKGROUND=1\n"
-        cfg.write_text(old.replace(" BACKGROUND=1", ""), newline="\n")
+        cfg.write_bytes(old.replace(" BACKGROUND=1", "").encode("utf-8"))
         result = self.remove()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(cfg.exists())
@@ -159,7 +159,7 @@ stock_camera_private_config "$INSTALLER_DIR/installer/extras/nozzle-camera/nozzl
 ''')
         self.assertIn("[k2_camera_command nozzle_camera_on]", result.stdout)
         self.assertIn("K2_RUN_CAMERA_COMMAND CMD=nozzle_camera_off BACKGROUND=1", result.stdout)
-        (self.custom / "nozzle_camera.cfg").write_text(result.stdout, newline="\n")
+        (self.custom / "nozzle_camera.cfg").write_bytes(result.stdout.encode("utf-8"))
         result = self.remove(TEST_TIMER_OBJECT="k2_camera_command nozzle_camera_off",
                              TEST_EXPECT_CANCEL="K2_SET_CAMERA_SHUTOFF DURATION=0")
         self.assertEqual(result.returncode, 0, result.stderr)

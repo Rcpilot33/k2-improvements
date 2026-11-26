@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # Select the macro profile before installing any part of the bundle.
 macro_model=$(get_sn_mac.sh model) || exit 1
 case "$macro_model" in

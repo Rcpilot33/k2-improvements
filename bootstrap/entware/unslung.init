@@ -2,7 +2,7 @@
 
 ACTION=${1}
 
-if [ "${ACTION}" == "boot" ]; then
+if [ "${ACTION}" = "boot" ]; then
     ACTION=start
 fi
 

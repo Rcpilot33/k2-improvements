@@ -108,13 +108,13 @@ class ModelRoutingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             custom = Path(tmp) / "custom"
             custom.mkdir()
-            (Path(tmp) / "printer.cfg").write_text("[include custom/main.cfg]\n", newline="\n")
+            (Path(tmp) / "printer.cfg").write_bytes(b"[include custom/main.cfg]\n")
             configs = ("start_print", "start_print_pro", "m191", "bed_mesh", "overrides")
             for name in configs:
                 (custom / (name + ".cfg")).touch()
             includes = "".join("[include %s.cfg]\n" % name for name in configs)
             main = custom / "main.cfg"
-            main.write_text(includes + "[include k2_prtouch_safe_xy.cfg]\n", newline="\n")
+            main.write_bytes((includes + "[include k2_prtouch_safe_xy.cfg]\n").encode("utf-8"))
             def check():
                 return subprocess.run(
                     [BASH, "-c", '. "$1/installer/detect/features.sh"; is_macros',
@@ -124,5 +124,5 @@ class ModelRoutingTests(unittest.TestCase):
             self.assertEqual(check(), 0)
             (custom / "cartographer.cfg").touch()
             self.assertEqual(check(), 1)
-            main.write_text(includes + "#[include k2_prtouch_safe_xy.cfg]\n", newline="\n")
+            main.write_bytes((includes + "#[include k2_prtouch_safe_xy.cfg]\n").encode("utf-8"))
             self.assertEqual(check(), 0)

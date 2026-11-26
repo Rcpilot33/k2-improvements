@@ -64,12 +64,12 @@ class ProtectionTests(unittest.TestCase):
         self.service_text = ("#!/bin/sh /etc/rc.common\nSTART=55\nUSE_PROCD=1\n"
                              "DEPEND=fstab,mcu_update\n\nstart_service() {\n"
                              "    echo host-started\n}\n")
-        self.service.write_text(self.service_text, newline="\n")
+        self.service.write_bytes(self.service_text.encode("utf-8"))
         self.factory_text = ('#!/bin/sh\nUSB_P_EN3=162\n'
                              'echo 0 > /sys/class/gpio/gpio$USB_P_EN3/value\n'
                              'echo 1 > /sys/class/gpio/gpio$USB_P_EN3/value\n')
         self.power.write_text(self.factory_text)
-        (self.custom / "main.cfg").write_text("[include overrides.cfg]\n# other settings\n", newline="\n")
+        (self.custom / "main.cfg").write_bytes(b"[include overrides.cfg]\n# other settings\n")
         self.preferences = self.base / "preferences.json"
         self.original = {"ai_control": {"switch": 1, "wasteSwitch": 1,
                          "flowDetect": 1, "flowEmDetect": 1, "firstFloor": 1},
@@ -169,14 +169,14 @@ class ProtectionTests(unittest.TestCase):
     def test_boot_patch_preserves_unrelated_edits_and_refuses_modified_managed_block(self):
         self.apply("power")
         changed = self.service.read_text() + "# operator addition\n"
-        self.service.write_text(changed, newline="\n")
+        self.service.write_bytes(changed.encode("utf-8"))
         self.apply("refresh")
         self.assertEqual(self.service.read_text(), changed)
         self.apply("ai-only")
         self.assertEqual(self.service.read_text(), self.service_text + "# operator addition\n")
         self.apply("power")
-        self.service.write_text(self.service.read_text().replace(
-            "DEPEND=fstab,mcu_update,k2-nozzle-usb", "DEPEND=fstab,mcu_update,custom,k2-nozzle-usb"), newline="\n")
+        self.service.write_bytes(self.service.read_text().replace(
+            "DEPEND=fstab,mcu_update,k2-nozzle-usb", "DEPEND=fstab,mcu_update,custom,k2-nozzle-usb").encode("utf-8"))
         before = self.service.read_text()
         with self.assertRaises(ValueError):
             self.apply("remove")
@@ -187,7 +187,7 @@ class ProtectionTests(unittest.TestCase):
     def test_startup_gate_waits_for_usb_and_blocks_host_on_missing_rail(self):
         self.apply("power")
         hook = self.base / "hook.sh"
-        hook.write_text((HERE / "nozzle-usb.init").read_text(), newline="\n")
+        hook.write_bytes((HERE / "nozzle-usb.init").read_text().encode("utf-8"))
         gpio = self.base / "gpio"
         devices = self.base / "usb"
         device = devices / "1-1.2.4"
@@ -195,13 +195,13 @@ class ProtectionTests(unittest.TestCase):
         (device / "idVendor").write_text("1d50\n")
         (device / "idProduct").write_text("614e\n")
         power = self.base / "power.sh"
-        power.write_text('#!/bin/sh\n[ -f "$K2_NOZZLE_GPIO_VALUE" ] || exit 1\n'
-                         'printf 0 > "$K2_NOZZLE_GPIO_VALUE"\n', newline="\n")
+        power.write_bytes(b'#!/bin/sh\n[ -f "$K2_NOZZLE_GPIO_VALUE" ] || exit 1\n'
+                         b'printf 0 > "$K2_NOZZLE_GPIO_VALUE"\n')
         gate = self.base / "gate.sh"
-        gate.write_text('#!/bin/sh\n. "$K2_TEST_HOOK"\nstart\n', newline="\n")
+        gate.write_bytes(b'#!/bin/sh\n. "$K2_TEST_HOOK"\nstart\n')
         service = self.base / "service.sh"
-        service.write_text(self.service.read_text().replace(
-            "/etc/init.d/k2-nozzle-usb", gate.as_posix()), newline="\n")
+        service.write_bytes(self.service.read_text().replace(
+            "/etc/init.d/k2-nozzle-usb", gate.as_posix()).encode("utf-8"))
         subprocess.run([BASH, "-c", 'chmod +x "$1" "$2"', "test", power.as_posix(),
                         gate.as_posix()], check=True)
         env = dict(os.environ, K2_NOZZLE_GPIO_VALUE=gpio.as_posix(),
@@ -230,7 +230,7 @@ class ProtectionTests(unittest.TestCase):
         self.assertIn(b"host-started", output)
         # A device that never enumerates must return failure, not launch host.
         (device / "idProduct").unlink()
-        gate.write_text('#!/bin/sh\nsleep() { return 0; }\n. "$K2_TEST_HOOK"\nstart\n', newline="\n")
+        gate.write_bytes(b'#!/bin/sh\nsleep() { return 0; }\n. "$K2_TEST_HOOK"\nstart\n')
         missing = subprocess.run([BASH, "-c", command], env=env, capture_output=True, timeout=5)
         self.assertNotEqual(missing.returncode, 0)
         self.assertIn(b"Klipper start blocked", missing.stderr)
@@ -242,24 +242,23 @@ class ProtectionTests(unittest.TestCase):
         directory = repo / "installer/extras/nozzle-usb-cartographer"
         directory.mkdir(parents=True)
         script = directory / "install.sh"
-        script.write_text((HERE / "install.sh").read_text(), newline="\n")
+        script.write_bytes((HERE / "install.sh").read_text().encode("utf-8"))
         helpers = repo / "scripts"
         helpers.mkdir()
-        (helpers / "stock_nozzle_camera.sh").write_text(
-            'stock_nozzle_camera_is_jimmyv() { return 0; }\n'
-            'stock_nozzle_camera_require_idle() { return 0; }\n'
-            'stock_nozzle_camera_present() { return 1; }\n', newline="\n")
+        (helpers / "stock_nozzle_camera.sh").write_bytes(
+            b'stock_nozzle_camera_is_jimmyv() { return 0; }\n'
+            b'stock_nozzle_camera_require_idle() { return 0; }\n'
+            b'stock_nozzle_camera_present() { return 1; }\n')
         events = self.base / "events"
-        (helpers / "klippy_code_restart.sh").write_text(
-            'printf "restart\\n" >> "$K2_TEST_EVENTS"\n', newline="\n")
+        (helpers / "klippy_code_restart.sh").write_bytes(
+            b'printf "restart\\n" >> "$K2_TEST_EVENTS"\n')
         python = self.base / "python.sh"
-        python.write_text('#!/bin/sh\nprintf "configure:%s\\n" "$2" >> "$K2_TEST_EVENTS"\n'
-                          'case "$2" in ai-only) hold=0 ;; power) hold=1 ;; refresh) exit 0 ;; esac\n'
-                          'echo "# usb_power_hold: $hold" > "$PRINTER_CFG_DIR/custom/k2_nozzle_camera_guard.cfg"\n',
-                          newline="\n")
+        python.write_bytes(b'#!/bin/sh\nprintf "configure:%s\\n" "$2" >> "$K2_TEST_EVENTS"\n'
+                          b'case "$2" in ai-only) hold=0 ;; power) hold=1 ;; refresh) exit 0 ;; esac\n'
+                          b'echo "# usb_power_hold: $hold" > "$PRINTER_CFG_DIR/custom/k2_nozzle_camera_guard.cfg"\n')
         hook = self.system / "etc/init.d/k2-nozzle-usb"
-        hook.write_text('#!/bin/sh\nprintf "power:%s\\n" "$1" >> "$K2_TEST_EVENTS"\n', newline="\n")
-        (self.custom / "k2_nozzle_camera_guard.cfg").write_text("# usb_power_hold: 1\n", newline="\n")
+        hook.write_bytes(b'#!/bin/sh\nprintf "power:%s\\n" "$1" >> "$K2_TEST_EVENTS"\n')
+        (self.custom / "k2_nozzle_camera_guard.cfg").write_bytes(b"# usb_power_hold: 1\n")
         subprocess.run([BASH, "-c", 'chmod +x "$1" "$2"', "test", python.as_posix(), hook.as_posix()], check=True)
         env = dict(os.environ, K2_PYTHON=python.as_posix(), K2_SYSTEM_ROOT=self.system.as_posix(),
                    PRINTER_CFG_DIR=self.config.as_posix(), K2_TEST_EVENTS=events.as_posix())
@@ -300,16 +299,16 @@ class ProtectionTests(unittest.TestCase):
         self.assertIn(b"nozzle-usb-cartographer", pending.stdout)
         current = '. "$INSTALLER_DIR/installer/detect/features.sh"; is_nozzle_usb_cartographer'
         self.assertEqual(subprocess.run([BASH, "-c", current], env=env).returncode, 0)
-        self.service.write_text(self.service_text, newline="\n")
+        self.service.write_bytes(self.service_text.encode("utf-8"))
         self.assertEqual(subprocess.run([BASH, "-c", current], env=env).returncode, 1)
 
     @unittest.skipUnless(Path(BASH).exists(), "bash required")
     def test_power_off_is_mapped_to_power_on(self):
         script = self.base / "wrapper.sh"
-        script.write_text((HERE / "nozzle-power.sh").read_text(), newline="\n")
+        script.write_bytes((HERE / "nozzle-power.sh").read_text().encode("utf-8"))
         factory = self.base / "factory.sh"
         # MSYS shell scripts use explicit chmod; never touch real sysfs.
-        factory.write_text('#!/bin/sh\nprintf "%s" "$1"\n', newline="\n")
+        factory.write_bytes(b'#!/bin/sh\nprintf "%s" "$1"\n')
         subprocess.run([BASH, "-c", 'chmod +x "$1"', "test", factory.as_posix()], check=True)
         for request in ("on", "off"):
             result = subprocess.run([BASH, script.as_posix(), request], capture_output=True,
@@ -357,12 +356,12 @@ class ProtectionTests(unittest.TestCase):
         script_dir = self.base / "repo/installer/extras/nozzle-usb-cartographer"
         script_dir.mkdir(parents=True)
         script = script_dir / "install.sh"
-        script.write_text((HERE / "install.sh").read_text(), newline="\n")
+        script.write_bytes((HERE / "install.sh").read_text().encode("utf-8"))
         helpers = self.base / "repo/scripts"
         helpers.mkdir()
-        (helpers / "stock_nozzle_camera.sh").write_text(
-            'stock_nozzle_camera_is_jimmyv() { return 0; }\n'
-            'stock_nozzle_camera_require_idle() { return 1; }\n', newline="\n")
+        (helpers / "stock_nozzle_camera.sh").write_bytes(
+            b'stock_nozzle_camera_is_jimmyv() { return 0; }\n'
+            b'stock_nozzle_camera_require_idle() { return 1; }\n')
         cancelled = subprocess.run([BASH, script.as_posix()], input=b"2\nn\n", capture_output=True)
         self.assertEqual(cancelled.returncode, 2)
         busy = subprocess.run([BASH, script.as_posix(), "--power"], capture_output=True)
@@ -382,7 +381,7 @@ class ProtectionTests(unittest.TestCase):
         self.apply("ai-only")
         result = subprocess.run([BASH, "-c", command], env=env, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        (self.custom / "k2_nozzle_camera_guard.cfg").write_text(configure.MARKER + "\n# usb_power_hold: 1\n", newline="\n")
+        (self.custom / "k2_nozzle_camera_guard.cfg").write_bytes((configure.MARKER + "\n# usb_power_hold: 1\n").encode("utf-8"))
         detector = '. "$INSTALLER_DIR/installer/detect/features.sh"; is_nozzle_usb_cartographer'
         result = subprocess.run([BASH, "-c", detector], env=env, capture_output=True)
         self.assertEqual(result.returncode, 1)  # Config alone is not rail protection.

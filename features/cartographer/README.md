@@ -18,6 +18,8 @@ Both printers use a userspace USB bridge for Cartographer communication. The
 installation therefore includes the probe plugin, bridge service, Klipper
 configuration, and K2-specific macros.
 
+Jacob10383 wrote `usb_bridge_new`, distributed here as a binary with no published source. SHA-256: `acab226e89a065f4255906196e52ea6f6f3fcb0d2bf2f3ef7a765a625fb707df`.
+
 Installing Cartographer replaces the active stock `prtouch_v3` configuration.
 Creality's master service uses that section name to select its complete
 pre-file preparation path. The installer therefore reports an empty synthetic

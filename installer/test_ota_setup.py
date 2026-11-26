@@ -91,12 +91,12 @@ run_logged_install() { echo INSTALL_RAN; }
 
     def test_protected_restarts_refuse_active_jobs_before_restart(self):
         curl = self.base / "query"
-        curl.write_text("""#!/bin/sh
+        curl.write_bytes(b"""#!/bin/sh
 case "$*" in
     *'print_stats=state'*) printf '{"result":{"status":{"print_stats":{"state":"%s"}}}}' "$STATE" ;;
     *) echo unexpected-request >&2; exit 1 ;;
 esac
-""", newline="\n")
+""")
         curl.chmod(0o755)
         self.env.update(K2_CURL=curl.as_posix(), K2_KLIPPER_SERVICE="false")
         for state in ("printing", "paused"):
@@ -139,7 +139,7 @@ ota_component_ready fluidd
         source = (ROOT / "features/moonraker/install.sh").read_text()
         # Redirect printer system paths into a disposable filesystem.
         source = re.sub(r"(?<![\w/}])/(etc|opt|usr|mnt|var|proc|lib)/", r"${FIXTURE}/\1/", source)
-        (self.base / "install.sh").write_text(source, newline="\n")
+        (self.base / "install.sh").write_bytes(source.encode("utf-8"))
         self.env["FIXTURE_PATH"] = self.base.as_posix()
         script = r"""
 set -e
@@ -204,7 +204,7 @@ bash ./install.sh --restore-service
         # Use a PATH shim also visible to /bin/sh child scripts.
         shim = self.base / "bin"
         shim.mkdir()
-        (shim / "python3").write_text('#!/bin/sh\nexec "$TEST_PYTHON" "$@"\n', newline="\n")
+        (shim / "python3").write_bytes(b'#!/bin/sh\nexec "$TEST_PYTHON" "$@"\n')
         (shim / "python3").chmod(0o755)
         self.env["SHIM"] = shim.as_posix()
         shutil.copy(shim / "python3", shim / "python")

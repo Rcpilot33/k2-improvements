@@ -20,28 +20,25 @@ class MountActivationTests(unittest.TestCase):
         self.base = Path(self.temp.name)
         geometry = self.base / "features/cartographer/mesh_limits.sh"
         geometry.parent.mkdir(parents=True)
-        geometry.write_text((ROOT / "features/cartographer/mesh_limits.sh").read_text(), newline="\n")
+        geometry.write_bytes((ROOT / "features/cartographer/mesh_limits.sh").read_text().encode("utf-8"))
         self.bin = self.base / "bin"
         self.bin.mkdir()
         model = self.bin / "get_sn_mac.sh"
-        model.write_text('#!/bin/sh\necho "$TEST_PRINTER_MODEL"\n', newline="\n")
+        model.write_bytes(b'#!/bin/sh\necho "$TEST_PRINTER_MODEL"\n')
         model.chmod(0o755)
         self.picker = self.base / "installer/extras/cartographer-offset-setup/install.sh"
         self.picker.parent.mkdir(parents=True)
-        self.picker.write_text(
-            (ROOT / "installer/extras/cartographer-offset-setup/install.sh").read_text(),
-            newline="\n",
-        )
+        self.picker.write_bytes(
+            (ROOT / "installer/extras/cartographer-offset-setup/install.sh").read_text().encode("utf-8"))
         scripts = self.base / "scripts"
         scripts.mkdir()
         shutil.copyfile(ROOT / "scripts/stock_nozzle_camera.sh", scripts / "stock_nozzle_camera.sh")
-        (scripts / "firmware_restart.sh").write_text(
-            'if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" = 1 ]; then\n'
-            ' echo "I: deferring FIRMWARE_RESTART until the full setup is complete"\n'
-            ' exit 0\nfi\n'
-            'echo restart >> "$TEST_RESTART_LOG"\n'
-            'exit "${TEST_RESTART_STATUS:-0}"\n', newline="\n",
-        )
+        (scripts / "firmware_restart.sh").write_bytes(
+            b'if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" = 1 ]; then\n'
+            b' echo "I: deferring FIRMWARE_RESTART until the full setup is complete"\n'
+            b' exit 0\nfi\n'
+            b'echo restart >> "$TEST_RESTART_LOG"\n'
+            b'exit "${TEST_RESTART_STATUS:-0}"\n')
         self.custom = self.base / "config/custom"
         self.custom.mkdir(parents=True)
         (self.custom.parent / "printer.cfg").write_text(
@@ -63,11 +60,10 @@ class MountActivationTests(unittest.TestCase):
         shutil.copyfile(ROOT / "features/cartographer/k2_cartographer_scan_guard.py", guard)
         self.query_log = self.base / "query.log"
         self.curl = self.base / "fake-curl"
-        self.curl.write_text(
-            '#!/bin/sh\necho query >> "$TEST_QUERY_LOG"\n'
-            'printf "%s\\n" "$TEST_ACTIVITY_JSON"\n'
-            'exit "${TEST_QUERY_STATUS:-0}"\n', newline="\n",
-        )
+        self.curl.write_bytes(
+            b'#!/bin/sh\necho query >> "$TEST_QUERY_LOG"\n'
+            b'printf "%s\\n" "$TEST_ACTIVITY_JSON"\n'
+            b'exit "${TEST_QUERY_STATUS:-0}"\n')
         subprocess.run([BASH, "-c", 'chmod +x "$1"', "test", self.curl.as_posix()], check=True)
 
     def run_picker(self, choice="3\n", state="standby", **extra_env):
@@ -120,7 +116,7 @@ class MountActivationTests(unittest.TestCase):
             "[stepper_y]\nposition_endstop: -6.5\nposition_min: -6.5\n")
         self.assertIn("mesh_min: 10, 5", baseline)
         self.assertIn("serial: /dev/ttyACM0", baseline)
-        (self.custom / "cartographer.cfg").write_text(baseline, newline="\n")
+        (self.custom / "cartographer.cfg").write_bytes(baseline.encode("utf-8"))
         for choice, y in ((2, 36), (3, 12), (4, 17)):
             result = self.run_picker(f"{choice}\nn\n", TEST_PRINTER_MODEL="F012")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
