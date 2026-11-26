@@ -25,7 +25,6 @@ fi
 sh "$INSTALLER_BASE/installer/extras/fluidd-ui-overlay/install.sh"
 "$PYTHON" "$SCRIPT_DIR/k2_material_z_offset_editor.py" \
     --normalize "$CUSTOM/overrides.cfg"
-# The editor's automatic material registration is invoked from START_PRINT.
 # Refresh this managed link so installing the optional editor cannot leave an
 # older START_PRINT in place with a working UI but no apply/register handoff.
 cleanup_managed_start_print_backups \
@@ -38,10 +37,10 @@ if [ "$HAD_SURFACE_WRAPPER" -eq 1 ]; then
     sh "$INSTALLER_BASE/installer/extras/surface-selection-wrapper/install.sh"
 fi
 ln -sfn "$SCRIPT_DIR/material_z_offsets.cfg" "$CUSTOM/material_z_offsets.cfg"
-ln -sfn "$SCRIPT_DIR/k2_material_z_offset_editor.py" \
-    "$KLIPPER_EXTRAS/k2_material_z_offset_editor.py"
 "$PYTHON" "$INSTALLER_BASE/scripts/ensure_included.py" \
     "$CUSTOM/main.cfg" material_z_offsets.cfg
+sh "$INSTALLER_BASE/features/macros/start_print/install_material_registration.sh" \
+    "$CUSTOM" "$KLIPPER_EXTRAS"
 
 if ! "$PYTHON" "$SCRIPT_DIR/configure_fluidd_layout.py"; then
     echo "W: editor installed, but its Fluidd category metadata could not be configured"

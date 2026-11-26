@@ -18,16 +18,16 @@ class CameraMountCompatibilityTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="k2-camera-mount-")
         self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name)
-        paths = ["scripts/stock_nozzle_camera.sh",
+        paths = ["scripts/stock_nozzle_camera.sh", "features/cartographer/mesh_limits.sh",
                  "installer/extras/cartographer-offset-setup/install.sh"]
         paths += ["installer/extras/nozzle-camera/" + name for name in
                   ("install.sh", "uninstall.sh", "nozzle-camera.sh", "nozzle_camera.cfg")]
         for name in paths:
             dest = self.base / name
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_text((ROOT / name).read_text(), newline="\n")
-        (self.base / "scripts/firmware_restart.sh").write_text(
-            'echo restart >> "$TEST_EVENTS"\n', newline="\n")
+            dest.write_bytes((ROOT / name).read_text().encode("utf-8"))
+        (self.base / "scripts/firmware_restart.sh").write_bytes(
+            b'echo restart >> "$TEST_EVENTS"\n')
         self.camera = self.base / "installer/extras/nozzle-camera"
         self.custom = self.base / "config/custom"
         self.custom.mkdir(parents=True)
@@ -41,15 +41,21 @@ class CameraMountCompatibilityTests(unittest.TestCase):
         self.set_mount(12)
         self.bin = self.base / "bin"
         self.bin.mkdir()
+        model = self.bin / "get_sn_mac.sh"
+        model.write_bytes(b"#!/bin/sh\necho F008\n")
+        model.chmod(0o755)
         self.events = self.base / "events"
         self.curl = self.base / "fake-curl"
-        self.curl.write_text('''#!/bin/sh
+        self.curl.write_bytes(b'''#!/bin/sh
 case "$*" in
     *objects/query*) echo '{"result":{"status":{"print_stats":{"state":"'"$TEST_STATE"'"}}}}' ;;
-    *objects/list*) echo '{"result":{"objects":["delayed_gcode _NOZZLE_CAMERA_AUTO_OFF"]}}' ;;
-    *gcode/script*) echo cancel-timer >> "$TEST_EVENTS"; printf '%s\n' "$TEST_CANCEL_REPLY" ;;
+    *objects/list*) printf '{"result":{"objects":["%s"]}}' "${TEST_TIMER_OBJECT:-delayed_gcode _NOZZLE_CAMERA_AUTO_OFF}" ;;
+    *gcode/script*) if [ -n "${TEST_EXPECT_CANCEL:-}" ]; then
+        case "$*" in *"$TEST_EXPECT_CANCEL"*) ;; *) exit 1 ;; esac
+    fi
+    echo cancel-timer >> "$TEST_EVENTS"; printf '%s\n' "$TEST_CANCEL_REPLY" ;;
 esac
-''', newline="\n")
+''')
         subprocess.run([BASH, "-c", 'chmod +x "$1"', "test", self.curl.as_posix()], check=True)
 
     def set_mount(self, y, custom=False):
@@ -65,6 +71,7 @@ esac
 
     def run_shell(self, script, input_text="", **extra):
         env = dict(os.environ, INSTALLER_DIR=self.base.as_posix(),
+                   PATH=str(self.bin) + os.pathsep + os.environ["PATH"],
                    PRINTER_CFG_DIR=self.custom.parent.as_posix(),
                    K2_BIN_DIR=self.bin.as_posix(), K2_CURL=self.curl.as_posix(),
                    NOZZLE_CAM_PIDFILE=(self.base / "camera.pid").as_posix(),
@@ -132,6 +139,30 @@ extra_state nozzle-camera
         result = self.remove()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.events.read_text().splitlines(), ["cancel-timer", "restart"])
+
+    def test_removal_accepts_previous_installer_config(self):
+        self.install_camera_fixture()
+        cfg = self.custom / "nozzle_camera.cfg"
+        old = cfg.read_text().replace("camera_shutoff_timer: True\n", "").replace(
+            "K2_SET_CAMERA_SHUTOFF", "UPDATE_DELAYED_GCODE ID=_NOZZLE_CAMERA_AUTO_OFF")
+        old += "\n[delayed_gcode _NOZZLE_CAMERA_AUTO_OFF]\ngcode:\n    RUN_SHELL_COMMAND CMD=nozzle_camera_off BACKGROUND=1\n"
+        cfg.write_bytes(old.replace(" BACKGROUND=1", "").encode("utf-8"))
+        result = self.remove()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(cfg.exists())
+
+    def test_private_bridge_config_is_recognized_on_removal(self):
+        self.install_camera_fixture()
+        result = self.run_shell('''
+. "$INSTALLER_DIR/scripts/stock_nozzle_camera.sh"
+stock_camera_private_config "$INSTALLER_DIR/installer/extras/nozzle-camera/nozzle_camera.cfg"
+''')
+        self.assertIn("[k2_camera_command nozzle_camera_on]", result.stdout)
+        self.assertIn("K2_RUN_CAMERA_COMMAND CMD=nozzle_camera_off BACKGROUND=1", result.stdout)
+        (self.custom / "nozzle_camera.cfg").write_bytes(result.stdout.encode("utf-8"))
+        result = self.remove(TEST_TIMER_OBJECT="k2_camera_command nozzle_camera_off",
+                             TEST_EXPECT_CANCEL="K2_SET_CAMERA_SHUTOFF DURATION=0")
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_busy_printer_and_failed_timer_cancel_prevent_removal(self):
         self.install_camera_fixture()

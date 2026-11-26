@@ -2,10 +2,10 @@
 
 ## Can I install this on a Creality K2 Pro or another K2 model?
 
-No. This project supports and has been validated on the **Creality K2 Plus
-only**. Its scripts and patches depend on K2 Plus-specific Klipper components,
-service paths, homing behavior, motor controllers, and printer configuration.
-Do not run the installer on a K2 Pro or any other K2-series printer.
+Yes for the K2 Plus (F008) and K2 Pro (F012). The menu checks the printer's
+model at startup and accepts those two models. Both use the same
+[install command on main](./INSTALL.md#install-from-main).
+See [firmware compatibility by model](./README.md#validated-firmware).
 
 ## Can I still use the automatic calibration features?
 
@@ -33,8 +33,8 @@ step rather than a confirmed current limitation.
 
 Reports of the bed moving into the bottom, homing toward the back, or the
 touchscreen withholding temperatures until homing were observed on stock
-`1.1.2.x` firmware. Those releases are outside the currently validated firmware
-matrix. Use one of the versions listed in [VALIDATION.md](./VALIDATION.md).
+`1.1.2.x` firmware. The expected K2 Plus compatibility range starts at
+`1.1.3.13`. See [firmware compatibility by model](./README.md#validated-firmware).
 
 ## Why can the first homing move after `SAVE_CONFIG` run in the wrong direction?
 
@@ -148,7 +148,7 @@ After the reset, complete the entire stock touchscreen setup and self-check.
 Confirm that the stock printer and Fluidd reach a ready state before
 reinstalling K2 Improvements. Do not restore individual Klipper Python files
 unless the log proves that is still necessary and the replacement comes from
-the exact matching K2 Plus firmware or a known-good backup from that printer.
+firmware matching that printer's model and version or a known-good backup from that printer.
 
 ## Why did Cartographer keep using the previous or default model after I pressed a plate selector?
 

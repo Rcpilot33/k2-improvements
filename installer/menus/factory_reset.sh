@@ -76,6 +76,7 @@ factory_reset_run() {
     printf 'preserve /mnt/UDISK/root and /mnt/UDISK/bin, then trigger Creality factory reset.\n'
     printf 'This includes the entire /mnt/UDISK/creality tree.\n'
     printf 'Removal errors (including recreated logs) are warned about; the reset continues.\n\n'
+    printf 'This removes Entware in /mnt/UDISK/opt, including Git and installed packages.\n'
     printf 'This WILL remove /mnt/UDISK/printer_data.\n'
     printf 'That includes Klipper config, custom macros, saved meshes, logs, and backups stored there.\n\n'
     printf 'This may also remove downloaded firmware, timelapse/image folders,\n'

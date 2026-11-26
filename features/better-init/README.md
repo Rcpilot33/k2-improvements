@@ -1,6 +1,6 @@
 # Better Init
 
-Replaces key K2 Plus service scripts with versions that track running
+Replaces printer service scripts with versions that track running
 processes correctly.
 
 The stock scripts do not provide normal PID and service-management behavior.

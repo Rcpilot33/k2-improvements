@@ -40,6 +40,11 @@ is_cartographer() {
     [ -e "$klipper_dir/klippy/extras/cartographer.py" ] &&
     grep -q '^class TriggerDispatch' "$klipper_dir/klippy/mcu.py" 2>/dev/null
 }
+is_cartographer_setup_complete() {
+    [ ! -e "$PRINTER_CFG_DIR/custom/.cartographer-install-pending" ] && cartographer_core_ready || return 1
+    [ "${K2_PRINTER_MODEL:-}" != F012 ] ||
+        grep -q '^\[gcode_macro _HOME_Z\]$' "$PRINTER_CFG_DIR/custom/cartographer.cfg"
+}
 is_moonraker()     { [ -d /mnt/UDISK/printer_data/moonraker ] || [ -f /mnt/UDISK/printer_data/config/moonraker.conf ]; }
 cartographer_core_ready() {
     is_cartographer &&
@@ -67,6 +72,14 @@ is_fluidd()        { grep -ilq 'crealityk2' /usr/share/fluidd/assets/*.js 2>/dev
 is_macros() {
     local custom="$PRINTER_CFG_DIR/custom"
     local main="$custom/main.cfg"
+    if [ -f "$custom/cartographer.cfg" ] &&
+       grep -q '^\[include k2_prtouch_safe_xy\.cfg\]$' "$main" 2>/dev/null; then
+        return 1
+    fi
+    if [ "${K2_PRINTER_MODEL:-}" = F012 ]; then
+        [ -e "$custom/start_print_pro.cfg" ] &&
+            grep -q '^\[include start_print_pro\.cfg\]$' "$main" 2>/dev/null || return 1
+    fi
     [ -e "$custom/start_print.cfg" ] &&
     [ -e "$custom/m191.cfg" ] &&
     [ -e "$custom/bed_mesh.cfg" ] &&
@@ -124,9 +137,13 @@ is_secure_auth()   { grep -Fq '# k2-improvements: secure-auth installed' /etc/in
 is_nozzle_camera() {
     local custom="$PRINTER_CFG_DIR/custom"
     local klipper_dir="${KLIPPER_DIR:-/usr/share/klipper}"
+    local bridge=gcode_shell_command
+    if grep -q '^\[k2_camera_command ' "$custom/nozzle_camera.cfg" 2>/dev/null; then
+        bridge=k2_camera_command
+    fi
     [ -e "$custom/nozzle_camera.cfg" ] &&
     [ -x /mnt/UDISK/bin/nozzle-camera.sh ] &&
-    [ -e "$klipper_dir/klippy/extras/gcode_shell_command.py" ] &&
+    [ -e "$klipper_dir/klippy/extras/$bridge.py" ] &&
     grep -q '^\[include nozzle_camera\.cfg\]$' "$custom/main.cfg" 2>/dev/null
 }
 is_skip_setup()    {

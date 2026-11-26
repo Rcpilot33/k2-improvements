@@ -13,7 +13,11 @@ The installer changes the untouched stock `probe_count: 19,19` to
 `custom/overrides.cfg`. These defaults were validated with the supported V3
 and V4 firmware. Full-firmware users may explicitly raise the speed to `200`
 when they prefer faster scans and have verified adequate sample coverage.
-An existing customized probe count or speed is preserved during updates.
+The 50 by 50 grid places mesh points closer together than a 31 by 31 grid.
+On Lite firmware, samples along the scan path are about 0.63 mm apart at
+150 mm/s. For the roughly 0.45 mm spacing target from mesh tuning, consider
+setting `speed: 100` in the same section. At that speed, Lite samples about
+every 0.42 mm. Updates preserve a customized probe count or speed.
 The same Cartographer-only override selects one spiral run by default, avoiding
 the direction-aligned ridges observed with snake scanning on K2 installations.
 Cartographer settings are grouped in `overrides.cfg` with the other settings a
@@ -26,14 +30,19 @@ Flashing instructions are available [here](./firmware/README.md).
 1. Install Cartographer through **Install or change setup -> Cartographer
    setup**, or use **Convert stock setup to Cartographer** when the supported
    stock-probe path is already installed.
-2. Select the mount profile matching the physical mount. Jamin is
-   printer-tested; JimmyV uses the offsets documented with that mount but is
-   untested in this project.
+2. Select the mount profile matching the physical mount. Jamin has been
+   used for successful prints on both the Plus and the Pro. The JimmyV presets
+   use the documented mount offsets and still need physical validation.
 3. Confirm the installer's protected Klippy-code reload, firmware-reset
    recovery, and K2 initialization wait completed successfully. If it did not,
    fully power-cycle the printer before the next `G28`.
-4. Home the printer, run `Z_TILT_ADJUST`, then re-home Z before calibration.
-5. Complete Scan calibration, Touch calibration, and `SAVE_CONFIG`.
+4. With the build plate fitted and clearance for XY travel, check probe
+   communication with `CARTOGRAPHER_QUERY`, then home XY with `G28 X Y`.
+   On a first installation, select the default profile and run
+   `A21_CARTO_SCAN_SELECTED` for manual Scan calibration before homing Z.
+5. With the Scan model loaded, home Z. On the dual-Z Plus, run
+   `Z_TILT_ADJUST` and re-home Z. The Pro has one Z drive.
+   Complete Touch calibration and run `SAVE_CONFIG`.
 6. Wait for the protected `SAVE_CONFIG` firmware restart to finish. Power-cycle
    before homing only if the restart reports an error.
 7. Tune final Z with an actual first-layer print. Touch calibration establishes
@@ -42,6 +51,20 @@ Flashing instructions are available [here](./firmware/README.md).
    Cartographer. Optionally enable **Cartographer plate workflow** to reveal
    selectors for separate `textured_pei`, `epoxy`, `high_temp`, and `custom`
    model pairs and add automatic slicer selection.
+
+### First setup on a K2 Pro with the Jamin mount
+
+1. After conversion and the protected restart, inspect the **loaded**
+   configuration. For the 5.8 mm spacers, Y endstop and minimum should both
+   be `-0.7`. Check probe offset `0,-15`, mesh bounds `10,5` to `290,280`
+   and zero reference `150,150` before moving the toolhead.
+2. Check the probe, XY home, Scan calibration and centered Z home one at a
+   time as above. Verify door clearance on Y home and the nozzle position
+   at the reference. Complete Touch calibration and the protected restart.
+3. Load the calibrated model pair, home and scan the bed. Check the mesh
+   in Fluidd before starting the first small print. During print preparation
+   verify the adaptive mesh, selected final Z mode and return from the rear
+   purge area to Y300.
 
 ## Print Mount and spacers for K2
 

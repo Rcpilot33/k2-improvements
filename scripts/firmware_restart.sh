@@ -109,6 +109,7 @@ if [ "$WAIT_FOR_STARTUP" = "1" ]; then
     esac
 fi
 
+. "$(dirname "$(readlink -f "$0")")/stock_nozzle_camera.sh"
 ATTEMPT=1
 while [ "$ATTEMPT" -le "$ATTEMPTS" ]; do
     if [ "$ATTEMPTS" -gt 1 ]; then
@@ -117,6 +118,7 @@ while [ "$ATTEMPT" -le "$ATTEMPTS" ]; do
         echo "I: requesting FIRMWARE_RESTART through Moonraker"
     fi
 
+    k2_require_no_active_job || exit 1
     ACCEPTED=0
     if "$CURL" -fsS --max-time 10 -X POST \
         "$API_URL/printer/firmware_restart" >/dev/null; then

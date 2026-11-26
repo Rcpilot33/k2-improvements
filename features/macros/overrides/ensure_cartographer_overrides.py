@@ -24,6 +24,8 @@ CARTOGRAPHER_PROBE_COUNT = "50,50"
 LEGACY_MANAGED_SPEED_COMMENTS = (
     "150 recommended for lite firmware",
     "lite firmware: 150 recommended",
+    "150 recommended for lite firmware; 200 recommended for full firmware",
+    "lite firmware: 150 recommended; full firmware: 200 recommended",
 )
 
 BED_MESH = "bed_mesh"
@@ -115,28 +117,17 @@ def _normalize_bed_mesh_presentation(block: str) -> str:
     for raw in block.splitlines(keepends=True):
         body = raw.rstrip("\r\n")
         probe_count = PROBE_COUNT_LINE_RE.match(body)
-        if probe_count:
+        comment = body.partition("#")[2].strip().casefold()
+        if probe_count and comment in ("stock probe default", "50,50 is a good starting point if using carto"):
             value = re.sub(r"[ \t]*,[ \t]*", ",", probe_count.group(1))
-            if value == STOCK_PROBE_COUNT:
-                value = CARTOGRAPHER_PROBE_COUNT
-            rendered.append(
-                "probe_count: {:<24} # Cartographer default: 50,50{}".format(
-                    value, newline
-                )
-            )
-            continue
-        speed = SPEED_LINE_RE.match(body)
-        if speed:
-            value = speed.group(1)
-            if value == "200" and any(
-                marker in body.casefold() for marker in LEGACY_MANAGED_SPEED_COMMENTS
+            if (value == STOCK_PROBE_COUNT and comment == "stock probe default") or (
+                value == CARTOGRAPHER_PROBE_COUNT and comment.startswith("50,50")
             ):
-                value = "150"
-            rendered.append(
-                "speed: {:<30} # 200 can be set for Full firmware{}".format(
-                    value, newline
-                )
-            )
+                rendered.append("probe_count: 50,50                    # Cartographer default: 50,50" + newline)
+                continue
+        speed = SPEED_LINE_RE.match(body)
+        if speed and speed.group(1) == "200" and comment in LEGACY_MANAGED_SPEED_COMMENTS:
+            rendered.append("speed: 150                         # 200 can be set for Full firmware" + newline)
             continue
         rendered.append(raw)
     return "".join(rendered)

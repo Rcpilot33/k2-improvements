@@ -143,6 +143,11 @@ show_cartographer_setup_checklist() {
   1. Confirm the correct physical mount and offset preset is selected.
   2. Confirm the installer restart or stock SAVE_CONFIG host restart completed.
      If it reported an error, power-cycle the printer before the next G28.
+     With the plate installed and clearance for travel, check CARTOGRAPHER_QUERY
+     and home XY (G28 X Y). Calibrate the first Scan model before homing Z.
+     On a K2 Pro with the Jamin mount, verify the loaded reference is 150,150,
+     mesh bounds are 10,5 to 290,280 and Y endstop/minimum are both -0.7.
+     Z_TILT_ADJUST applies only to the dual-Z Plus.
 EOF
     if is_carto_plate_workflow; then
         cat <<'EOF'
@@ -233,6 +238,7 @@ EOF
         return
     fi
 
+    migration_require_idle || { press_enter; return 1; }
     printf '\n'
     if sh "$INSTALLER_DIR/scripts/firmware_restart.sh"; then
         printf '\n%s\n' "$(c_green 'Protected firmware restart completed successfully.')"
@@ -266,6 +272,7 @@ EOF
         return
     fi
 
+    migration_require_idle || { press_enter; return 1; }
     printf '\n'
     if sh "$INSTALLER_DIR/scripts/klippy_code_restart.sh"; then
         printf '\n%s\n' "$(c_green 'Klippy Python modules and K2 MCU state reloaded successfully.')"

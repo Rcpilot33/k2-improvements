@@ -126,7 +126,21 @@ class MemoryDiagnostics:
             daemon=True,
         )
         self.worker.start()
-        self.reactor.register_timer(self._sample, self.reactor.NOW)
+        self.timer = self.reactor.register_timer(self._sample, self.reactor.NOW)
+        self.printer.register_event_handler("klippy:disconnect", self._disconnect)
+
+    def _disconnect(self):
+        self.reactor.unregister_timer(self.timer)
+        # Discard any queued sample. A worker already writing a sample exits
+        # as soon as it finishes, even if the bounded join expires.
+        try:
+            self.pending_samples.get_nowait()
+        except queue.Empty:
+            pass
+        else:
+            self.pending_samples.task_done()
+        self.pending_samples.put_nowait(None)
+        self.worker.join(timeout=0.25)
 
     def get_status(self, eventtime):
         return dict(self.last_status)
@@ -225,9 +239,11 @@ class MemoryDiagnostics:
 
     def _worker_loop(self):
         while True:
-            eventtime, print_state = self.pending_samples.get()
+            sample = self.pending_samples.get()
             try:
-                self._collect_sample(eventtime, print_state)
+                if sample is None:
+                    return
+                self._collect_sample(*sample)
             finally:
                 self.pending_samples.task_done()
 

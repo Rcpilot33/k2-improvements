@@ -1,7 +1,7 @@
 # Plate-Aware Saved Meshes
 
 This optional extra keeps separate saved bed meshes for different build
-plates on a K2 Plus using the stock PR Touch probe.
+plates on a K2 Plus or K2 Pro using the stock PR Touch probe.
 
 ## Naming
 

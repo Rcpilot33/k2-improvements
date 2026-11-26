@@ -3,17 +3,28 @@
 set -e
 
 SCRIPT_DIR="$(readlink -f $(dirname $0))"
+. "$SCRIPT_DIR/../model.sh"
 
 test -d ~/printer_data/config/custom || mkdir -p ~/printer_data/config/custom
 
 # add the main.cfg to printer.cfg
-python ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
     ~/printer_data/config/printer.cfg custom/main.cfg
 # add the start_print.cfg
 ln -sf ${SCRIPT_DIR}/start_print.cfg \
     ~/printer_data/config/custom/start_print.cfg
-python ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
+python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
     ~/printer_data/config/custom/main.cfg start_print.cfg
+
+sh "$SCRIPT_DIR/install_material_registration.sh" "$HOME/printer_data/config/custom" \
+    "${KLIPPER_DIR:-/usr/share/klipper}/klippy/extras"
+
+if [ "$macro_model" = F012 ]; then
+    echo "I: installing K2 Pro (F012) startup settings"
+    ln -sf "$SCRIPT_DIR/start_print_pro.cfg" ~/printer_data/config/custom/start_print_pro.cfg
+    python3 "$SCRIPT_DIR/../../../scripts/ensure_included.py" \
+        ~/printer_data/config/custom/main.cfg start_print_pro.cfg
+fi
 
 # Stock PR Touch may stop Creality's artificial-Z approach at the nozzle and
 # then enter _HOME_Z at an artificial coordinate near Z=20. Install a
@@ -26,10 +37,10 @@ ln -sf ${SCRIPT_DIR}/k2_prtouch_safe_xy.cfg \
 rm -f /usr/share/klipper/klippy/extras/k2_prtouch_safe_xy.pyc \
     /usr/share/klipper/klippy/extras/__pycache__/k2_prtouch_safe_xy.*.pyc
 if [ -f ~/printer_data/config/custom/cartographer.cfg ]; then
-    python ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
+    python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
         ~/printer_data/config/custom/main.cfg k2_prtouch_safe_xy.cfg True
 else
-    python ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
+    python3 ${SCRIPT_DIR}/../../../scripts/ensure_included.py \
         ~/printer_data/config/custom/main.cfg k2_prtouch_safe_xy.cfg
 fi
 

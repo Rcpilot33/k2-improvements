@@ -18,14 +18,13 @@ class PendingScanTests(unittest.TestCase):
                  snapshot=(), eligible=False, script="migration_pending_entries"):
         with tempfile.TemporaryDirectory(prefix="k2-pending-scan-") as directory:
             base = Path(directory)
-            (base / "catalog").write_text("\n".join(catalog) + "\n", newline="\n")
+            (base / "catalog").write_bytes(("\n".join(catalog) + "\n").encode("utf-8"))
             if completed is not None:
-                (base / "completed-migrations").write_text(
-                    "\n".join(completed) + "\n", newline="\n"
-                )
+                (base / "completed-migrations").write_bytes(
+                    ("\n".join(completed) + "\n").encode("utf-8"))
             for name, values in (("installed", installed), ("present", present),
                                  ("installed-before-update", snapshot)):
-                (base / name).write_text("\n".join(values) + "\n", newline="\n")
+                (base / name).write_bytes(("\n".join(values) + "\n").encode("utf-8"))
             calls = base / "calls"
             calls.touch()
             shell = '''
@@ -92,6 +91,31 @@ migration_is_complete() {
                 )
                 self.assertEqual(output, ["a|macros|first", "b|macros|second|detail"])
                 self.assertEqual(calls, ["installed:macros"])
+
+    def test_pro_updates_are_offered_once_to_existing_installs(self):
+        script = '''
+. "${UPDATE_SCRIPT%/menus/update.sh}/migrations/catalog.sh"
+migration_catalog | awk -F '|' -v id="$ENTRY" '$1 != id { print $1 }' > "$MIGRATION_COMPLETED"
+migration_pending_components
+'''
+        for entry, component in (
+            ("screws-tilt-pro-home-before-probing-v1", "screws_tilt_adjust"),
+            ("k2-pro-native-print-macros-v1", "macros"),
+            ("k2-pro-stock-probe-count-v1", "macros"),
+            ("k2-pro-stock-start-messages-v1", "macros"),
+            ("k2-pro-shared-start-print-v1", "macros"),
+        ):
+            for model, installed, expected in (
+                ("F012", (component,), [component]),
+                ("F008", (component,), []),
+                ("F012", (), []),
+            ):
+                with self.subTest(entry=entry, model=model, installed=installed):
+                    check = f"K2_PRINTER_MODEL={model}\nENTRY={entry}\n" + script
+                    if installed:
+                        check += f"migration_mark_component_current {component}\nmigration_pending_components"
+                    output, _ = self.run_scan([], installed=installed, script=check)
+                    self.assertEqual(output, expected)
 
     def test_partial_install_and_pre_update_snapshot_still_offer_repairs(self):
         output, calls = self.run_scan(

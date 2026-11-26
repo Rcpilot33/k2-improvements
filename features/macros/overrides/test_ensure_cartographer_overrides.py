@@ -96,6 +96,14 @@ class CartographerOverridesTests(unittest.TestCase):
         self.assertIn("speed: 150", updated)
         self.assertNotIn("probe_count: 19,19", updated)
 
+    def test_preserves_user_stock_sized_mesh_across_repairs(self):
+        for line in ("probe_count: 19,19", "probe_count: 19, 19 # calibrated", "probe_count: 31,31 # my mesh"):
+            for comment in ("", " # measured"):
+                settings = line + "\nspeed: 150" + comment + "\n"
+                result, _ = MODULE.ensure_defaults("[bed_mesh]\n" + settings)
+                self.assertIn(settings, result)
+                self.assertEqual(MODULE.ensure_defaults(result), (result, False))
+
     def test_adds_cartographer_probe_count_when_missing(self):
         updated, changed = MODULE.ensure_defaults("[bed_mesh]\nmesh_pps: 0,0\n")
 
@@ -184,17 +192,27 @@ class CartographerOverridesTests(unittest.TestCase):
         )
         updated, _ = MODULE.ensure_defaults(original)
 
-        self.assertIn("speed: 200", updated)
-        self.assertIn(
-            "# 200 can be set for Full firmware",
-            updated,
-        )
+        self.assertIn("speed: 200 # user choice", updated)
         self.assertIn("max_noisy_samples: 0", updated)
         self.assertIn("mesh_runs: 3", updated)
         self.assertIn("mesh_path: hilbert", updated)
         self.assertIn('variable_carto_final_z_mode: "scan" # user choice', updated)
         self.assertEqual(updated.count("variable_carto_final_z_mode:"), 1)
         self.assertNotIn("speed: 150", updated)
+
+    def test_migrates_historical_speed_comments_only_when_unmodified(self):
+        for comment in (
+            "150 recommended for Lite firmware; 200 recommended for Full firmware",
+            "Lite firmware: 150 recommended; Full firmware: 200 recommended",
+        ):
+            with self.subTest(comment=comment):
+                speed_line = "speed: 200 # " + comment
+                updated, _ = MODULE.ensure_defaults("[bed_mesh]\n" + speed_line + "\n")
+                self.assertIn("speed: 150", updated)
+                self.assertEqual(MODULE.ensure_defaults(updated), (updated, False))
+                customized = speed_line + " (tested on this printer)\n"
+                updated, _ = MODULE.ensure_defaults("[bed_mesh]\n" + customized)
+                self.assertIn(customized, updated)
 
     def test_creates_valid_start_print_section_when_missing(self):
         updated, _ = MODULE.ensure_defaults("[bed_mesh]\nprobe_count: 50,50\n")

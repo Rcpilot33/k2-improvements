@@ -1,11 +1,11 @@
 # Global No-Carto Z Offsets
 
-Optional global Z-offset editor for the native PR Touch path. Use
-**Optional extras -> Global No-Carto Z Offsets**, then power-cycle while idle
-and wait for full startup. Installation also enables the tested transient-only
-touchscreen compatibility; neither installation nor opening the editor moves
-the printer, changes its calibration, or sends a restart. Not installed by
-default. Cartographer is excluded at installation and runtime.
+On a stock-probe K2 Plus or K2 Pro, select **Optional extras → Global No-Carto
+Z Offsets** while the printer is idle. The installer enables the global editor
+and its touchscreen support, reloads Klippy, performs one protected firmware
+restart, and waits for the K2 motor controller to report ready. Batch installs
+and installer updates perform this restart once at the end. If the protected
+restart reports a failure, power-cycle before homing.
 
 The `Global_Z_Offsets_No_Carto` button appears in Fluidd's Z Offsets category.
 It uses a compact dialog matching the Cartographer editor: names on the left,
@@ -119,6 +119,6 @@ sh installer/extras/global-prtouch-offsets/install.sh --remove
 ```
 
 Removal preserves the JSON table, required touchscreen compatibility, and
-managed START_PRINT. Power-cycle to unload the transform; without the feature,
-printing uses the original native baseline again. Existing unrelated pending
+managed START_PRINT. The protected restart unloads the transform and restores
+use of the native baseline. Existing unrelated pending
 SAVE_CONFIG values are never cleared or saved by this editor.

@@ -1,6 +1,6 @@
 # Cartographer
 
-Cartographer replaces the K2 Plus stock contact probe with a fast scanning
+Cartographer replaces the stock contact probe on the K2 Plus and K2 Pro with a fast scanning
 probe. It supports dense, adaptive bed meshes without the long probing time of
 a large stock-probe mesh.
 
@@ -14,9 +14,11 @@ a large stock-probe mesh.
 
 ## Important differences
 
-The K2 Plus uses a userspace USB bridge for Cartographer communication. The
+Both printers use a userspace USB bridge for Cartographer communication. The
 installation therefore includes the probe plugin, bridge service, Klipper
 configuration, and K2-specific macros.
+
+Jacob10383 wrote `usb_bridge_new`, distributed here as a binary with no published source. SHA-256: `acab226e89a065f4255906196e52ea6f6f3fcb0d2bf2f3ef7a765a625fb707df`.
 
 Installing Cartographer replaces the active stock `prtouch_v3` configuration.
 Creality's master service uses that section name to select its complete
@@ -44,7 +46,7 @@ Implementation details and timeout behavior are documented in the shared
 [prime-tower scanner guide](../prime_tower/README.md).
 
 Creality Print's **Prime tower -> No sparse layers (beta)** option is not
-supported on the K2 Plus. A delayed tower can command the bed back to
+supported by the adaptive mesh workflow. A delayed tower can command the bed back to
 first-layer height after the model is already tall, creating a collision risk.
 If an enabled prime tower and that setting are both present, adaptive mesh
 preflight rejects the file and directs the user to disable the option and
@@ -129,7 +131,7 @@ and a continuous scan mesh.
   Cartographer V3 USB hardware
 - Two M2.6x20 mm screws
 - Two M3x5x4 heat-set inserts for the printed mount
-- A compatible K2 Plus Cartographer mount
+- A Cartographer mount compatible with your printer model
 
 ## Install and calibrate
 
@@ -150,3 +152,12 @@ coverage is verified. The shared no-Cartographer template remains `19,19`.
 For automatic per-surface model selection, install the **Cartographer plate
 workflow** from Extras and follow its
 [selector/action guide](../../installer/extras/cartographer-macros/README.md).
+
+## USB bridge binary
+
+On systems that need the userspace USB bridge, the installer uses the ARM
+binary introduced in Jacob10383's commit `68d6758`. Its SHA-256 is
+`acab226e89a065f4255906196e52ea6f6f3fcb0d2bf2f3ef7a765a625fb707df`.
+The upstream commit supplies the binary. Its build source and a separate
+distribution license have not been verified.
+[Upstream bridge commit](https://github.com/Jacob10383/k2-improvements/commit/68d6758a2242014db8624e872286c88814b24d2d)

@@ -1,15 +1,16 @@
 # Complete Installation and Recovery Guide
 
-This guide contains the detailed installation, update, maintenance, and
-recovery information for the K2 Plus Improvements menu installer. For the
-project overview and shortest supported path, begin with the
-[main README](./README.md).
+For a first installation, [back up the printer](#before-installation),
+[run the bootstrap for your model](#bootstrap), then [choose your probe setup](#choose-the-setup-path).
+Before printing, follow the instructions for [stock PR Touch](#stock-pr-touch-first-print-preparation)
+or [Cartographer calibration](#cartographer-mount-offsets-and-calibration).
+
+Already running K2 Improvements? Go directly to [optional extras](#optional-extras),
+[installer updates](#updating), or [firmware OTA backup and recovery](#recover-after-a-firmware-ota).
 
 > [!IMPORTANT]
-> **Supported printer: Creality K2 Plus only.** Do not run these installers on
-> a K2 Pro or any other K2-series printer. This project modifies K2 Plus-specific
-> Klipper components, services, homing logic, motor-controller behavior, and
-> configuration files. Other models are not supported or validated.
+> **The menu installer supports the Creality K2 Plus (F008) and K2 Pro (F012).**
+> Both printers use the same install command. The installer detects the model.
 
 ## Safety and compatibility
 
@@ -35,10 +36,17 @@ Complete the factory setup before installing, leave **Print Calibration**
 disabled when sending prints, then use the provided manual calibration,
 bed-mesh, and tuning workflows.
 
-Validated Creality firmware versions are `1.1.3.13`, `1.1.5.2`, `1.1.5.5`, and
-`1.1.8.0`. For `1.1.8.0`, the maintainer confirmed successful stock-probe and
-Cartographer operation; the conversion path was not separately recorded.
-See [VALIDATION.md](./VALIDATION.md) for the complete test matrix.
+Use firmware built for your printer model. The Plus and Pro both have a
+`1.1.5.5` release. In the OTA image, `sw-description` gives the firmware version.
+Inside `rootfs`, `DISTRIB_TARGET` in `/etc/openwrt_release` identifies the board as
+`CR0CN240110C10` for the Plus or `CR0CN200400C10` for the Pro.
+
+On the K2 Plus, the installer is expected to work from `1.1.3.13` through
+`1.1.8.0`, inclusive. OTA review offers repairs that replace firmware files
+throughout that range. For a new Plus installation, choose `1.1.5.2` or later
+within the range for the stock firmware fixes introduced in `1.1.5.2`.
+On the Pro, OTA review offers these repairs on `1.1.5.5` and `1.1.8.3`.
+See [firmware compatibility by model](./README.md#validated-firmware).
 
 ## Before installation
 
@@ -47,51 +55,6 @@ See [VALIDATION.md](./VALIDATION.md) for the complete test matrix.
 Back up the printer configuration, custom macros, saved meshes, calibration
 data, and any other files you want to keep. A factory reset and some recovery
 operations are destructive.
-
-### Recover after a firmware OTA
-
-After a firmware OTA on a configured K2 Plus, open the existing installer.
-Before the menus open, it checks the Entware packages and tools, SFTP, PATH,
-boot links, root home, printer directories and installer checkout. It offers
-to repair missing prerequisites. If the checkout itself cannot launch, rerun
-the bootstrap for your installed branch.
-
-Before a no-wipe OTA, choose **6 → 5, Save current setup before a firmware OTA**.
-This captures the installed options and checks the archived settings against the
-live files, even when component updates are pending on the current firmware.
-The first successful setup verification also creates a settings backup. Use
-**6 → 5** again after tuning to capture the latest values. The archive lives
-in `/mnt/UDISK/root/.k2-improvements/installer-state/updater/` and contains
-the setup inventory and the following files from `config/custom/` when present:
-`overrides.cfg`, `cartographer.cfg`, `prtouch_global_z.json`,
-`plate-workflow-slicers.json`, and `kamp_settings.cfg`.
-
-During recovery, the review compares those files before component repairs.
-For each difference, choose **y** to restore the saved file, **k** to keep the
-current state, or **Enter** to return and review later. Accepted restores take
-effect with a protected restart. Recovery keeps the pre-OTA archive. An explicit
-new backup retains the preceding one as `.previous.zip`. The printer's active
-`printer.cfg` continues to supply its native calibration and `SAVE_CONFIG` values.
-
-Open **6 → 1** when the installer flags a firmware change. It compares the
-local installation with the saved setup and lists repairs for the
-stock probe or Cartographer and the previously installed extras. The local
-review works offline. Repairs that download missing packages require network
-access. If JimmyV nozzle-camera protection needs repair, the review asks which
-USB connector powers the probe. Select the matching wiring to restore protection
-and continue verification, or choose **Back** to leave the repair pending.
-When **6 → 1** updates an older installer, the reloaded menu opens
-the first setup review automatically. Confirm the probe setup
-and add any previously installed extras that the scan could no longer find.
-Use **6 → 4, Review and restore saved settings**, to run the same review after a same-version firmware reinstall.
-The installer records the new firmware only after the checks pass, including
-Klipper Ready, macro registration, Fluidd macro grouping and the Moonraker updaters.
-
-The stock-probe and Cartographer setup runs, OTA reviews, menu bootstrap
-repairs and individual core component installs write their terminal output to
-`/mnt/UDISK/printer_data/logs/k2-installer.log`. The next run rotates a log
-over 1 MiB to `k2-installer.log.1`. For an error in the separately
-downloaded bootstrap, capture the SSH output.
 
 ### Recommended clean starting point
 
@@ -139,15 +102,15 @@ and includes a graphical SFTP browser.
 ## Bootstrap
 
 Bootstrap installs Entware when needed, configures the larger persistent root
-home, and clones or updates this branch at:
+home, and installs the repository under:
 
 ```text
 /mnt/UDISK/root/k2-improvements
 ```
 
-### Bootstrap and open the menu
+### Install from main
 
-Copy this entire command into the printer's SSH session:
+Run this command over SSH on the K2 Plus or K2 Pro.
 
 ```sh
 python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githubusercontent.com/Rcpilot33/k2-improvements/main/bootstrap.sh", "/tmp/bootstrap.sh")' && sh /tmp/bootstrap.sh --menu
@@ -157,9 +120,11 @@ The `--menu` path asks whether to open the installer after bootstrap. Enter
 `y` to continue. A blank answer, `n`, or input failure finishes bootstrap
 without opening the menu.
 
+Choose **1. Status and diagnostics** to see which components are installed.
+
 ### Bootstrap without the menu prompt
 
-Use this form to install or update only the bootstrap and repository:
+To install from `main` and open the menu later, run:
 
 ```sh
 python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githubusercontent.com/Rcpilot33/k2-improvements/main/bootstrap.sh", "/tmp/bootstrap.sh")' && sh /tmp/bootstrap.sh --no-menu
@@ -167,8 +132,8 @@ python3 -c 'import urllib.request; urllib.request.urlretrieve("https://raw.githu
 
 The default when no menu flag is supplied is also `--no-menu`.
 
-On the first run, `better-root` may intentionally close the SSH connection.
-Reconnect and open the menu with:
+Bootstrap keeps the SSH connection open. Reconnect to start a login shell with the
+new root home, then open the menu with the following command.
 
 ```sh
 sh /mnt/UDISK/root/k2-improvements/menu.sh
@@ -269,7 +234,7 @@ omits those components.
 | [Fluidd](./features/fluidd/README.md) | Updated printer web interface. |
 | [screws_tilt_adjust](./features/screws_tilt_adjust/README.md) | Manual bed-screw adjustment support. |
 | Cartographer | Probe support and K2-specific Klipper patches; Cartographer path only. |
-| abort_homing | Allows an emergency stop to abort homing. |
+| abort_homing | Adds the [Klipper endpoint for stopping a homing move](./features/abort_homing/README.md). |
 | [Protected SAVE_CONFIG restart](./features/save-config-restart/README.md) | Lets Klipper write the configuration and complete its stock host restart, then performs one guarded firmware reset and waits for K2 motor initialization. |
 | [Macros](./features/macros/README.md) | Installs `START_PRINT`, `M191`, bed-mesh, and overrides support. |
 
@@ -282,7 +247,8 @@ Before the first print, create and save a bed mesh named `default` using the
 same `[bed_mesh] probe_count` that will be active during printing. The stock
 temperature-specific mesh workflow expects a compatible saved default mesh.
 
-From the Fluidd console, run:
+On the single-Z **K2 Pro**, follow the [Pro bed-mesh steps](./features/macros/bed_mesh/README.md).
+On the dual-Z **K2 Plus**, run the following commands in the Fluidd console.
 
 ```gcode
 G28
@@ -320,7 +286,7 @@ The normal flasher:
 | Cartographer V3 / STM32F042 | `6.1.0 Full` | `6.1.0 Lite` |
 | Cartographer V4 / STM32G431 | `6.2.0 Full` | `6.2.0 Lite` |
 
-Full is recommended for the K2 Plus. Lite is a conservative fallback for
+Full is recommended for both printer models. Lite is a conservative fallback for
 timing problems. V4 6.2.0 is offered only when the installed plugin source
 matches the audited sensor-frequency implementation; refresh Cartographer from
 the update menu if the firmware choice is unavailable. The older 5.1.0 and
@@ -471,6 +437,51 @@ so they do not block later updates.
 Factory-reset workflows clear the updater completion records so a replacement
 installation does not inherit the previous installation's migration state.
 
+### Recover after a firmware OTA
+
+After a firmware OTA on a configured K2 Plus or Pro, open the existing installer.
+Before the menus open, it checks the Entware packages and tools, SFTP, PATH,
+boot links, root home, printer directories and installer checkout. It offers
+to repair missing prerequisites. If the checkout itself cannot launch, rerun
+the bootstrap for your installed branch.
+
+Before a no-wipe OTA, choose **6 → 5, Save current setup before a firmware OTA**.
+This captures the installed options and checks the archived settings against the
+live files, even when component updates are pending on the current firmware.
+The first successful setup verification also creates a settings backup. Use
+**6 → 5** again after tuning to capture the latest values. The archive lives
+in `/mnt/UDISK/root/.k2-improvements/installer-state/updater/` and contains
+the setup inventory and the following files from `config/custom/` when present:
+`overrides.cfg`, `cartographer.cfg`, `prtouch_global_z.json`,
+`plate-workflow-slicers.json`, and `kamp_settings.cfg`.
+
+During recovery, the review compares those files before component repairs.
+For each difference, choose **y** to restore the saved file, **k** to keep the
+current state, or **Enter** to return and review later. Accepted restores take
+effect with a protected restart. Recovery keeps the pre-OTA archive. An explicit
+new backup retains the preceding one as `.previous.zip`. The printer's active
+`printer.cfg` continues to supply its native calibration and `SAVE_CONFIG` values.
+
+Open **6 → 1** when the installer flags a firmware change. It compares the
+local installation with the saved setup and lists repairs for the
+stock probe or Cartographer and the previously installed extras. The local
+review works offline. Repairs that download missing packages require network
+access. If JimmyV nozzle-camera protection needs repair, the review asks which
+USB connector powers the probe. Select the matching wiring to restore protection
+and continue verification, or choose **Back** to leave the repair pending.
+When **6 → 1** updates an older installer, the reloaded menu opens
+the first setup review automatically. Confirm the probe setup
+and add any previously installed extras that the scan could no longer find.
+Use **6 → 4, Review and restore saved settings**, to run the same review after a same-version firmware reinstall.
+The installer records the new firmware only after the checks pass, including
+Klipper Ready, macro registration, Fluidd macro grouping and the Moonraker updaters.
+
+The stock-probe and Cartographer setup runs, OTA reviews, menu bootstrap
+repairs and individual core component installs write their terminal output to
+`/mnt/UDISK/printer_data/logs/k2-installer.log`. The next run rotates a log
+over 1 MiB to `k2-installer.log.1`. For an error in the separately
+downloaded bootstrap, capture the SSH output.
+
 ## Factory reset and cleanup
 
 **Maintenance and recovery → Factory reset and cleanup tools** offers a dry
@@ -512,7 +523,7 @@ the confirmed failure sequence, and the validated recovery.
 
 ## Legacy entry points
 
-Inherited entry points remain available:
+The K2 Pro uses `menu.sh`. The K2 Plus also accepts these legacy entry points.
 
 ```sh
 sh /mnt/UDISK/root/k2-improvements/gimme-the-jamin.sh
@@ -525,7 +536,7 @@ work, enforce prerequisites, and provide clearer recovery instructions.
 ## Additional help
 
 - [FAQ and troubleshooting](./FAQ.md)
-- [Validation report](./VALIDATION.md)
+- [Firmware compatibility by printer model](./README.md#validated-firmware)
 - [Bed measurement and aluminium-tape shimming](./bed_leveling)
 - [Cartographer setup and calibration](./features/cartographer/SETUP.md)
 - [Slicer `START_PRINT` setup](./features/macros/start_print/README.md)

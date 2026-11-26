@@ -17,13 +17,13 @@
 # cartographer (the orphan SAVE_CONFIG block only appears once cartographer's
 # alter_config.py has run).
 _INSTALL_ALL_ORDER='entware|is_entware|features/entware/install.sh
-better-root|is_better_root|installer/extras/better-root-safe/install.sh
+better-root|is_better_root|bootstrap/better-root/install.sh
 better-init|is_better_init|features/better-init/install.sh
 skip-setup|is_skip_setup|features/skip-setup/install.sh
 moonraker|is_moonraker|features/moonraker/install.sh
 fluidd|is_fluidd|features/fluidd/install.sh
 screws_tilt_adjust|is_screws_tilt_firmware_restart|features/screws_tilt_adjust/install.sh
-cartographer|cartographer_core_ready|features/cartographer/install.sh
+cartographer|is_cartographer_setup_complete|features/cartographer/install.sh
 abort_homing|is_abort_homing_firmware_restart|features/abort_homing/install.sh
 save-config-restart|is_save_config_restart|features/save-config-restart/install.sh
 prtouch-cleanup|is_prtouch_clean|installer/extras/prtouch-cleanup/install.sh
@@ -34,7 +34,7 @@ menu_install_all() {
     clear
     ui_heading 'INSTALL CARTOGRAPHER SETUP'
     printf '\n'
-    printf 'The minimum needed to run a K2 Plus + Cartographer probe. Skips anything\n'
+    printf 'Installs the Cartographer setup for this K2. Skips anything\n'
     printf 'already installed. After the auto steps, prompts you to pick your\n'
     printf 'Cartographer mount preset (mandatory - probe offsets depend on hardware).\n\n'
     printf 'NOT in this flow (need physical interaction or are optional):\n'
@@ -60,8 +60,9 @@ menu_install_all() {
     printf '         Make sure no print is active.\n\n'
 
     if ! confirm "Proceed with Cartographer setup installation?"; then return 0; fi
+    migration_require_idle || return 1
     if [ "${bootstrap_needs_review:-0}" = 1 ]; then
-        migration_require_idle && ota_repair_bootstrap || return 1
+        ota_repair_bootstrap || return 1
     fi
 
     local installed=0 skipped=0 failed=0
@@ -84,9 +85,9 @@ menu_install_all() {
             continue
         fi
         if [ ! -f "$script" ]; then
-            warn "missing $script - skipping"
+            warn "missing $script"
             failed=$((failed+1))
-            continue
+            break
         fi
         # Force HOME into the install script's env from current /etc/passwd.
         # better-root mid-flow updates /etc/passwd, but the running menu
@@ -100,7 +101,7 @@ menu_install_all() {
         # A full setup reloads Klipper once after all components and the
         # mandatory mount-selection step. Individual component installers
         # retain their immediate restart behavior.
-        if HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 sh "$script"; then
+        if HOME="$pwd_home" K2_SKIP_BETTER_ROOT_LOGOUT=1 K2_DEFER_FIRMWARE_RESTART=1 sh "$script"; then
             installed=$((installed+1))
             case "$name" in
                 better-init|fluidd|screws_tilt_adjust|cartographer|abort_homing|save-config-restart|macros)
@@ -108,11 +109,19 @@ menu_install_all() {
                     ;;
             esac
         else
-            warn "$name install.sh failed (continuing)"
+            warn "$name install.sh failed"
             failed=$((failed+1))
+            break
         fi
     done
     IFS="$OLDIFS"
+
+    if [ "$failed" -gt 0 ]; then
+        rm -f "$migration_installed_file"
+        warn "Setup incomplete. Correct the failure and rerun setup before restarting."
+        press_enter
+        return 1
+    fi
 
     # Post-install: ensure the Entware unslung boot hook is in place.
     # Bootstrap.sh installs it during Entware setup, but if the user ran
@@ -139,7 +148,12 @@ menu_install_all() {
             pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
             [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
-                sh "$INSTALLER_DIR/installer/extras/cartographer-offset-setup/install.sh" || failed=$((failed+1))
+                sh "$INSTALLER_DIR/installer/extras/cartographer-offset-setup/install.sh" || {
+                    rm -f "$migration_installed_file"
+                    warn "Mount setup failed. Rerun setup before restarting."
+                    press_enter
+                    return 1
+                }
         else
             printf '\n%s\n\n' "$(c_yellow 'Skipped - run it later from Cartographer tools.')"
         fi

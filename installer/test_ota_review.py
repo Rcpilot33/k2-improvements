@@ -58,6 +58,7 @@ class ReviewTests(unittest.TestCase):
         setup = """
 set -u
 . installer/lib/common.sh
+. installer/detect/printer_fw.sh
 . installer/menus/update.sh
 . installer/menus/ota_review.sh
 detect_installed_firmware() { echo "$FW"; }
@@ -68,7 +69,7 @@ ota_component_ready() { return 0; }
 python3() { return "$RUNTIME_STATUS"; }
 """
         environment = dict(os.environ, MIGRATION_STATE_DIR=self.state.as_posix(),
-                           FW="1.1.8.0", RUNTIME_STATUS="0")
+                           FW="1.1.8.0", K2_PRINTER_MODEL="F008", RUNTIME_STATUS="0")
         environment.update(env)
         result = subprocess.run([BASH, "-c", setup + script], cwd=ROOT, env=environment,
                                 input=stdin.encode(), capture_output=True, timeout=15)
@@ -88,6 +89,38 @@ python3() { return "$RUNTIME_STATUS"; }
         self.assertIn("firmware=1.1.8.0", self.snapshot.read_text())
         self.assertIn("option=kamp-adaptive-purge", self.snapshot.read_text())
 
+    def test_core_repairs_require_a_supported_model_and_firmware_pair(self):
+        script = """
+extra_line() { :; }
+ota_component_ready() { [ "$1" != macros ] || [ -f "$MIGRATION_STATE_DIR/repaired" ]; }
+migration_apply_components() {
+    [ "$(cat "$1")" = macros ] && touch "$MIGRATION_STATE_DIR/repaired"
+}
+ota_review
+"""
+        original = self.snapshot.read_bytes()
+        repaired = self.state / "repaired"
+        for model, fw, allowed in (
+            ("F012", "1.1.8.3", True), ("F012", "1.1.5.5", True),
+            ("F008", "1.1.5.5", True), ("F008", "1.1.8.0", True),
+            ("F008", "1.1.3.13", True), ("F008", "1.1.4.8", True),
+            ("F008", "1.1.4.11", True), ("F008", "1.1.6.4", True),
+            ("F008", "1.1.7.0", True), ("F008", "1.1.3.12", False),
+            ("F008", "1.1.8.0.1", False), ("F008", "1.1.6.beta", False),
+            ("F008", "1.1.6.4.1", False), ("F008", "1.1.8.0.0", False),
+            ("F012", "1.1.4.11", False),
+            ("F008", "1.1.8.3", False), ("F012", "1.1.8.0", False),
+            ("", "1.1.5.5", False), ("F012", "9.9.9", False),
+        ):
+            with self.subTest(model=model, fw=fw):
+                self.snapshot.write_bytes(original)
+                repaired.unlink(missing_ok=True)
+                result = self.shell(script, "y\n", K2_PRINTER_MODEL=model, FW=fw)
+                self.assertEqual(result.returncode == 0, allowed, result.stdout + result.stderr)
+                self.assertEqual(repaired.exists(), allowed)
+                if not allowed:
+                    self.assertEqual(self.snapshot.read_bytes(), original)
+
     def test_erased_option_stays_in_repair_plan_after_failure(self):
         original = self.snapshot.read_bytes()
         result = self.shell("""
@@ -100,6 +133,82 @@ ota_review
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Missing or incomplete components:\nkamp-adaptive-purge", result.stdout)
         self.assertEqual(original, self.snapshot.read_bytes())
+
+    def test_review_recovers_saved_factory_camera_with_one_protected_restart(self):
+        original = b"firmware=1.1.5.5\nsetup=cartographer\noption=nozzle-camera\n"
+        self.snapshot.write_bytes(original)
+        script = """
+INSTALLER_DIR=$PWD
+. installer/menus/extras.sh
+has_cartographer_configuration() { return 0; }
+is_stock_nozzle_camera_available() { [ "$COMPATIBLE" = yes ]; }
+ota_component_ready() { [ "$1" != nozzle-camera ] || [ -f "$MIGRATION_STATE_DIR/stream" ]; }
+migration_require_idle() { return 0; }
+migration_reconcile_fluidd_layout() { return 0; }
+migration_mark_component_current() { return 0; }
+sh() {
+    case "$1:$K2_DEFER_FIRMWARE_RESTART" in
+        */extras/nozzle-camera/install.sh:1) touch "$MIGRATION_STATE_DIR/stream" ;;
+        */scripts/klippy_code_restart.sh:0) echo 'camera restart' ;;
+        *) return 1 ;;
+    esac
+}
+ota_review
+"""
+        blocked = self.shell(script, COMPATIBLE="no")
+        self.assertNotEqual(blocked.returncode, 0)
+        self.assertFalse((self.state / "stream").exists())
+        self.assertEqual(self.snapshot.read_bytes(), original)
+        repaired = self.shell(script, "y\n", COMPATIBLE="yes")
+        self.assertEqual(repaired.returncode, 0, repaired.stdout + repaired.stderr)
+        self.assertEqual(repaired.stdout.count("camera restart"), 1)
+        self.assertIn("Verified cartographer on firmware 1.1.8.0", repaired.stdout)
+
+    def test_stock_ota_activates_runtime_before_offset_repair(self):
+        original = b"firmware=1.1.8.0\nsetup=stock-probe\noption=global-prtouch-offsets\noption=nozzle-camera\n"
+        script = """
+INSTALLER_DIR=$PWD
+extra_line() { :; }
+confirm() { return 0; }
+ota_component_ready() {
+    case "$1" in
+        macros|moonraker-service|nozzle-camera|global-prtouch-offsets) test -f "$MIGRATION_STATE_DIR/$1" ;;
+        *) return 0 ;;
+    esac
+}
+printer_activity_state() {
+    if [ -f "$MIGRATION_STATE_DIR/ready" ]; then echo "$AFTER_RESTART"; else echo unknown; fi
+}
+press_enter() { :; }
+migration_repair_component() {
+    echo "install $1"
+    if [ "$1" = global-prtouch-offsets ]; then
+        [ "$(printer_activity_state)" = standby ] || return 1
+    fi
+    touch "$MIGRATION_STATE_DIR/$1"
+}
+migration_reconcile_fluidd_layout() { return 0; }
+migration_mark_component_current() { return 0; }
+sh() {
+    echo "restart"
+    touch "$MIGRATION_STATE_DIR/ready"
+}
+ota_review
+"""
+        self.snapshot.write_bytes(original)
+        busy = self.shell(script, FW="1.1.5.2", AFTER_RESTART="paused")
+        self.assertNotEqual(busy.returncode, 0)
+        self.assertIn("cannot update or repair components while the printer is paused", busy.stderr)
+        self.assertNotIn("install global-prtouch-offsets", busy.stdout)
+        self.assertEqual(self.snapshot.read_bytes(), original)
+        for name in ("ready", "macros", "moonraker-service", "nozzle-camera"):
+            (self.state / name).unlink()
+        result = self.shell(script, FW="1.1.5.2", AFTER_RESTART="standby")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        stages = [line for line in result.stdout.splitlines() if line.startswith("install ") or line == "restart"]
+        self.assertEqual(stages, ["install moonraker-service", "install macros", "install nozzle-camera",
+                                  "restart", "install global-prtouch-offsets", "restart"])
+        self.assertIn("firmware=1.1.5.2", self.snapshot.read_text())
 
     def test_review_repairs_nozzle_protection_after_core_and_resumes_after_back(self):
         original = b"firmware=1.1.6.4\nsetup=cartographer\noption=nozzle-usb-cartographer\n"
@@ -288,6 +397,33 @@ migration_offer_on_startup
         result = self.shell("ota_detect_options() { :; }; ota_review", "1\nmaterial-z-offsets\n")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("option=material-z-offsets", self.snapshot.read_text())
+
+    def test_probe_specific_options_on_first_review_backup_and_existing_snapshot(self):
+        stock = {"global-prtouch-offsets", "plate-aware-mesh"}
+        carto = {"global-touch-offsets", "cartographer-plate-workflow"}
+        detected = stock | carto | {"material-z-offsets"}
+        for setup, choice, model, label, allowed in (
+            ("cartographer", "2", "F012", "K2 Pro", carto),
+            ("stock-probe", "1", "F008", "K2 Plus", stock),
+        ):
+            with self.subTest(setup=setup):
+                harness = "ota_detect_options() { printf '%s\\n' " + " ".join(sorted(detected)) + "; }\n"
+                if setup == "cartographer":
+                    harness += "has_cartographer_configuration() { return 0; }\n"
+                expected = allowed | {"material-z-offsets"}
+                for command, saved in (("ota_review", False), ("ota_save_before_update", False),
+                                       ("ota_review", True)):
+                    self.snapshot.unlink(missing_ok=True)
+                    answers = choice + "\n\n"
+                    if saved:
+                        self.snapshot.write_text("setup=" + setup + "\n" +
+                                                 "".join("option=" + x + "\n" for x in detected))
+                        answers = ""
+                    result = self.shell(harness + command, answers, K2_PRINTER_MODEL=model)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    lines = self.snapshot.read_text().splitlines()
+                    self.assertIn("model=" + label, lines)
+                    self.assertEqual({s[7:] for s in lines if s.startswith("option=")}, expected)
 
     def test_missing_fluidd_grouping_can_be_restored_after_runtime_is_ready(self):
         script = """

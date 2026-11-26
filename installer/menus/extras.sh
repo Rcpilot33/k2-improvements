@@ -144,6 +144,7 @@ run_carto_plate_workflow() {
         return 0
     fi
 
+    migration_require_idle || return 1
     local pwd_home failed plate_slicers
     choose_plate_workflow_slicers || return 1
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
@@ -397,6 +398,7 @@ menu_extras() {
             9)
                 if is_cartographer; then
                     show_feature_readme nozzle-usb-cartographer "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/README.md"
+                    migration_require_idle || continue
                     if sh "$INSTALLER_DIR/installer/extras/nozzle-usb-cartographer/install.sh"; then
                         if is_nozzle_usb_cartographer; then
                             migration_mark_component_current nozzle-usb-cartographer
@@ -487,6 +489,20 @@ install_extra() {
         secure-auth)
             if "$det" 2>/dev/null; then
                 printf '  Status: %s\n\n' "$(c_green 'ALREADY APPLIED')"
+                printf '  1. Reinstall Secure Auth\n  2. Restore previous SSH settings\n  0. Back\n\nSelect [0-2]: '
+                local auth_choice
+                read_prompt auth_choice
+                case "$auth_choice" in
+                    1) ;;
+                    2)
+                        confirm 'Restore the original Dropbear startup script and restart SSH?' || return 0
+                        migration_require_idle || return 1
+                        sh "$script" --restore || { warn 'SSH settings restore failed'; press_enter; return 1; }
+                        press_enter
+                        return 0
+                        ;;
+                    *) return 0 ;;
+                esac
             fi
             if confirm 'Open the complete setup guide in this terminal now?'; then
                 show_secure_auth_setup_guide
@@ -536,6 +552,7 @@ install_extra() {
             ;;
     esac
 
+    migration_require_idle || return 1
     local pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)
     [ -n "$pwd_home" ] || pwd_home="${HOME:-/mnt/UDISK/root}"
     [ -n "$pwd_home" ] || pwd_home=/mnt/UDISK/root

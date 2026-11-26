@@ -5,6 +5,7 @@ import pathlib
 import sys
 import types
 import unittest
+from unittest.mock import Mock
 
 
 MODULE_PATH = pathlib.Path(__file__).with_name("patches") / "homing.py"
@@ -93,6 +94,9 @@ class HomingScannerCompatibilityTests(unittest.TestCase):
                 Scanner(CurrentMcu(False), scan_ready=False)
             )._check_scanner_model_ready()
 
+    def test_single_z_recovery_has_no_tilt_adjustment(self):
+        self.make_homing(None).resume_adjustment()
+
     def test_loaded_scan_model_allows_homing(self):
         self.make_homing(
             Scanner(CurrentMcu(False), scan_ready=True)
@@ -100,6 +104,58 @@ class HomingScannerCompatibilityTests(unittest.TestCase):
 
     def test_no_cartographer_allows_other_probe_model_check(self):
         self.make_homing(None)._check_scanner_model_ready()
+
+    def test_optical_home_policy(self):
+        # Each tuple gives (calibration active, explicit request, optical expected).
+        for dual_z, carto, sequence in (
+            (False, True, [(False, 0, False), (True, 0, True), (True, 1, True),
+                           (True, 0, False), (False, 0, False)]),
+            (False, True, [(False, 1, True), (False, 0, False)]),
+            (False, True, [(True, 1, True), (True, 0, False)]),
+            (True, True, [(False, 0, True), (False, 0, False), (False, 1, True)]),
+            (False, False, [(False, 0, True), (False, 0, False)]),
+        ):
+            scanner = Scanner(CurrentMcu()) if carto else None
+            homing = self.make_homing(scanner)
+            homing.config = Mock()
+            sections = {'z_align'}
+            if dual_z:
+                sections.add('stepper_z1')
+            if carto:
+                sections.add('cartographer')
+            homing.config.has_section.side_effect = sections.__contains__
+            homing.probe_type = ''
+            homing.z_move = 0
+            homing.run_G28_two_Z = Mock(return_value=0)
+            homing.write_real_zmax = Mock()
+            homing.run_gcmd = Mock()
+            toolhead = Mock()
+            toolhead.get_status.return_value = {'homed_axes': 'xy'}
+            align = types.SimpleNamespace(is_already_zodwn=False, zdown_switch_enable=0)
+            box = Mock()
+            box.has_flushing_sign.return_value = False
+            gcode = Mock()
+            objects = dict(toolhead=toolhead, box=box, gcode=gcode, z_align=align,
+                           cartographer=scanner, gcode_move=Mock())
+            homing.printer.lookup_object = objects.get
+            homing.printer.get_reactor = Mock()
+            for calibration, request, optical in sequence:
+                with self.subTest(dual_z=dual_z, carto=carto, calibration=calibration,
+                                  request=request, already_aligned=align.is_already_zodwn):
+                    if request:
+                        align.zdown_switch_enable = request
+                    toolhead.G29_flag = calibration
+                    was_aligned = align.is_already_zodwn
+                    homing.cmd_G28({'Z': ''})
+                    self.assertEqual(homing.run_G28_two_Z.call_count, int(optical))
+                    self.assertEqual(align.is_already_zodwn, was_aligned or optical)
+                    self.assertEqual(align.zdown_switch_enable, 0)
+                    self.assertEqual(homing.write_real_zmax.called, calibration and optical)
+                    toolhead.get_kinematics.return_value.home.assert_called_once()
+                    gcode.run_script_from_command.assert_called_with('SET_Z_LIMIT')
+                    homing.run_G28_two_Z.reset_mock()
+                    homing.write_real_zmax.reset_mock()
+                    toolhead.get_kinematics.return_value.home.reset_mock()
 
 
 if __name__ == "__main__":

@@ -19,8 +19,13 @@ checkout_branch() {
 }
 
 normal_update() {
-    "$GIT_BIN" -C "$INSTALLER_DIR" remote set-url origin "$REPO_URL" &&
-        "$GIT_BIN" -C "$INSTALLER_DIR" fetch origin "$BRANCH" &&
+    "$GIT_BIN" -C "$INSTALLER_DIR" remote set-url origin "$REPO_URL" || return 1
+    # Single-branch clones need a tracking ref for subsequent ordinary pulls.
+    if ! "$GIT_BIN" -C "$INSTALLER_DIR" config --get-all remote.origin.fetch |
+        grep -Fx -e "+refs/heads/*:refs/remotes/origin/*" -e "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" >/dev/null; then
+        "$GIT_BIN" -C "$INSTALLER_DIR" remote set-branches --add origin "$BRANCH" || return 1
+    fi
+        "$GIT_BIN" -C "$INSTALLER_DIR" fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" &&
         checkout_branch &&
         "$GIT_BIN" -C "$INSTALLER_DIR" pull --ff-only origin "$BRANCH"
 }

@@ -22,7 +22,7 @@ class FirmwareSelectionTests(unittest.TestCase):
                   'v4_620_plugin_supported', 'plugin_support_error', 'format_firmware_label')
                  or isinstance(n, ast.Assign) and any(
                      isinstance(t, ast.Name) and t.id in ('V3_610_CHECKSUMS', 'V4_620_CHECKSUMS',
-                                                        'MANAGED_PLUGIN_DIR', 'AUDITED_CONSTANTS_SHA256')
+                                                        'LEGACY_CHECKSUMS', 'BUNDLED_CHECKSUMS', 'MANAGED_PLUGIN_DIR', 'AUDITED_CONSTANTS_SHA256')
                      for t in n.targets)]
         self.env = dict(pathlib=pathlib, Optional=Optional, hashlib=hashlib, re=re,
                         struct=struct, __file__=str(ROOT / 'flash.py'))
@@ -73,6 +73,9 @@ class FirmwareSelectionTests(unittest.TestCase):
     def test_corrupt_or_missing_image_refused(self):
         with patch.object(Path, 'read_bytes', return_value=b'corrupted'):
             self.assertIsNone(self.choose('1'))
+            for mcu in ('stm32f042x6', 'stm32g431xx'):
+                for choice in ('4', '5'):
+                    self.assertIsNone(self.choose(choice, mcu))
         with patch.object(Path, 'is_file', return_value=False):
             self.assertIsNone(self.choose('2'))
 

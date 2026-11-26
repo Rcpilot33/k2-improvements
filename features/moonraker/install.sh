@@ -31,11 +31,6 @@ progress() {
 install_virtualenv() {
     progress "Installing virtualenv ..."
     command -v virtualenv > /dev/null || pip install virtualenv
-
-    # update pip to pull pre-built wheels
-    if ! grep -qE '^extra-index-url=https://www.piwheels.org/simple$' /etc/pip.conf; then
-        echo 'extra-index-url=https://www.piwheels.org/simple' >> /etc/pip.conf
-    fi
 }
 
 remove_legacy_symlinks() {
@@ -60,6 +55,7 @@ create_moonraker_venv() {
     ./moonraker-env/bin/pip \
         install \
         --prefer-binary \
+        --extra-index-url https://www.piwheels.org/simple \
         --upgrade \
         --find-links=${SCRIPT_DIR}/wheels \
         --requirement moonraker/scripts/moonraker-requirements.txt
@@ -67,6 +63,7 @@ create_moonraker_venv() {
     ./moonraker-env/bin/pip \
         install \
         --prefer-binary \
+        --extra-index-url https://www.piwheels.org/simple \
         lmdb==1.7.3
 
     python3 ${SCRIPT_DIR}/../../scripts/fix_venv.py ~/moonraker-env

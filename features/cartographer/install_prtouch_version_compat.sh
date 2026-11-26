@@ -24,7 +24,7 @@ else
     ln -sfn ${SCRIPT_DIR}/k2_prtouch_version_compat.py \
         ~/klipper/klippy/extras/k2_prtouch_version_compat.py
     ln -sfn ${SCRIPT_DIR}/k2_prtouch_version_compat.cfg "$COMPAT_CFG"
-    python ${SCRIPT_DIR}/../../scripts/ensure_included.py \
+    python3 ${SCRIPT_DIR}/../../scripts/ensure_included.py \
         "$MAIN_CFG" k2_prtouch_version_compat.cfg
     rm -f ~/klipper/klippy/extras/k2_prtouch_version_compat.pyc \
         ~/klipper/klippy/extras/__pycache__/k2_prtouch_version_compat.*.pyc

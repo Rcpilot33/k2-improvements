@@ -1,6 +1,6 @@
 # Secure Auth
 
-Disables SSH password authentication so the K2 Plus accepts public-key login
+Disables SSH password authentication so the printer accepts public-key login
 only.
 
 The installer refuses to make changes unless

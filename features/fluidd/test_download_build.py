@@ -43,6 +43,16 @@ class PinnedBuildTests(unittest.TestCase):
                     download_build.download(self.build(), target)
             self.assertFalse(target.exists())
 
+    def test_stable_install_uses_the_pinned_url_and_rejects_other_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'fluidd.zip'
+            with patch.object(download_build.urllib.request, 'urlopen',
+                              return_value=io.BytesIO(b'wrong stable zip')) as fetch:
+                with self.assertRaisesRegex(ValueError, 'checksum'):
+                    download_build.download(None, target)
+            self.assertEqual(fetch.call_args[0][0].full_url, download_build.STABLE_BUILD['url'])
+            self.assertFalse(target.exists())
+
     def test_installed_check_requires_both_exact_zip_and_source_revision(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

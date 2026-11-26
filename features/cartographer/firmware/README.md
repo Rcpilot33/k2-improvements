@@ -1,7 +1,7 @@
 # Cartographer Firmware
 
 A flashing script is included for Cartographer V3 and V4 probes connected to
-the K2 Plus by USB. With this repository installed, run:
+the K2 Plus or K2 Pro by USB. With this repository installed, run:
 
 ```sh
 python3 /mnt/UDISK/root/k2-improvements/features/cartographer/firmware/flash.py
@@ -107,6 +107,23 @@ rollback. Changing the menu recommendation alone does not flash or restart the
 printer.
 The installer update tracker reports the new manual firmware choices when the
 recorded update changes either 6.2 bundle; it never marks the probe as flashed.
+
+## Legacy USB rollback images
+
+The bundled rollback files match Git blobs at the same upstream commit as the
+recommended firmware. The V3 files come from `firmware/v2-v3/survey/5.1.0`.
+The V4 rollback files come from `firmware/v4/firmware/6.0.0`. The older
+V4 application image in the directory comes from `firmware/v4/firmware/5.1.0`.
+The flasher checks these files even when selected by filename.
+[Upstream firmware tree](https://github.com/Cartographer3D/cartographer_firmware/tree/e5c2b17dbe04ec1f747af5d81b2215949a0a9f8e/firmware)
+
+| Image | SHA-256 |
+|---|---|
+| `Cartographer_V4_USB_8kib_offset.bin` | `e44bb359a1ae56e79a3ee3ba1f1564fc949702dab45234ee025ff2cd0ea8e351` |
+| `CartographerV4_6.0.0_USB_full_8kib_offset.bin` | `6487e285e1186688cdad51387acf3da6f647a5f6355c0ad576e315cc2307df63` |
+| `CartographerV4_6.0.0_USB_lite_8kib_offset.bin` | `efd76b888ef06ea1c3ae2ea6066f1b5f65a9bf65e6b433b9f675ab5b6415cf1e` |
+| `Survey_Cartographer_K1_USB_8kib_offset.bin` | `bbe149dfd59512458e07d3b5a4936118d75cd52b0d850e8ad4446482f1e09aee` |
+| `Survey_Cartographer_USB_8kib_offset.bin` | `a137f51457ea32601d8882bee437926618ee520b6dee8d709e6b98fe6e938fdb` |
 
 ## Bundled DFU recovery
 

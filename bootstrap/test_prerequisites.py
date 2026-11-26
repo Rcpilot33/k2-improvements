@@ -22,7 +22,7 @@ class BootstrapTests(unittest.TestCase):
         # text so this fixture also runs on Windows without symlink privileges.
         checker = (HERE / "prerequisites.sh").read_text()
         checker = re.sub(r'(?<![\w/.])/(etc|mnt|usr|opt)(?=[/" ])', r'./fs/\1', checker)
-        (self.base / "check.sh").write_text(checker, newline="\n")
+        (self.base / "check.sh").write_bytes(checker.encode("utf-8"))
         self.command = """
 . ./check.sh
 bootstrap_link_ready() {
@@ -49,7 +49,7 @@ bootstrap_entware_ready .
     def put(self, path, content="#!/bin/sh\nexit 0\n"):
         target = self.fs / path
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, newline="\n")
+        target.write_bytes(content.encode("utf-8"))
         target.chmod(0o755)
 
     def check(self):

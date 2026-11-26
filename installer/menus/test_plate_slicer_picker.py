@@ -20,6 +20,7 @@ set -eu
 clear() { :; }
 ui_heading() { :; }
 confirm() { return 0; }
+migration_require_idle() { return 0; }
 press_enter() { :; }
 read_prompt() { read -r "$1"; }
 warn() { printf 'WARN:%s\n' "$1"; }

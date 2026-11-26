@@ -18,22 +18,27 @@ class MountActivationTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="k2-mount-activation-")
         self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name)
+        geometry = self.base / "features/cartographer/mesh_limits.sh"
+        geometry.parent.mkdir(parents=True)
+        geometry.write_bytes((ROOT / "features/cartographer/mesh_limits.sh").read_text().encode("utf-8"))
+        self.bin = self.base / "bin"
+        self.bin.mkdir()
+        model = self.bin / "get_sn_mac.sh"
+        model.write_bytes(b'#!/bin/sh\necho "$TEST_PRINTER_MODEL"\n')
+        model.chmod(0o755)
         self.picker = self.base / "installer/extras/cartographer-offset-setup/install.sh"
         self.picker.parent.mkdir(parents=True)
-        self.picker.write_text(
-            (ROOT / "installer/extras/cartographer-offset-setup/install.sh").read_text(),
-            newline="\n",
-        )
+        self.picker.write_bytes(
+            (ROOT / "installer/extras/cartographer-offset-setup/install.sh").read_text().encode("utf-8"))
         scripts = self.base / "scripts"
         scripts.mkdir()
         shutil.copyfile(ROOT / "scripts/stock_nozzle_camera.sh", scripts / "stock_nozzle_camera.sh")
-        (scripts / "firmware_restart.sh").write_text(
-            'if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" = 1 ]; then\n'
-            ' echo "I: deferring FIRMWARE_RESTART until the full setup is complete"\n'
-            ' exit 0\nfi\n'
-            'echo restart >> "$TEST_RESTART_LOG"\n'
-            'exit "${TEST_RESTART_STATUS:-0}"\n', newline="\n",
-        )
+        (scripts / "firmware_restart.sh").write_bytes(
+            b'if [ "${K2_DEFER_FIRMWARE_RESTART:-0}" = 1 ]; then\n'
+            b' echo "I: deferring FIRMWARE_RESTART until the full setup is complete"\n'
+            b' exit 0\nfi\n'
+            b'echo restart >> "$TEST_RESTART_LOG"\n'
+            b'exit "${TEST_RESTART_STATUS:-0}"\n')
         self.custom = self.base / "config/custom"
         self.custom.mkdir(parents=True)
         (self.custom.parent / "printer.cfg").write_text(
@@ -55,16 +60,16 @@ class MountActivationTests(unittest.TestCase):
         shutil.copyfile(ROOT / "features/cartographer/k2_cartographer_scan_guard.py", guard)
         self.query_log = self.base / "query.log"
         self.curl = self.base / "fake-curl"
-        self.curl.write_text(
-            '#!/bin/sh\necho query >> "$TEST_QUERY_LOG"\n'
-            'printf "%s\\n" "$TEST_ACTIVITY_JSON"\n'
-            'exit "${TEST_QUERY_STATUS:-0}"\n', newline="\n",
-        )
+        self.curl.write_bytes(
+            b'#!/bin/sh\necho query >> "$TEST_QUERY_LOG"\n'
+            b'printf "%s\\n" "$TEST_ACTIVITY_JSON"\n'
+            b'exit "${TEST_QUERY_STATUS:-0}"\n')
         subprocess.run([BASH, "-c", 'chmod +x "$1"', "test", self.curl.as_posix()], check=True)
 
     def run_picker(self, choice="3\n", state="standby", **extra_env):
         env = dict(
             os.environ, PRINTER_CFG_DIR=self.custom.parent.as_posix(),
+            PATH=str(self.bin) + os.pathsep + os.environ["PATH"], TEST_PRINTER_MODEL="F008",
             K2_CURL=self.curl.as_posix(), K2_DEFER_FIRMWARE_RESTART="0",
             TEST_RESTART_LOG=self.restart_log.as_posix(),
             TEST_QUERY_LOG=self.query_log.as_posix(),
@@ -87,10 +92,44 @@ class MountActivationTests(unittest.TestCase):
         self.assertIn("mount settings are active", result.stdout)
         saved = self.overrides.read_text()
         for setting in ("y_offset: 12", "mesh_min: 5, 12", "position_min: -6.2",
-                        "probe_count: 15, 15", "pressure_advance: 0.05"):
+                        "mesh_max: 345, 340", "probe_count: 15, 15", "pressure_advance: 0.05"):
             self.assertIn(setting, saved)
         self.assertEqual((self.custom / "cartographer.cfg").read_text(), self.baseline)
         self.assertEqual(len(list(self.custom.glob("overrides.cfg.before-cartographer-offset-*"))), 1)
+
+    def test_pro_mount_limits_and_return_to_jamin(self):
+        # Exercise the managed baseline render used before the mount picker.
+        carto = ROOT / "features/cartographer"
+        script = ('get_sn_mac.sh() { echo F012; }\n. "$1/mesh_limits.sh" && '
+                  'render_cartographer_config "$1/cartographer.cfg" /dev/ttyACM0')
+        baseline = subprocess.check_output([BASH, "-c", script, "test", carto.as_posix()], text=True)
+        self.assertIn("mesh_max: 290, 280", baseline)
+        self.assertIn("zero_reference_position: 150, 150", baseline)
+        self.assertIn("[gcode_macro _HOME_Z]", baseline)
+        self.assertIn("printer.configfile.settings.bed_mesh.zero_reference_position", baseline)
+        plus = subprocess.check_output([BASH, "-c", script.replace("echo F012", "echo F008"),
+                                        "test", carto.as_posix()], text=True)
+        self.assertNotIn("[gcode_macro _HOME_Z]", plus)
+        self.assertIn("zero_reference_position: 175, 175", plus)
+        self.assertIn("[stepper_y]\nposition_endstop: -0.7\nposition_min: -0.7\n", baseline)
+        (self.custom.parent / "printer.cfg").write_text(
+            "[stepper_y]\nposition_endstop: -6.5\nposition_min: -6.5\n")
+        self.assertIn("mesh_min: 10, 5", baseline)
+        self.assertIn("serial: /dev/ttyACM0", baseline)
+        (self.custom / "cartographer.cfg").write_bytes(baseline.encode("utf-8"))
+        for choice, y in ((2, 36), (3, 12), (4, 17)):
+            result = self.run_picker(f"{choice}\nn\n", TEST_PRINTER_MODEL="F012")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            saved = self.overrides.read_text()
+            self.assertIn("mesh_max: 295, 290", saved)
+            self.assertIn("position_endstop: -6.5\n", saved)
+            self.assertIn("position_min: -6.5\n", saved)
+            self.assertIn(f"mesh_min: 5, {y}\n", saved)
+        result = self.run_picker("1\n", TEST_PRINTER_MODEL="F012")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("mesh_max:", self.overrides.read_text())
+        self.assertNotIn("[stepper_y]", self.overrides.read_text())
+        self.assertEqual((self.custom / "cartographer.cfg").read_text(), baseline)
 
     def test_front_travel_is_opt_in_for_each_jimmyv_mount(self):
         for choice, offset, mesh_y, profile in (

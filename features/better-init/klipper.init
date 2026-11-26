@@ -1,4 +1,5 @@
 #!/bin/ash /etc/rc.common
+# shellcheck shell=busybox
 
 START=55
 USE_PROCD=1
@@ -61,7 +62,7 @@ backup_usr_cfg()
             else
                 cp $usr_cfg.$((i-1)) $usr_cfg.$i && sync
             fi
-            let i-=1
+            i=$((i - 1))
         done
     fi
 }
@@ -263,5 +264,10 @@ start_service() {
     procd_set_param env HOME=/mnt/UDISK
     # taskset klipper process to CPU1
     procd_set_param command taskset 0x2 $PROG $PY_SCRIPT $CONF -l $LOG -a /tmp/klippy_uds
-    procd_close_instance
+    procd_close_instance || return $?
+
+    # Run Creality's one-shot OOM adjustment on firmware that ships it.
+    if [ -f /usr/bin/klipper_watcher.sh ]; then
+        . /usr/bin/klipper_watcher.sh &
+    fi
 }

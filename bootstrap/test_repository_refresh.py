@@ -45,7 +45,7 @@ class RepositoryRefreshTests(unittest.TestCase):
             "commit", "-m", message, cwd=checkout,
         )
 
-    def run_refresh(self, remote, checkout, recovery):
+    def run_refresh(self, remote, checkout, recovery, branch="main"):
         environment = os.environ.copy()
         if os.name == "nt":
             git_root = pathlib.Path(self.bash).parents[1]
@@ -60,7 +60,7 @@ class RepositoryRefreshTests(unittest.TestCase):
                 self.bash,
                 bash_path(SCRIPT),
                 bash_path(remote),
-                "main",
+                branch,
                 bash_path(checkout),
                 bash_path(recovery),
                 "git",
@@ -97,6 +97,25 @@ class RepositoryRefreshTests(unittest.TestCase):
             self.assertIn("Fast-forward", output)
             self.assertEqual((checkout / "tracked.txt").read_text(), "two\n")
             self.assertFalse(recovery.exists())
+
+    def test_switch_from_single_branch_keeps_current_checkout_and_backup(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            remote, seed = self.make_remote(root)
+            self.git_run("checkout", "-b", "integration-testing", cwd=seed)
+            self.git_run("push", "origin", "integration-testing", cwd=seed)
+            checkout, recovery = root / "checkout", root / "recovery"
+            self.git_run("clone", "--single-branch", "-b", "integration-testing", str(remote), str(checkout))
+            (checkout / "settings").write_text("keep")
+            backup = recovery / "previous-checkout"
+            backup.mkdir(parents=True)
+            (backup / "settings").write_text("prior backup")
+            output = self.run_refresh(remote, checkout, recovery)
+            self.assertNotIn("starting bootstrap recovery", output)
+            self.assertEqual(self.git_run("branch", "--show-current", cwd=checkout), "main")
+            self.assertEqual(self.git_run("rev-parse", "--abbrev-ref", "@{upstream}", cwd=checkout), "origin/main")
+            self.assertEqual((checkout / "settings").read_text(), "keep")
+            self.assertEqual((backup / "settings").read_text(), "prior backup")
 
     def test_missing_checkout_metadata_preserves_surviving_files(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -74,6 +74,7 @@ migration_component_applicable() {
     if [ "$1" = global-prtouch-offsets ] && is_cartographer; then
         return 1
     fi
+    if [ "$1" = nozzle-camera ] && ! is_stock_nozzle_camera_available; then return 1; fi
     if [ "$1" = nozzle-camera-mount-compatibility ]; then
         _load_stock_nozzle_camera_helpers &&
             stock_nozzle_camera_is_jimmyv && stock_nozzle_camera_present
@@ -495,6 +496,10 @@ migration_repair_component() {
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/plate-aware-mesh/install.sh" --no-restart
             ;;
+        nozzle-camera)
+            HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
+                sh "$INSTALLER_DIR/installer/extras/nozzle-camera/install.sh"
+            ;;
         nozzle-camera-mount-compatibility)
             HOME="$pwd_home" K2_DEFER_FIRMWARE_RESTART=1 \
                 sh "$INSTALLER_DIR/installer/extras/nozzle-camera/uninstall.sh" --no-restart
@@ -547,7 +552,7 @@ migration_repair_component() {
 
 migration_component_restart_kind() {
     case "$1" in
-        cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|global-touch-offsets|global-prtouch-offsets|material-z-offsets|start-print-fast-stop|nozzle-usb-cartographer)
+        cartographer|macros|save-config-restart|virtual-sdcard-guard|memory-diagnostics|abort_homing|screws_tilt_adjust|kamp-adaptive-purge|global-touch-offsets|global-prtouch-offsets|material-z-offsets|start-print-fast-stop|nozzle-camera|nozzle-usb-cartographer)
             echo code
             ;;
         moonraker-source|fluidd)

@@ -80,6 +80,8 @@ install_feature() {
         if ! confirm "Install $name now?"; then return 0; fi
     fi
 
+    migration_require_idle || return 1
+
     # Force HOME from /etc/passwd - better-root may have changed root's
     # home mid-session, but the menu shell's HOME is cached from login.
     pwd_home=$(awk -F: '$1=="root"{print $6}' /etc/passwd)

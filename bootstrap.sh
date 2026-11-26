@@ -6,7 +6,11 @@ set -e
 # then runs the internal Jacob-style bootstrap script.
 
 REPO="Rcpilot33/k2-improvements"
-BRANCH="${K2_BRANCH:-main}"
+MODEL=$(get_sn_mac.sh model 2>/dev/null) || MODEL=
+case "$MODEL" in
+    F008|F012) BRANCH="${K2_BRANCH:-main}" ;;
+    *) echo "Unsupported printer model: ${MODEL:-unknown}" >&2; exit 1 ;;
+esac
 
 EXPECT_BRANCH="no"
 for ARG in "$@"; do
@@ -40,6 +44,14 @@ esac
 
 BASE_URL="https://raw.githubusercontent.com/$REPO/$BRANCH"
 
+# Older Plus-only branches do not have the Pro setup menu.
+if [ "$MODEL" = F012 ]; then
+    case "$BRANCH" in
+        main|integration-testing|k2-pro-support) ;;
+        *) echo "Unsupported K2 Pro installer branch: $BRANCH. Use main for installation." >&2; exit 1 ;;
+    esac
+fi
+
 BOOTSTRAP_DIR="/tmp/bootstrap"
 
 rm -rf "$BOOTSTRAP_DIR"
@@ -67,7 +79,6 @@ download "$BASE_URL/bootstrap/repository-refresh.sh" "$BOOTSTRAP_DIR/repository-
 download "$BASE_URL/bootstrap/entware/install.sh" "$BOOTSTRAP_DIR/entware/install.sh"
 download "$BASE_URL/bootstrap/entware/wget-ssl.py" "$BOOTSTRAP_DIR/entware/wget-ssl.py"
 download "$BASE_URL/bootstrap/entware/unslung.init" "$BOOTSTRAP_DIR/entware/unslung.init"
-download "$BASE_URL/bootstrap/entware/unslung,init" "$BOOTSTRAP_DIR/entware/unslung,init"
 download "$BASE_URL/bootstrap/better-root/install.sh" "$BOOTSTRAP_DIR/better-root/install.sh"
 download "$BASE_URL/bootstrap/better-root/README.md" "$BOOTSTRAP_DIR/better-root/README.md"
 

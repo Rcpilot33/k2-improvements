@@ -14,6 +14,9 @@ mounts by editing only `custom/overrides.cfg`. It never modifies
 
 ### Jamin/default
 
+On the K2 Pro (RC3), the Jamin mount fit with the spacers installed and
+just cleared the closed door. This fit check covered physical clearance only.
+
 The installer removes only these mount-related keys from `overrides.cfg`:
 
 - `[cartographer] x_offset` and `y_offset`
@@ -26,9 +29,13 @@ With those overrides absent, the values in `cartographer.cfg` are effective:
 | --- | --- |
 | `cartographer y_offset` | `-15` |
 | `bed_mesh mesh_min` | `10, 5` |
-| `bed_mesh mesh_max` | `340, 330` |
-| `stepper_y position_endstop` | `-0.4` |
-| `stepper_y position_min` | `-0.4` |
+| `bed_mesh mesh_max` | K2 Plus `340, 330`, K2 Pro `290, 280` |
+| `stepper_y position_endstop` | K2 Plus `-0.4`, K2 Pro `-0.7` |
+| `stepper_y position_min` | K2 Plus `-0.4`, K2 Pro `-0.7` |
+
+The Jamin homing coordinate is the stock Y endstop plus the nominal
+5.8 mm spacer thickness. RC3's stock endstop is `-6.5` mm.
+Physical homing validation on RC3 is pending.
 
 ### JimmyV legacy back-mount
 
@@ -40,9 +47,9 @@ users who already have that mount:
 | --- | --- |
 | `cartographer y_offset` | `36` |
 | `bed_mesh mesh_min` | `5, 36` |
-| `bed_mesh mesh_max` | `345, 340` |
+| `bed_mesh mesh_max` | K2 Plus `345, 340`, K2 Pro `295, 290` |
 
-JimmyV also says to comment out the `[stepper_y]` `-0.4` values in
+JimmyV also says to comment out the Jamin `[stepper_y]` values in
 `cartographer.cfg`. Because this repository keeps `cartographer.cfg` unchanged,
 the installer reads the stock `position_endstop` and `position_min` from
 `printer.cfg` and writes them to `[stepper_y]` in `overrides.cfg`. The later
@@ -57,7 +64,7 @@ come from JimmyV's final published model page:
 | --- | --- |
 | `cartographer y_offset` | `12` |
 | `bed_mesh mesh_min` | `5, 12` |
-| `bed_mesh mesh_max` | `345, 340` |
+| `bed_mesh mesh_max` | K2 Plus `345, 340`, K2 Pro `295, 290` |
 
 The installer restores the stock `printer.cfg` stepper-Y values through
 `overrides.cfg`, as described for the legacy profile.
@@ -71,7 +78,7 @@ JimmyV's final mount with the 3DO v2 nozzle camera:
 | --- | --- |
 | `cartographer y_offset` | `17` |
 | `bed_mesh mesh_min` | `5, 17` |
-| `bed_mesh mesh_max` | `345, 340` |
+| `bed_mesh mesh_max` | K2 Plus `345, 340`, K2 Pro `295, 290` |
 
 The installer restores the stock `printer.cfg` stepper-Y values through
 `overrides.cfg`, as described for the legacy profile.
@@ -88,7 +95,7 @@ The custom picker accepts:
 
 Custom values are written to `overrides.cfg`; `cartographer.cfg` remains
 unchanged. Choosing the Cartographer stepper baseline leaves the `[stepper_y]`
-keys absent from the overrides so the `-0.4` baseline remains effective.
+keys absent from the overrides so the model's Jamin baseline remains effective.
 
 Before showing the profile menu, the installer displays the current
 `cartographer.cfg` X/Y offsets, mesh limits, and stepper Y values. These provide
@@ -108,8 +115,8 @@ before enabling it on an existing installation.
 With confirmation, the picker writes the exact JimmyV profile and
 `mesh_front_travel: 6` to `[k2_cartographer_scan_guard]` in `overrides.cfg`.
 The mesh minimum becomes `5, 30` for legacy, `5, 6` for final/no-3DO, or
-`5, 11` for final/3DO. The preset mesh maximum stays `345, 340`; speed, grid,
-and unrelated user settings are preserved. Reapplying the same enabled preset keeps the confirmation;
+`5, 11` for final/3DO. Each mount uses the same model-specific maximum
+with either front travel setting. Reapplying the same enabled preset keeps the confirmation;
 answer **n** to disable it and restore that preset's original mesh minimum.
 Jamin and Custom do not offer the extension and remove any prior opt-in.
 

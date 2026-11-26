@@ -35,7 +35,7 @@ Use **Optional extras -> KAMP adaptive purge**. The installer adds:
 - `[exclude_object]` when it is not already configured; and
 - optional firmware retraction when selected.
 
-During an interactive install, the installer displays the K2 Plus KAMP
+During an interactive install, the installer displays the KAMP
 settings and lets you keep or change them. User selections are written to the
 later-loaded `custom/overrides.cfg`; reinstalling or updating KAMP refreshes
 the maintained defaults without replacing those selections. Reopen
@@ -69,7 +69,7 @@ upstream macro:
    than on a feed-only `G0`, which would check the still-out-of-range position.
 
 Creality Print's **Prime tower -> No sparse layers (beta)** option is not
-supported on the K2 Plus. It can delay the tower until a color change, then
+supported by the adaptive mesh workflow. It can delay the tower until a color change, then
 command the bed back to first-layer height while a tall model is already on
 it, potentially driving the model into the toolhead or X rail. When an enabled
 prime tower and that setting are both present, the printer-side
@@ -140,19 +140,19 @@ patch.
 
 ## Slicer setup
 
-For Creality Print, choose the template matching the features enabled in that
-printer profile. Keep the slicer's system preset unchanged as a fallback.
+For a K2 Pro, choose a [Creality Print](./slicer-templates/README.md#k2-pro-creality-print) or [OrcaSlicer](./slicer-templates/README.md#k2-pro-orcaslicer) template.
+The table below lists the K2 Plus templates. Choose the file that matches the features enabled in your printer profile.
 
 | Template | Material | Plate selection | KAMP purge |
 |---|---|---|---|
-| [`creality-start-material-only.gcode`](./slicer-templates/creality-start-material-only.gcode) | Yes | No; uses `default` | No |
-| [`creality-start-material-surface-profiles.gcode`](./slicer-templates/creality-start-material-surface-profiles.gcode) | Yes | Yes | No |
-| [`creality-start-material-kamp.gcode`](./slicer-templates/creality-start-material-kamp.gcode) | Yes | No; uses `default` | Yes |
-| [`creality-start-material-surface-profiles-kamp.gcode`](./slicer-templates/creality-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
-| [`orca-start-material-only.gcode`](./slicer-templates/orca-start-material-only.gcode) | Yes | No | No |
-| [`orca-start-material-kamp.gcode`](./slicer-templates/orca-start-material-kamp.gcode) | Yes | No | Yes |
-| [`orca-start-material-surface-profiles.gcode`](./slicer-templates/orca-start-material-surface-profiles.gcode) | Yes | Yes | No |
-| [`orca-start-material-surface-profiles-kamp.gcode`](./slicer-templates/orca-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
+| [`creality-start-material-only.gcode`](./slicer-templates/k2-plus/creality-start-material-only.gcode) | Yes | No; uses `default` | No |
+| [`creality-start-material-surface-profiles.gcode`](./slicer-templates/k2-plus/creality-start-material-surface-profiles.gcode) | Yes | Yes | No |
+| [`creality-start-material-kamp.gcode`](./slicer-templates/k2-plus/creality-start-material-kamp.gcode) | Yes | No; uses `default` | Yes |
+| [`creality-start-material-surface-profiles-kamp.gcode`](./slicer-templates/k2-plus/creality-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
+| [`orca-start-material-only.gcode`](./slicer-templates/k2-plus/orca-start-material-only.gcode) | Yes | No | No |
+| [`orca-start-material-kamp.gcode`](./slicer-templates/k2-plus/orca-start-material-kamp.gcode) | Yes | No | Yes |
+| [`orca-start-material-surface-profiles.gcode`](./slicer-templates/k2-plus/orca-start-material-surface-profiles.gcode) | Yes | Yes | No |
+| [`orca-start-material-surface-profiles-kamp.gcode`](./slicer-templates/k2-plus/orca-start-material-surface-profiles-kamp.gcode) | Yes | Yes | Yes |
 
 All four Creality Print variants passed printer testing on firmware `1.1.5.5`.
 The six Orca 2.4.2 plate names were verified from exported files. Standard,
@@ -249,4 +249,4 @@ before homing.
 
 KAMP is maintained by Kyle Isom in
 [Klipper-Adaptive-Meshing-Purging](https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging).
-This repository provides the K2 Plus installer, settings, and slicer templates.
+This repository provides the K2 Plus and K2 Pro installer, settings, and slicer templates.

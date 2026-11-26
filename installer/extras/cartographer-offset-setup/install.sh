@@ -7,6 +7,7 @@
 set -eu
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+. "$SCRIPT_DIR/../../../features/cartographer/mesh_limits.sh"
 RESTART_SCRIPT="$SCRIPT_DIR/../../../scripts/firmware_restart.sh"
 . "$SCRIPT_DIR/../../../scripts/stock_nozzle_camera.sh"
 CFG_ROOT="${PRINTER_CFG_DIR:-/mnt/UDISK/printer_data/config}"
@@ -56,11 +57,11 @@ CURRENT_MESH_MAX=$(cfg_value "$OVERRIDES_CFG" bed_mesh mesh_max)
 CURRENT_FRONT_TRAVEL=$(cfg_value "$OVERRIDES_CFG" k2_cartographer_scan_guard mesh_front_travel)
 CURRENT_MOUNT=$(cfg_value "$OVERRIDES_CFG" k2_cartographer_scan_guard mount_profile)
 
-if [ "$CURRENT_Y" = "36" ] && { [ "$CURRENT_MESH_MIN" = "5, 36" ] || [ "$CURRENT_MESH_MIN" = "5, 30" ]; } && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
+if [ "$CURRENT_Y" = "36" ] && { [ "$CURRENT_MESH_MIN" = "5, 36" ] || [ "$CURRENT_MESH_MIN" = "5, 30" ]; } && [ "$CURRENT_MESH_MAX" = "$JIMMYV_MESH_MAX" ]; then
     CURRENT_PROFILE="JimmyV legacy back-mount"
-elif [ "$CURRENT_Y" = "12" ] && { [ "$CURRENT_MESH_MIN" = "5, 12" ] || [ "$CURRENT_MESH_MIN" = "5, 6" ]; } && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
+elif [ "$CURRENT_Y" = "12" ] && { [ "$CURRENT_MESH_MIN" = "5, 12" ] || [ "$CURRENT_MESH_MIN" = "5, 6" ]; } && [ "$CURRENT_MESH_MAX" = "$JIMMYV_MESH_MAX" ]; then
     CURRENT_PROFILE="JimmyV final back-mount without 3DO camera"
-elif [ "$CURRENT_Y" = "17" ] && { [ "$CURRENT_MESH_MIN" = "5, 17" ] || [ "$CURRENT_MESH_MIN" = "5, 11" ]; } && [ "$CURRENT_MESH_MAX" = "345, 340" ]; then
+elif [ "$CURRENT_Y" = "17" ] && { [ "$CURRENT_MESH_MIN" = "5, 17" ] || [ "$CURRENT_MESH_MIN" = "5, 11" ]; } && [ "$CURRENT_MESH_MAX" = "$JIMMYV_MESH_MAX" ]; then
     CURRENT_PROFILE="JimmyV final back-mount with 3DO camera"
 elif [ -z "$CURRENT_Y" ] && [ -z "$CURRENT_MESH_MIN" ] && [ -z "$CURRENT_MESH_MAX" ]; then
     CURRENT_PROFILE="Jamin/default (cartographer.cfg baseline)"
@@ -87,9 +88,9 @@ echo "  position_min:     $STOCK_MIN"
 echo
 echo "Pick your mount:"
 echo "  1. Jamin/default - remove mount overrides and use cartographer.cfg"
-echo "  2. JimmyV legacy UNTESTED       - y=36, mesh=5,36 to 345,340"
-echo "  3. JimmyV final no 3DO UNTESTED - y=12, mesh=5,12 to 345,340"
-echo "  4. JimmyV final 3DO UNTESTED    - y=17, mesh=5,17 to 345,340"
+echo "  2. JimmyV legacy UNTESTED       - y=36, mesh=5,36 to $JIMMYV_MESH_MAX"
+echo "  3. JimmyV final no 3DO UNTESTED - y=12, mesh=5,12 to $JIMMYV_MESH_MAX"
+echo "  4. JimmyV final 3DO UNTESTED    - y=17, mesh=5,17 to $JIMMYV_MESH_MAX"
 echo "  5. Custom - enter offsets, mesh limits, and stepper_y source"
 echo "  b. Cancel"
 echo
@@ -199,6 +200,7 @@ NEW_CFG="${OVERRIDES_CFG}.new"
 trap 'rm -f "$NEW_CFG"' EXIT HUP INT TERM
 
 awk -v profile="$PROFILE" -v front_travel="$FRONT_TRAVEL" -v stock_endstop="$STOCK_ENDSTOP" -v stock_min="$STOCK_MIN" \
+    -v jimmyv_mesh_max="$JIMMYV_MESH_MAX" \
     -v custom_x="$CUSTOM_X" -v custom_y="$CUSTOM_Y" \
     -v custom_mesh_min="$CUSTOM_MESH_MIN" -v custom_mesh_max="$CUSTOM_MESH_MAX" \
     -v custom_stepper="$CUSTOM_STEPPER" '
@@ -210,21 +212,21 @@ function emit_values(section) {
     } else if (profile == "jimmyv_legacy" && section == "[bed_mesh]") {
         print "# cartographer-offset-setup: JimmyV legacy mount"
         print "mesh_min: 5, " 36 - front_travel
-        print "mesh_max: 345, 340"
+        print "mesh_max: " jimmyv_mesh_max
     } else if (profile == "jimmyv_final_12" && section == "[cartographer]") {
         print "# cartographer-offset-setup: JimmyV final mount without 3DO camera"
         print "y_offset: 12"
     } else if (profile == "jimmyv_final_12" && section == "[bed_mesh]") {
         print "# cartographer-offset-setup: JimmyV final mount without 3DO camera"
         print "mesh_min: 5, " 12 - front_travel
-        print "mesh_max: 345, 340"
+        print "mesh_max: " jimmyv_mesh_max
     } else if (profile == "jimmyv_final_17" && section == "[cartographer]") {
         print "# cartographer-offset-setup: JimmyV final mount with 3DO camera"
         print "y_offset: 17"
     } else if (profile == "jimmyv_final_17" && section == "[bed_mesh]") {
         print "# cartographer-offset-setup: JimmyV final mount with 3DO camera"
         print "mesh_min: 5, " 17 - front_travel
-        print "mesh_max: 345, 340"
+        print "mesh_max: " jimmyv_mesh_max
     } else if (profile ~ /^jimmyv_/ && front_travel > 0 && section == "[k2_cartographer_scan_guard]") {
         print "# cartographer-offset-setup: mesh-only front travel"
         print "mount_profile: " profile

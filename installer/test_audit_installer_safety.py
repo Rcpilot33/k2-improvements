@@ -5,6 +5,8 @@ import pathlib
 import re
 import shutil
 import subprocess
+import sys
+import tempfile
 import unittest
 
 
@@ -13,11 +15,42 @@ BASH = shutil.which("bash") or "C:/Program Files/Git/bin/bash.exe"
 
 
 class InstallerAuditSafetyTests(unittest.TestCase):
-    def test_menu_uses_stale_pid_aware_lock(self):
+    @unittest.skipUnless(sys.platform.startswith("linux"), "Linux process locks required")
+    def test_menu_lock_survives_exec_and_recovers_after_owner_is_killed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lock = pathlib.Path(tmp) / "menu.lock"
+            launch = [sys.executable, str(ROOT / "installer/menu_lock.py"), str(lock)]
+            # The child inherits the descriptor but must never keep its parent's lock.
+            script = 'sleep 30 </dev/null >/dev/null 2>&1 & echo $!; exec sh -c "read waiting"'
+            with subprocess.Popen(launch + ["sh", "-c", script], stdin=subprocess.PIPE,
+                                  stdout=subprocess.PIPE, text=True) as owner:
+                child = None
+                try:
+                    child = int(owner.stdout.readline())
+                    for _ in range(2):
+                        result = subprocess.run(launch + ["true"], capture_output=True, text=True)
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertIn("another K2 installer", result.stderr)
+                    owner.kill()
+                    owner.wait(timeout=5)
+                    subprocess.run(launch + ["true"], check=True, timeout=5)
+                finally:
+                    owner.kill()
+                    if child:
+                        os.kill(child, 15)
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "Linux process locks required")
+    def test_menu_lock_recovers_orphan_directory_and_reused_pid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lock = pathlib.Path(tmp) / "menu.lock"
+            lock.mkdir()
+            command = [sys.executable, str(ROOT / "installer/menu_lock.py"), str(lock), "true"]
+            subprocess.run(command, check=True, timeout=5)
+            (lock / "pid").write_text(str(os.getpid()))
+            subprocess.run(command, check=True, timeout=5)
+
+    def test_menu_signals_exit(self):
         source = (ROOT / "menu.sh").read_text(encoding="utf-8")
-        self.assertIn("mkdir \"$INSTALLER_LOCK\"", source)
-        self.assertIn("kill -0 \"$lock_pid\"", source)
-        self.assertIn("trap release_installer_lock EXIT", source)
         self.assertIn("trap 'exit 130' INT", source)
         self.assertIn("trap 'exit 143' TERM", source)
         self.assertIn("trap 'exit 129' HUP", source)

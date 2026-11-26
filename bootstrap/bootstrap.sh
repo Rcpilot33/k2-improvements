@@ -4,7 +4,11 @@ set -e
 cd $(dirname $0)
 CURDIR=$(pwd)
 REPO_URL="https://github.com/Rcpilot33/k2-improvements.git"
-BRANCH="${K2_BRANCH:-main}"
+MODEL=$(get_sn_mac.sh model 2>/dev/null) || MODEL=
+case "$MODEL" in
+    F008|F012) BRANCH="${K2_BRANCH:-main}" ;;
+    *) echo "Unsupported printer model: ${MODEL:-unknown}" >&2; exit 1 ;;
+esac
 
 EXPECT_BRANCH="no"
 for ARG in "$@"; do
@@ -35,6 +39,14 @@ case "$BRANCH" in
         exit 2
         ;;
 esac
+
+# Older Plus-only branches do not have the Pro setup menu.
+if [ "$MODEL" = F012 ]; then
+    case "$BRANCH" in
+        main|integration-testing|k2-pro-support) ;;
+        *) echo "Unsupported K2 Pro installer branch: $BRANCH. Use main for installation." >&2; exit 1 ;;
+    esac
+fi
 
 # Run install script from Entware if needed
 . "$CURDIR/prerequisites.sh"

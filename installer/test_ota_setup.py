@@ -44,6 +44,71 @@ run_logged_install cartographer fixture
             self.assertIn(expected, result.stdout)
             self.assertIn(expected, log)
 
+    def test_closed_prompt_does_not_mark_logged_repair_successful(self):
+        result = self.shell("""
+. installer/lib/common.sh
+detect_printer_fw() { echo 1.1.8.0; }
+detect_installer_commit() { echo abcdef; }
+run_logged_install ota-review confirm 'Apply repair?'
+""")
+        self.assertEqual(result.returncode, 75, result.stderr)
+        log = (self.cfg.parent / "logs/k2-installer.log").read_text()
+        self.assertIn("ota-review interrupted before completion", log)
+        self.assertNotIn("Successful.", log)
+
+    def test_busy_printer_stops_install_paths_before_changes(self):
+        common = """
+. installer/menus/update.sh
+. installer/menus/install_all.sh
+. installer/menus/install_no_carto.sh
+. installer/menus/features.sh
+. installer/menus/extras.sh
+INSTALLER_DIR=$PWD
+clear() { :; }
+ui_heading() { :; }
+show_feature_readme() { :; }
+confirm() { return 0; }
+press_enter() { :; }
+warn() { echo "$*"; }
+c_yellow() { :; }
+has_cartographer_configuration() { return 1; }
+state_installed() { :; }
+state_pending() { :; }
+printer_activity_state() { echo "$STATE"; }
+_INSTALL_ALL_ORDER='example|false|fake'
+_INSTALL_NO_CARTO_ORDER=$_INSTALL_ALL_ORDER
+sh() { echo INSTALL_RAN; }
+run_logged_install() { echo INSTALL_RAN; }
+"""
+        for state in ("printing", "paused"):
+            for action in ("menu_install_all", "menu_install_no_carto", "install_feature macros",
+                           "install_extra 'material-z-offsets|false||installer/extras/material-z-offsets/install.sh|'"):
+                with self.subTest(state=state, action=action):
+                    result = self.shell(common + "\nSTATE=" + state + "\n" + action)
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertIn("printer is " + state, result.stdout)
+                    self.assertNotIn("INSTALL_RAN", result.stdout)
+
+    def test_protected_restarts_refuse_active_jobs_before_restart(self):
+        curl = self.base / "query"
+        curl.write_bytes(b"""#!/bin/sh
+case "$*" in
+    *'print_stats=state'*) printf '{"result":{"status":{"print_stats":{"state":"%s"}}}}' "$STATE" ;;
+    *) echo unexpected-request >&2; exit 1 ;;
+esac
+""")
+        curl.chmod(0o755)
+        self.env.update(K2_CURL=curl.as_posix(), K2_KLIPPER_SERVICE="false")
+        for state in ("printing", "paused"):
+            self.env["STATE"] = state
+            for helper in ("firmware_restart.sh", "klippy_code_restart.sh"):
+                with self.subTest(state=state, helper=helper):
+                    result = self.shell("sh scripts/" + helper)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn("cannot restart Klipper while the printer is " + state, result.stderr)
+                    self.assertNotIn("unexpected-request", result.stderr)
+                    self.assertNotIn("restarting the Klippy host process", result.stdout)
+
     def test_surviving_configuration_with_missing_driver_is_incomplete(self):
         (self.custom / "cartographer.cfg").write_text("[cartographer]\n")
         result = self.shell("""
@@ -74,7 +139,7 @@ ota_component_ready fluidd
         source = (ROOT / "features/moonraker/install.sh").read_text()
         # Redirect printer system paths into a disposable filesystem.
         source = re.sub(r"(?<![\w/}])/(etc|opt|usr|mnt|var|proc|lib)/", r"${FIXTURE}/\1/", source)
-        (self.base / "install.sh").write_text(source, newline="\n")
+        (self.base / "install.sh").write_bytes(source.encode("utf-8"))
         self.env["FIXTURE_PATH"] = self.base.as_posix()
         script = r"""
 set -e
@@ -139,7 +204,7 @@ bash ./install.sh --restore-service
         # Use a PATH shim also visible to /bin/sh child scripts.
         shim = self.base / "bin"
         shim.mkdir()
-        (shim / "python3").write_text('#!/bin/sh\nexec "$TEST_PYTHON" "$@"\n', newline="\n")
+        (shim / "python3").write_bytes(b'#!/bin/sh\nexec "$TEST_PYTHON" "$@"\n')
         (shim / "python3").chmod(0o755)
         self.env["SHIM"] = shim.as_posix()
         shutil.copy(shim / "python3", shim / "python")

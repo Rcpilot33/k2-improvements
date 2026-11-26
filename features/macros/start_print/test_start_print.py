@@ -96,9 +96,9 @@ class StartPrintConfigTests(unittest.TestCase):
         self.assertNotIn("[delayed_gcode", self.config)
         self.assertNotIn("[gcode_macro SET_CHAMBER_FAN]", self.config)
 
-    def test_active_chamber_wait_uses_creality_35c_boundary(self):
-        self.assertIn("{% if CHAMBER_TEMP > 35 %}", self.config)
-        self.assertNotIn("{% if CHAMBER_TEMP > 40 %}", self.config)
+    def test_active_chamber_wait_uses_model_boundary(self):
+        self.assertIn("CHAMBER_TEMP|int > 40 if PRO else CHAMBER_TEMP > 35", self.config)
+        self.assertIn("{% if ACTIVE_HEAT %}", self.config)
 
     def test_preheat_restores_chamber_fan_policy_after_creality_preparation(self):
         self.assertIn(
@@ -114,7 +114,7 @@ class StartPrintConfigTests(unittest.TestCase):
             "TARGET={CHAMBER_TEMP + CHAMBER_FAN_MARGIN}",
             self.config,
         )
-        active = self.config.index("{% if CHAMBER_TEMP > 35 %}")
+        active = self.config.index("{% elif ACTIVE_HEAT %}")
         active_fan_target = self.config.index(
             "K2_CHAMBER_FAN_RESYNC "
             "TARGET={CHAMBER_TEMP + CHAMBER_FAN_MARGIN}",
@@ -159,7 +159,7 @@ class StartPrintConfigTests(unittest.TestCase):
         self.assertLess(soak, rehome)
 
     def test_preheat_keeps_passive_chamber_heater_off(self):
-        active_guard = self.config.index("{% if CHAMBER_TEMP > 35 %}")
+        active_guard = self.config.index("{% elif ACTIVE_HEAT %}")
         active_heater = self.config.index(
             "SET_HEATER_TEMPERATURE HEATER=chamber_heater "
             "TARGET={CHAMBER_TEMP}",
@@ -173,7 +173,7 @@ class StartPrintConfigTests(unittest.TestCase):
         self.assertLess(active_heater, passive_branch)
         self.assertLess(passive_branch, passive_heater)
 
-    def test_optional_material_editor_owns_offset_application(self):
+    def test_material_registration_helper_owns_offset_application_when_loaded(self):
         self.assertIn('"k2_material_z_offset_editor" in printer', self.config)
         self.assertIn('K2_MATERIAL_Z_APPLY MATERIAL="{MATERIAL}"', self.config)
         self.assertEqual(self.config.count("SET_GCODE_OFFSET Z={OFFSET}"), 1)
@@ -218,7 +218,7 @@ class StartPrintConfigTests(unittest.TestCase):
     def test_macro_repair_preserves_plate_surface_wrapper(self):
         installer = MACROS_INSTALLER.read_text(encoding="utf-8")
         capture = installer.index("HAD_SURFACE_WRAPPER=1")
-        refresh = installer.index("start_print m191 bed_mesh overrides; do")
+        refresh = installer.index("for sub in resume start_print m191 bed_mesh overrides")
         restore = installer.index("surface-selection-wrapper/install.sh")
         self.assertLess(capture, refresh)
         self.assertLess(refresh, restore)

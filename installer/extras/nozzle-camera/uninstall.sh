@@ -26,6 +26,16 @@ for target in "$CAMERA_CFG" "$BIN_LINK"; do
             */installer/extras/nozzle-camera/$(basename "$source_file")) ;;
             *) echo "ERROR: refusing to remove unfamiliar camera link: $target" >&2; exit 1 ;;
         esac
+    elif [ "$target" = "$CAMERA_CFG" ] && stock_camera_private_config "$source_file" | cmp -s "$target" -; then
+        :
+    elif [ "$target" = "$CAMERA_CFG" ] && ! cmp -s "$target" "$source_file"; then
+        # Exact installer copies from before the independent camera timer.
+        case "$(sha256sum "$target" | cut -d ' ' -f 1)" in
+            48590c65a70ace9ae9fe88a9b9f35d5abfae4d1169b7784eeb5bbccbd32f67ab|\
+            1cfdfd46b39d9205cb431aa5d2979b9633f75ab25f7297f5fe58bd3db484b413|\
+            9c0dd0385e69d86729e385dffc1b3cfacfef4190990df13e056469672be5c7f3) ;;
+            *) echo "ERROR: refusing to remove modified camera file: $target" >&2; exit 1 ;;
+        esac
     elif ! cmp -s "$target" "$source_file"; then
         echo "ERROR: refusing to remove modified camera file: $target" >&2
         exit 1
@@ -46,10 +56,16 @@ printf '%s' "$objects" | grep -q '"objects"' &&
         echo "ERROR: cannot check camera timer state; nothing was removed" >&2
         exit 1
     }
-if printf '%s' "$objects" | grep -q 'delayed_gcode _NOZZLE_CAMERA_AUTO_OFF'; then
+cancel=""
+if printf '%s' "$objects" | grep -qi 'delayed_gcode _NOZZLE_CAMERA_AUTO_OFF'; then
+    cancel="UPDATE_DELAYED_GCODE ID=_NOZZLE_CAMERA_AUTO_OFF DURATION=0"
+elif printf '%s' "$objects" | grep -Eq '"(gcode_shell_command|k2_camera_command) nozzle_camera_off"'; then
+    cancel="K2_SET_CAMERA_SHUTOFF DURATION=0"
+fi
+if [ -n "$cancel" ]; then
     reply=$(stock_nozzle_camera_curl -fsS --max-time 5 -X POST \
         -H 'Content-Type: application/json' \
-        -d '{"script":"UPDATE_DELAYED_GCODE ID=_NOZZLE_CAMERA_AUTO_OFF DURATION=0"}' \
+        -d "{\"script\":\"$cancel\"}" \
         "${MOONRAKER_URL:-http://127.0.0.1:7125}/printer/gcode/script")
     printf '%s' "$reply" | grep -q '"result"' &&
         ! printf '%s' "$reply" | grep -q '"error"' || {

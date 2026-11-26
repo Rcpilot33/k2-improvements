@@ -121,8 +121,9 @@ class BedMesh:
         self.gcode.register_command(
             'BED_MESH_OFFSET', self.cmd_BED_MESH_OFFSET,
             desc=self.cmd_BED_MESH_OFFSET_help)
-        # Register dump webhooks
+        # The Creality touchscreen reads the active probed matrix during self-check.
         webhooks = self.printer.lookup_object('webhooks')
+        webhooks.register_endpoint("get_mesh", self._handle_get_mesh)
         webhooks.register_endpoint(
             "bed_mesh/dump_mesh", self._handle_dump_request
         )
@@ -131,6 +132,8 @@ class BedMesh:
         gcode_move.set_move_transform(self)
         # initialize status dict
         self.update_status()
+    def _handle_get_mesh(self, web_request):
+        web_request.send({'probed_matrix': self.status['probed_matrix']})
     def handle_connect(self):
         self.toolhead = self.printer.lookup_object('toolhead')
         self.bmc.print_generated_points(logging.info, truncate=True)
@@ -1651,6 +1654,8 @@ class ProfileManager:
     def __init__(self, config, bedmesh):
         self.name = config.get_name()
         self.printer = config.get_printer()
+        self.skip_stock_home_profile = (config.has_section('cartographer')
+                                        and not config.has_section('stepper_z1'))
         self.gcode = self.printer.lookup_object('gcode')
         self.bedmesh = bedmesh
         self.profiles = {}
@@ -1763,6 +1768,12 @@ class ProfileManager:
                 "No profile named [%s] to remove" % (prof_name))
     cmd_BED_MESH_PROFILE_help = "Bed Mesh Persistent Storage management"
     def cmd_BED_MESH_PROFILE(self, gcmd):
+        # RC3's stock homing_override requests its PR Touch default mesh
+        # even on an XY-only home. It may be absent or from the old probe.
+        if (self.skip_stock_home_profile and gcmd.get('LOAD', None) == 'default'
+                and getattr(self.printer.lookup_object('homing_override', None),
+                            'in_script', False)):
+            return
         options = collections.OrderedDict({
             'LOAD': self.load_profile,
             'SAVE': self.save_profile,

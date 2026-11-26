@@ -38,7 +38,9 @@ class NozzleCameraTests(unittest.TestCase):
     def test_has_manual_controls_and_ten_minute_shutdown(self):
         for command in ("NOZZLE_CAM_ON", "NOZZLE_CAM_OFF", "NOZZLE_CAM_STATUS"):
             self.assertIn("[gcode_macro %s]" % command, self.config)
-        self.assertIn("DURATION=600", self.config)
+        self.assertIn("K2_SET_CAMERA_SHUTOFF DURATION=600", self.config)
+        self.assertIn("K2_SET_CAMERA_SHUTOFF DURATION=0", self.config)
+        self.assertNotIn("UPDATE_DELAYED_GCODE", self.config)
 
     def test_installer_uses_firmware_aware_paths_and_protected_restart(self):
         self.assertIn('KLIPPER_ROOT="${KLIPPER_DIR:-/usr/share/klipper}"', self.install)

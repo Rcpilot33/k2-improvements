@@ -9,9 +9,11 @@ import subprocess
 import urllib.parse
 import urllib.request
 
-from get_latest_release import download_latest_release
-
 HERE = Path(__file__).resolve().parent
+STABLE_BUILD = {
+    'url': 'https://github.com/Rcpilot33/fluidd/releases/download/v1.37.6/fluidd.zip',
+    'sha256': '9e8f2cf66b5ec5d57acaf82918fef10304f7b6be081a77b58fa7e4a47056aef9',
+}
 
 
 def read_build(manifest, branch):
@@ -45,12 +47,8 @@ def configured_build():
 def download(build, destination):
     destination = Path(destination).resolve()
     if build is None:
-        download_latest_release('Rcpilot33/fluidd', asset_name='fluidd.zip')
-        downloaded = Path('fluidd.zip').resolve()
-        if downloaded != destination:
-            downloaded.replace(destination)
-        return
-    print('I: downloading Fluidd prerelease test build from ' + build['url'])
+        build = STABLE_BUILD
+    print('I: downloading Fluidd from ' + build['url'])
     request = urllib.request.Request(build['url'], headers={'User-Agent': 'K2-Fluidd-Installer'})
     digest = hashlib.sha256()
     try:
@@ -62,12 +60,12 @@ def download(build, destination):
                 digest.update(chunk)
                 target.write(chunk)
         if digest.hexdigest() != build['sha256']:
-            raise ValueError('Fluidd test ZIP checksum does not match the pinned build')
+            raise ValueError('Fluidd ZIP checksum does not match the pinned build')
     except BaseException:
         if destination.exists():
             destination.unlink()
         raise
-    print('I: verified Fluidd test ZIP SHA256; source commit ' + build['fluidd_commit'][:8])
+    print('I: verified Fluidd ZIP SHA256')
 
 
 def check_installed(build, root):
